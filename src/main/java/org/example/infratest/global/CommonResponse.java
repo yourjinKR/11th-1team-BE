@@ -16,7 +16,7 @@ public class CommonResponse<T> {
         return new CommonResponse<>(200, data, null);
     }
 
-    public static <T> CommonResponse<T> success(HttpStatus status, T data) {
+    public static <T> CommonResponse<T> success(T data, HttpStatus status) {
         return new CommonResponse<>(status.value(), data, null);
     }
 
