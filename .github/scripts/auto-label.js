@@ -12,16 +12,16 @@ const managedLabels = [
 ];
 
 const prTypeRules = [
-  { pattern: /-\s*\[[xX]\]\s*Feat\b/i, label: '✨ feat' },
-  { pattern: /-\s*\[[xX]\]\s*Bug\b/i, label: '🐛 bug' },
-  { pattern: /-\s*\[[xX]\]\s*Refactor\b/i, label: '♻️ refactor' },
-  { pattern: /-\s*\[[xX]\]\s*Chore\b/i, label: '🚚 chore' },
-  { pattern: /-\s*\[[xX]\]\s*API\b/i, label: '🧩 api' },
-  { pattern: /-\s*\[[xX]\]\s*DB\b/i, label: '🗄️ db' },
-  { pattern: /-\s*\[[xX]\]\s*Performance\b/i, label: '⚡ performance' },
-  { pattern: /-\s*\[[xX]\]\s*Test\b/i, label: '✅ test' },
-  { pattern: /-\s*\[[xX]\]\s*Docs\b/i, label: '📝 docs' },
-  { pattern: /-\s*\[[xX]\]\s*Security\b/i, label: '🔒 security' },
+  { pattern: /-\s*\[[xX]]\s*Feat\b/i, label: '✨ feat' },
+  { pattern: /-\s*\[[xX]]\s*Bug\b/i, label: '🐛 bug' },
+  { pattern: /-\s*\[[xX]]\s*Refactor\b/i, label: '♻️ refactor' },
+  { pattern: /-\s*\[[xX]]\s*Chore\b/i, label: '🚚 chore' },
+  { pattern: /-\s*\[[xX]]\s*API\b/i, label: '🧩 api' },
+  { pattern: /-\s*\[[xX]]\s*DB\b/i, label: '🗄️ db' },
+  { pattern: /-\s*\[[xX]]\s*Performance\b/i, label: '⚡ performance' },
+  { pattern: /-\s*\[[xX]]\s*Test\b/i, label: '✅ test' },
+  { pattern: /-\s*\[[xX]]\s*Docs\b/i, label: '📝 docs' },
+  { pattern: /-\s*\[[xX]]\s*Security\b/i, label: '🔒 security' },
 ];
 
 function collectLabels(body) {
