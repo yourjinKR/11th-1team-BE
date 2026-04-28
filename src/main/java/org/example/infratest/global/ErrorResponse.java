@@ -4,7 +4,7 @@ public record ErrorResponse(
         String code,
         String message
 ) {
-    public ErrorResponse of(ErrorCode errorCode) {
+    public static ErrorResponse of(ErrorCode errorCode) {
         return new ErrorResponse(errorCode.name(), errorCode.getMessage());
     }
 }
