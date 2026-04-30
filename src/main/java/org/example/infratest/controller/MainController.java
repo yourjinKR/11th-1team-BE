@@ -1,6 +1,9 @@
 package org.example.infratest.controller;
 
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.example.infratest.entity.MemberEntity;
+import org.example.infratest.global.api.CommonResponse;
 import org.example.infratest.service.FileUploadService;
 import org.example.infratest.service.impl.MemberServiceImpl;
 import org.springframework.http.HttpStatus;
@@ -19,13 +22,15 @@ public class MainController {
     private final FileUploadService fileUploadService;
 
     @PostMapping("/save")
-    public ResponseEntity<?> save(@RequestBody String name) {
-        return ResponseEntity.ok(memberServiceImpl.save(name));
+    public CommonResponse<?> save(@RequestBody String name) {
+        MemberEntity member = memberServiceImpl.save(name);
+        return CommonResponse.success(member, HttpStatus.CREATED);
     }
 
     @GetMapping("/list")
-    public ResponseEntity<?> list() {
-        return ResponseEntity.ok(memberServiceImpl.list());
+    public CommonResponse<?> list() {
+        List<MemberEntity> members = memberServiceImpl.list();
+        return CommonResponse.success(members);
     }
 
     @PostMapping(path = "/upload", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
