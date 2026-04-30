@@ -1,4 +1,4 @@
-package org.example.infratest.entity;
+package org.example.knockin.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

@@ -1,11 +1,11 @@
-package org.example.infratest.controller;
+package org.example.knockin.controller;
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.example.infratest.entity.MemberEntity;
-import org.example.infratest.global.api.CommonResponse;
-import org.example.infratest.service.FileUploadService;
-import org.example.infratest.service.impl.MemberServiceImpl;
+import org.example.knockin.entity.MemberEntity;
+import org.example.knockin.global.api.CommonResponse;
+import org.example.knockin.service.FileUploadService;
+import org.example.knockin.service.impl.MemberServiceImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

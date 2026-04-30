@@ -1,4 +1,4 @@
-package org.example.infratest.service;
+package org.example.knockin.service;
 
 import org.springframework.web.multipart.MultipartFile;
 

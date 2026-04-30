@@ -1,7 +1,7 @@
-package org.example.infratest.global.exception;
+package org.example.knockin.global.exception;
 
 import lombok.extern.slf4j.Slf4j;
-import org.example.infratest.global.api.CommonResponse;
+import org.example.knockin.global.api.CommonResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;

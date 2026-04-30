@@ -1,14 +1,10 @@
-package org.example.infratest.service.impl;
+package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.example.infratest.service.FileUploadService;
-import org.springframework.beans.factory.annotation.Value;
+import org.example.knockin.service.FileUploadService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.File;
 import java.io.IOException;

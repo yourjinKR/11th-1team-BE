@@ -1,9 +1,9 @@
-package org.example.infratest.global.api;
+package org.example.knockin.global.api;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.example.infratest.global.exception.ErrorCode;
+import org.example.knockin.global.exception.ErrorCode;
 import org.springframework.http.HttpStatus;
 
 @Getter
