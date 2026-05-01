@@ -1,39 +1,48 @@
 package org.example.knockin.global.api;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.example.knockin.global.exception.ErrorCode;
-import org.springframework.http.HttpStatus;
+import org.jspecify.annotations.Nullable;
+import org.springframework.http.*;
+import org.springframework.util.Assert;
 
 @Getter
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class CommonResponse<T> {
-    private final int status;
-    private final T data;
+    private HttpStatusCode status;
+    private T body;
     private final ErrorResponse error;
 
-    public static <T> CommonResponse<T> success(T data) {
-        return new CommonResponse<>(200, data, null);
+    public CommonResponse(T body, HttpStatusCode status, ErrorResponse error) {
+        this.error = error;
+        this.body = body;
+        this.status = status;
     }
 
-    public static <T> CommonResponse<T> success(T data, HttpStatus status) {
-        return new CommonResponse<>(status.value(), data, null);
+    public interface BodyBuilder {
+        <T> CommonResponse<T> body(@Nullable T body);
     }
 
-    public static CommonResponse<Void> successVoid() {
-        return new CommonResponse<>(200, null, null);
+    public static BodyBuilder status(HttpStatusCode status) {
+        Assert.notNull(status, "HttpStatusCode must not be null");
+        return new CommonResponse.DefaultBuilder(status);
     }
 
-    public static CommonResponse<Void> successVoid(HttpStatus status) {
-        return new CommonResponse<>(status.value(), null, null);
+    public static BodyBuilder status(int status) {
+        return new CommonResponse.DefaultBuilder(status);
     }
 
-    public static CommonResponse<Void> fail(ErrorCode errorCode) {
-        return new CommonResponse<>(
-                errorCode.getHttpStatus().value(),
-                null,
-                ErrorResponse.of(errorCode)
-        );
+    private static class DefaultBuilder implements BodyBuilder {
+        private final HttpStatusCode statusCode;
+
+        public DefaultBuilder(int statusCode) {
+            this(HttpStatusCode.valueOf(statusCode));
+        }
+
+        public DefaultBuilder(HttpStatusCode statusCode) {
+            this.statusCode = statusCode;
+        }
+
+        public <T> CommonResponse<T> body(@Nullable T body) {
+            return new CommonResponse<>(body, this.statusCode, null);
+        }
     }
 }

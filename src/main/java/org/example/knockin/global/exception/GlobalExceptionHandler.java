@@ -18,13 +18,13 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<CommonResponse<Void>> handleBusinessException(BusinessException e) {
+    public CommonResponse<?> handleBusinessException(BusinessException e) {
         log.warn("BusinessException: {}", e.getMessage());
         return handleExceptionInternal(e.getErrorCode());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<CommonResponse<Void>> handleIllegalArgumentException(IllegalArgumentException e) {
+    public CommonResponse<?> handleIllegalArgumentException(IllegalArgumentException e) {
         log.warn("IllegalArgumentException: {}", e.getMessage());
         return handleExceptionInternal(CommonErrorCode.BAD_REQUEST);
     }
@@ -36,13 +36,13 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException.class,
             BindException.class
     })
-    public ResponseEntity<CommonResponse<Void>> handleBadRequestException(Exception e) {
+    public CommonResponse<?> handleBadRequestException(Exception e) {
         log.warn("Bad request: {}", e.getMessage());
         return handleExceptionInternal(CommonErrorCode.BAD_REQUEST);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<CommonResponse<Void>> handleMethodNotAllowedException(
+    public CommonResponse<?> handleMethodNotAllowedException(
             HttpRequestMethodNotSupportedException e
     ) {
         log.warn("Method not allowed: {}", e.getMessage());
@@ -50,7 +50,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
-    public ResponseEntity<CommonResponse<Void>> handleUnsupportedMediaTypeException(
+    public CommonResponse<?> handleUnsupportedMediaTypeException(
             HttpMediaTypeNotSupportedException e
     ) {
         log.warn("Unsupported media type: {}", e.getMessage());
@@ -58,14 +58,12 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<CommonResponse<Void>> handleException(Exception e) {
+    public CommonResponse<?> handleException(Exception e) {
         log.error("Unhandled exception", e);
         return handleExceptionInternal(CommonErrorCode.INTERNAL_SERVER_ERROR);
     }
 
-    private ResponseEntity<CommonResponse<Void>> handleExceptionInternal(ErrorCode errorCode) {
-        return ResponseEntity
-                .status(errorCode.getHttpStatus())
-                .body(CommonResponse.fail(errorCode));
+    private CommonResponse<?> handleExceptionInternal(ErrorCode errorCode) {
+        return CommonResponse.status(errorCode.getHttpStatus()).body(errorCode);
     }
 }

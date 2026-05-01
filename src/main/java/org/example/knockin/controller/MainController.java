@@ -24,13 +24,13 @@ public class MainController {
     @PostMapping("/save")
     public CommonResponse<?> save(@RequestBody String name) {
         MemberEntity member = memberServiceImpl.save(name);
-        return CommonResponse.success(member, HttpStatus.CREATED);
+        return CommonResponse.status(HttpStatus.CREATED).body(member);
     }
 
     @GetMapping("/list")
     public CommonResponse<?> list() {
         List<MemberEntity> members = memberServiceImpl.list();
-        return CommonResponse.success(members);
+        return CommonResponse.status(HttpStatus.OK).body(members);
     }
 
     @PostMapping(path = "/upload", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
