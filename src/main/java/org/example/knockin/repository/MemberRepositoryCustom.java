@@ -1,6 +1,6 @@
-package org.example.infratest.repository;
+package org.example.knockin.repository;
 
-import org.example.infratest.entity.MemberEntity;
+import org.example.knockin.entity.MemberEntity;
 
 import java.util.List;
 

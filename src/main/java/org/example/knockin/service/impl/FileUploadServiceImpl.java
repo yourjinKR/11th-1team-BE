@@ -1,7 +1,7 @@
-package org.example.infratest.service.impl;
+package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.example.infratest.service.FileUploadService;
+import org.example.knockin.service.FileUploadService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;

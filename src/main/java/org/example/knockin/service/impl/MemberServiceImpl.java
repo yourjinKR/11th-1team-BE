@@ -1,8 +1,8 @@
-package org.example.infratest.service.impl;
+package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.example.infratest.entity.MemberEntity;
-import org.example.infratest.repository.MemberRepository;
+import org.example.knockin.entity.MemberEntity;
+import org.example.knockin.repository.MemberRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

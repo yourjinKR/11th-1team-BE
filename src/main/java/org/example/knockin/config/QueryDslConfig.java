@@ -1,4 +1,4 @@
-package org.example.infratest.config;
+package org.example.knockin.config;
 
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;

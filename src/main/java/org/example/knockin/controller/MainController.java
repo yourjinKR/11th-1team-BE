@@ -1,11 +1,11 @@
-package org.example.infratest.controller;
+package org.example.knockin.controller;
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.example.infratest.entity.MemberEntity;
-import org.example.infratest.global.api.CommonResponse;
-import org.example.infratest.service.FileUploadService;
-import org.example.infratest.service.impl.MemberServiceImpl;
+import org.example.knockin.entity.MemberEntity;
+import org.example.knockin.global.api.CommonResponse;
+import org.example.knockin.service.FileUploadService;
+import org.example.knockin.service.impl.MemberServiceImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -24,13 +24,13 @@ public class MainController {
     @PostMapping("/save")
     public CommonResponse<?> save(@RequestBody String name) {
         MemberEntity member = memberServiceImpl.save(name);
-        return CommonResponse.success(member, HttpStatus.CREATED);
+        return CommonResponse.status(HttpStatus.CREATED).body(member);
     }
 
     @GetMapping("/list")
     public CommonResponse<?> list() {
         List<MemberEntity> members = memberServiceImpl.list();
-        return CommonResponse.success(members);
+        return CommonResponse.status(HttpStatus.OK).body(members);
     }
 
     @PostMapping(path = "/upload", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})

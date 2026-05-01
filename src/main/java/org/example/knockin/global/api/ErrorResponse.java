@@ -1,6 +1,6 @@
-package org.example.infratest.global.api;
+package org.example.knockin.global.api;
 
-import org.example.infratest.global.exception.ErrorCode;
+import org.example.knockin.global.exception.ErrorCode;
 
 public record ErrorResponse(
         String code,

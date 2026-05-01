@@ -1,4 +1,4 @@
-package org.example.infratest.global.exception;
+package org.example.knockin.global.exception;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
