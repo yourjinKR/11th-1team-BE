@@ -37,8 +37,6 @@ public class MemberEntity {
 
     private String name;
 
-    private String email;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "provider", nullable = false, length = 20)
     private LoginProvider provider;
@@ -54,11 +52,10 @@ public class MemberEntity {
     @Column(nullable = false, length = 20)
     private MemberStatus status;
 
-    public static MemberEntity pendingMember(LoginProvider provider, String providerId, String email) {
+    public static MemberEntity pendingMember(LoginProvider provider, String providerId) {
         return MemberEntity.builder()
                 .provider(provider)
                 .providerId(providerId)
-                .email(email)
                 .status(MemberStatus.PENDING)
                 .role(MemberRole.USER)
                 .build();
