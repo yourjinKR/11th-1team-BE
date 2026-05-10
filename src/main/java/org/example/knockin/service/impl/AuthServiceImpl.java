@@ -2,6 +2,7 @@ package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.auth.provider.JwtTokenProvider;
+import org.example.knockin.auth.provider.JwtTokenProvider.IssuedAccessToken;
 import org.example.knockin.auth.provider.KakaoOAuthClient;
 import org.example.knockin.auth.provider.SocialUserInfo;
 import org.example.knockin.controller.LoginResponse;
@@ -34,11 +35,12 @@ public class AuthServiceImpl {
                 });
 
         OnBoardingNextStep nextStep = OnBoardingNextStep.from(member.getStatus());
+        IssuedAccessToken issuedAccessToken = jwtTokenProvider.createToken(member);
 
         return LoginResponse.of(
-                jwtTokenProvider.createToken(member),
+                issuedAccessToken.raw(),
                 "Bearer",
-                604800,
+                issuedAccessToken.expiresIn(),
                 member,
                 nextStep
         );

@@ -1,17 +1,19 @@
 package org.example.knockin.auth.provider;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
-import java.security.Key;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
+import javax.crypto.SecretKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.knockin.entity.MemberEntity;
+import org.example.knockin.entity.member.MemberRole;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -31,26 +33,51 @@ public class JwtTokenProvider {
     @PostConstruct
     protected void init() {
         log.info("[init] JwtTokenProvider: Start init secretKey");
-        System.out.println(secretKey);
         secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes(StandardCharsets.UTF_8));
-        System.out.println(secretKey);
         log.info("[init] JwtTokenProvider: Finish init secretKey");
     }
 
-    public String createToken(MemberEntity member) {
+    public IssuedAccessToken createToken(MemberEntity member) {
         Instant now = clock.instant();
         Instant accessTokenExpiresAt = now.plusSeconds(accessTokenExpSec);
 
-        return Jwts.builder()
+        String accessToken = Jwts.builder()
                 .subject(String.valueOf(member.getMemberId()))
                 .claim("role", member.getRole().name())
                 .issuedAt(Date.from(now))
                 .signWith(signingKey())
                 .expiration(Date.from(accessTokenExpiresAt))
                 .compact();
+
+        return new IssuedAccessToken(accessToken, accessTokenExpSec);
     }
 
-    private Key signingKey() {
+    public TokenClaims parseToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(signingKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return new TokenClaims(
+                Long.valueOf(claims.getSubject()),
+                MemberRole.valueOf(claims.get("role", String.class))
+        );
+    }
+
+    private SecretKey signingKey() {
         return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public record IssuedAccessToken(
+            String raw,
+            long expiresIn
+    ) {
+    }
+
+    public record TokenClaims(
+            Long memberId,
+            MemberRole role
+    ) {
     }
 }
