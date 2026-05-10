@@ -1,6 +1,7 @@
 package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.auth.provider.JwtTokenProvider;
 import org.example.knockin.auth.provider.KakaoOAuthClient;
 import org.example.knockin.auth.provider.SocialUserInfo;
 import org.example.knockin.controller.LoginResponse;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthServiceImpl {
     private final MemberRepository memberRepository;
     private final KakaoOAuthClient kakaoOAuthClient;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Transactional
     public LoginResponse loginWithKakao(String providerAccessToken) {
@@ -34,7 +36,7 @@ public class AuthServiceImpl {
         OnBoardingNextStep nextStep = OnBoardingNextStep.from(member.getStatus());
 
         return LoginResponse.of(
-                "tmpToken",
+                jwtTokenProvider.createToken(member),
                 "Bearer",
                 604800,
                 member,
