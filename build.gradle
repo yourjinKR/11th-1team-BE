@@ -21,6 +21,8 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client'
+    implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server'
     implementation 'software.amazon.awssdk:s3:2.28.23'
     implementation 'io.github.openfeign.querydsl:querydsl-jpa:6.11'
     annotationProcessor 'io.github.openfeign.querydsl:querydsl-apt:6.11:jpa'
@@ -35,6 +37,7 @@ dependencies {
     testAnnotationProcessor 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
