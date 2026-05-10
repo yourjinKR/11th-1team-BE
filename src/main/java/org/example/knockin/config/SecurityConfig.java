@@ -2,6 +2,7 @@ package org.example.knockin.config;
 
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.auth.JwtFilter;
+import org.example.knockin.auth.MemberStatusAuthorizationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,6 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtFilter jwtFilter;
+    private final MemberStatusAuthorizationFilter memberStatusAuthorizationFilter;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -35,6 +37,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(memberStatusAuthorizationFilter, JwtFilter.class)
                 .build();
     }
 }
