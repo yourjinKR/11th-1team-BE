@@ -1,5 +1,6 @@
 package org.example.knockin.controller.auth;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.service.impl.AuthServiceImpl;
@@ -17,7 +18,7 @@ public class AuthController {
     private final AuthServiceImpl authServiceImpl;
 
     @PostMapping("/login/kakao")
-    public CommonResponse<LoginResponse> kakaoLogin(@RequestBody KakaoLoginRequest request) {
+    public CommonResponse<LoginResponse> kakaoLogin(@Valid @RequestBody KakaoLoginRequest request) {
         LoginResponse response = authServiceImpl.loginWithKakao(request.providerAccessToken());
         return CommonResponse.status(HttpStatus.OK).body(response);
     }

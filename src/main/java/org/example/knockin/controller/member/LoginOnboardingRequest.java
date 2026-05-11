@@ -1,10 +1,13 @@
 package org.example.knockin.controller.member;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 
 public record LoginOnboardingRequest(
+        @NotBlank(message = "name은 필수입니다.")
         String name,
-        List<Agreement> agreements
+        List<@Valid Agreement> agreements
 ) {
 
     public record Agreement(

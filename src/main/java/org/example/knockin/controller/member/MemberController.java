@@ -1,5 +1,6 @@
 package org.example.knockin.controller.member;
 
+import jakarta.validation.Valid;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.service.impl.MemberServiceImpl;
 import org.springframework.http.HttpStatus;
@@ -19,7 +20,9 @@ public class MemberController {
     }
 
     @PatchMapping("/me/onboarding")
-    public CommonResponse<LoginOnboardingResponse> completeOnboarding(@RequestBody LoginOnboardingRequest request) {
+    public CommonResponse<LoginOnboardingResponse> completeOnboarding(
+            @Valid @RequestBody LoginOnboardingRequest request
+    ) {
         LoginOnboardingResponse response = memberServiceImpl.completeOnboarding(request);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
