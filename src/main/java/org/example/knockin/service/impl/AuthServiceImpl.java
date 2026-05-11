@@ -43,24 +43,17 @@ public class AuthServiceImpl {
 
     @Transactional
     public LoginResponse loginWithVerifiedSocialUser(SocialUserInfo userInfo) {
-        MemberEntity member = memberRepository.findByProviderAndProviderId(userInfo.provider(), userInfo.providerId())
-                .orElseGet(() -> {
-                    MemberEntity newMember = MemberEntity.pendingMember(
-                            userInfo.provider(),
-                            userInfo.providerId()
-                    );
-                    return memberRepository.save(newMember);
-                });
+        LoginProvider provider = userInfo.provider();
+        String providerId = userInfo.providerId();
+        MemberEntity member = memberRepository.findByProviderAndProviderId(provider, providerId)
+                .orElseGet(() -> createNewMemberAndSave(provider, providerId));
 
-        OnBoardingNextStep nextStep = OnBoardingNextStep.from(member.getStatus());
         IssuedAccessToken issuedAccessToken = jwtTokenProvider.createToken(member);
+        return LoginResponse.of(issuedAccessToken, "Bearer", member);
+    }
 
-        return LoginResponse.of(
-                issuedAccessToken.raw(),
-                "Bearer",
-                issuedAccessToken.expiresIn(),
-                member,
-                nextStep
-        );
+    private MemberEntity createNewMemberAndSave(LoginProvider provider, String providerId) {
+        MemberEntity newMember = MemberEntity.pendingMember(provider, providerId);
+        return memberRepository.save(newMember);
     }
 }

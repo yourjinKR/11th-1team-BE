@@ -1,5 +1,6 @@
 package org.example.knockin.controller.auth;
 
+import org.example.knockin.auth.provider.JwtTokenProvider.IssuedAccessToken;
 import org.example.knockin.entity.MemberEntity;
 import org.example.knockin.entity.member.MemberRole;
 import org.example.knockin.entity.member.MemberStatus;
@@ -14,15 +15,15 @@ public record LoginResponse(
         OnBoardingNextStep nextStep
 ) {
 
-    public static LoginResponse of(String accessToken, String tokenType, long expiresIn, MemberEntity member, OnBoardingNextStep nextStep) {
+    public static LoginResponse of(IssuedAccessToken issuedAccessToken, String tokenType, MemberEntity member) {
         return new LoginResponse(
-                accessToken,
+                issuedAccessToken.raw(),
                 tokenType,
-                expiresIn,
+                issuedAccessToken.expiresIn(),
                 member.getMemberId(),
                 member.getStatus(),
                 member.getRole(),
-                nextStep
+                OnBoardingNextStep.from(member.getStatus())
         );
     }
 }
