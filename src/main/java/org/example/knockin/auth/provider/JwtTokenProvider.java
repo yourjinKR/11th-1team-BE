@@ -11,13 +11,11 @@ import java.util.Base64;
 import java.util.Date;
 import javax.crypto.SecretKey;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.example.knockin.entity.MemberEntity;
 import org.example.knockin.entity.member.MemberRole;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtTokenProvider {
@@ -32,9 +30,7 @@ public class JwtTokenProvider {
 
     @PostConstruct
     protected void init() {
-        log.info("[init] JwtTokenProvider: Start init secretKey");
         secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes(StandardCharsets.UTF_8));
-        log.info("[init] JwtTokenProvider: Finish init secretKey");
     }
 
     public IssuedAccessToken createToken(MemberEntity member) {

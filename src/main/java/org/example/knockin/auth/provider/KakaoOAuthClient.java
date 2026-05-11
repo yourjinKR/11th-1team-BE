@@ -1,5 +1,6 @@
 package org.example.knockin.auth.provider;
 
+import lombok.extern.slf4j.Slf4j;
 import org.example.knockin.auth.AuthErrorCode;
 import org.example.knockin.entity.member.LoginProvider;
 import org.example.knockin.global.exception.BusinessException;
@@ -13,6 +14,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 @Component
+@Slf4j
 public class KakaoOAuthClient implements SocialOAuthClient {
 
     @Value("${auth.kakao.user-info-uri}")
@@ -54,6 +56,10 @@ public class KakaoOAuthClient implements SocialOAuthClient {
 
             return new SocialUserInfo(LoginProvider.KAKAO, String.valueOf(response.id()));
         } catch (Exception e) {
+            log.warn("[카카오 OAuth] access token 로그인 흐름에 실패했습니다. platform={}, 사유={}",
+                    command.platform(),
+                    e.getMessage()
+            );
             throw new BusinessException(AuthErrorCode.INVALID_PROVIDER_TOKEN);
         }
     }
