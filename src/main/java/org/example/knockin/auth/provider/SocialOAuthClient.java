@@ -3,7 +3,7 @@ package org.example.knockin.auth.provider;
 import org.example.knockin.entity.member.LoginProvider;
 
 public interface SocialOAuthClient {
-    LoginProvider supports();
+    boolean supports(LoginProvider provider, AuthPlatform platform, SocialCredentialType credentialType);
 
-    SocialUserInfo getUserInfo(String providerToken);
+    SocialUserInfo getUserInfo(SocialLoginCommand command);
 }

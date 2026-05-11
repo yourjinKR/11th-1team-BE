@@ -21,12 +21,15 @@ public class KakaoOAuthClient implements SocialOAuthClient {
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Override
-    public LoginProvider supports() {
-        return LoginProvider.KAKAO;
+    public boolean supports(LoginProvider provider, AuthPlatform platform, SocialCredentialType credentialType) {
+        return provider == LoginProvider.KAKAO
+                && credentialType == SocialCredentialType.ACCESS_TOKEN
+                && (platform == AuthPlatform.APP || platform == AuthPlatform.WEB);
     }
 
     @Override
-    public SocialUserInfo getUserInfo(String providerAccessToken) {
+    public SocialUserInfo getUserInfo(SocialLoginCommand command) {
+        String providerAccessToken = command.credential();
         if (!StringUtils.hasText(providerAccessToken)) {
             throw new BusinessException(AuthErrorCode.INVALID_PROVIDER_TOKEN);
         }

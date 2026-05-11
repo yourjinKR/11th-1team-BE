@@ -22,4 +22,10 @@ public class AuthController {
         LoginResponse response = authServiceImpl.loginWithKakao(request.providerAccessToken());
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
+
+    @PostMapping("/social/login")
+    public CommonResponse<LoginResponse> socialLogin(@Valid @RequestBody SocialLoginRequest request) {
+        LoginResponse response = authServiceImpl.login(request.toCommand());
+        return CommonResponse.status(HttpStatus.OK).body(response);
+    }
 }

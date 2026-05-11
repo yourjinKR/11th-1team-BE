@@ -5,6 +5,9 @@ import org.example.knockin.auth.provider.JwtTokenProvider;
 import org.example.knockin.auth.provider.JwtTokenProvider.IssuedAccessToken;
 import org.example.knockin.auth.provider.SocialOAuthClient;
 import org.example.knockin.auth.provider.SocialOAuthClientResolver;
+import org.example.knockin.auth.provider.AuthPlatform;
+import org.example.knockin.auth.provider.SocialCredentialType;
+import org.example.knockin.auth.provider.SocialLoginCommand;
 import org.example.knockin.auth.provider.SocialUserInfo;
 import org.example.knockin.controller.auth.LoginResponse;
 import org.example.knockin.controller.auth.OnBoardingNextStep;
@@ -23,13 +26,18 @@ public class AuthServiceImpl {
 
     @Transactional
     public LoginResponse loginWithKakao(String providerAccessToken) {
-        return login(LoginProvider.KAKAO, providerAccessToken);
+        return login(new SocialLoginCommand(
+                LoginProvider.KAKAO,
+                AuthPlatform.APP,
+                SocialCredentialType.ACCESS_TOKEN,
+                providerAccessToken
+        ));
     }
 
     @Transactional
-    public LoginResponse login(LoginProvider provider, String providerToken) {
-        SocialOAuthClient socialOAuthClient = socialOAuthClientResolver.resolve(provider);
-        SocialUserInfo userInfo = socialOAuthClient.getUserInfo(providerToken);
+    public LoginResponse login(SocialLoginCommand command) {
+        SocialOAuthClient socialOAuthClient = socialOAuthClientResolver.resolve(command);
+        SocialUserInfo userInfo = socialOAuthClient.getUserInfo(command);
         return loginWithSocialUser(userInfo);
     }
 
