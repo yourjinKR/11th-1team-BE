@@ -3,7 +3,8 @@ package org.example.knockin.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.auth.provider.JwtTokenProvider;
 import org.example.knockin.auth.provider.JwtTokenProvider.IssuedAccessToken;
-import org.example.knockin.auth.provider.KakaoOAuthClient;
+import org.example.knockin.auth.provider.SocialOAuthClient;
+import org.example.knockin.auth.provider.SocialOAuthClientResolver;
 import org.example.knockin.auth.provider.SocialUserInfo;
 import org.example.knockin.controller.auth.LoginResponse;
 import org.example.knockin.controller.auth.OnBoardingNextStep;
@@ -17,20 +18,28 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuthServiceImpl {
     private final MemberRepository memberRepository;
-    private final KakaoOAuthClient kakaoOAuthClient;
+    private final SocialOAuthClientResolver socialOAuthClientResolver;
     private final JwtTokenProvider jwtTokenProvider;
 
     @Transactional
     public LoginResponse loginWithKakao(String providerAccessToken) {
-        SocialUserInfo userInfo = kakaoOAuthClient.getUserInfo(providerAccessToken);
-        return login(LoginProvider.KAKAO, userInfo.providerId());
+        return login(LoginProvider.KAKAO, providerAccessToken);
     }
 
     @Transactional
-    public LoginResponse login(LoginProvider provider, String providerId) {
-        MemberEntity member = memberRepository.findByProviderAndProviderId(provider, providerId)
+    public LoginResponse login(LoginProvider provider, String providerToken) {
+        SocialOAuthClient socialOAuthClient = socialOAuthClientResolver.resolve(provider);
+        SocialUserInfo userInfo = socialOAuthClient.getUserInfo(providerToken);
+        return loginWithSocialUser(userInfo);
+    }
+
+    private LoginResponse loginWithSocialUser(SocialUserInfo userInfo) {
+        MemberEntity member = memberRepository.findByProviderAndProviderId(userInfo.provider(), userInfo.providerId())
                 .orElseGet(() -> {
-                    MemberEntity newMember = MemberEntity.pendingMember(provider, providerId);
+                    MemberEntity newMember = MemberEntity.pendingMember(
+                            userInfo.provider(),
+                            userInfo.providerId()
+                    );
                     return memberRepository.save(newMember);
                 });
 
