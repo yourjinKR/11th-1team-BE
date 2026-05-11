@@ -38,10 +38,11 @@ public class AuthServiceImpl {
     public LoginResponse login(SocialLoginCommand command) {
         SocialOAuthClient socialOAuthClient = socialOAuthClientResolver.resolve(command);
         SocialUserInfo userInfo = socialOAuthClient.getUserInfo(command);
-        return loginWithSocialUser(userInfo);
+        return loginWithVerifiedSocialUser(userInfo);
     }
 
-    private LoginResponse loginWithSocialUser(SocialUserInfo userInfo) {
+    @Transactional
+    public LoginResponse loginWithVerifiedSocialUser(SocialUserInfo userInfo) {
         MemberEntity member = memberRepository.findByProviderAndProviderId(userInfo.provider(), userInfo.providerId())
                 .orElseGet(() -> {
                     MemberEntity newMember = MemberEntity.pendingMember(

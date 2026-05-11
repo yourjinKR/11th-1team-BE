@@ -25,8 +25,8 @@ public class KakaoOAuthClient implements SocialOAuthClient {
     @Override
     public boolean supports(LoginProvider provider, AuthPlatform platform, SocialCredentialType credentialType) {
         return provider == LoginProvider.KAKAO
-                && credentialType == SocialCredentialType.ACCESS_TOKEN
-                && (platform == AuthPlatform.APP || platform == AuthPlatform.WEB);
+                && platform == AuthPlatform.APP
+                && credentialType == SocialCredentialType.ACCESS_TOKEN;
     }
 
     @Override

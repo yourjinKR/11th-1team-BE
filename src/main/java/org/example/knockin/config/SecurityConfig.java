@@ -3,6 +3,7 @@ package org.example.knockin.config;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.auth.JwtFilter;
 import org.example.knockin.auth.MemberStatusAuthorizationFilter;
+import org.example.knockin.auth.OAuth2LoginSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -28,6 +29,7 @@ import java.util.List;
 public class SecurityConfig {
     private final JwtFilter jwtFilter;
     private final MemberStatusAuthorizationFilter memberStatusAuthorizationFilter;
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -40,10 +42,19 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers.frameOptions(FrameOptionsConfig::sameOrigin))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login/**", "/auth/social/**", "/h2-console/**").permitAll()
+                        .requestMatchers(
+                                "/auth/login/**",
+                                "/auth/social/**",
+                                "/oauth2/**",
+                                "/login/oauth2/**",
+                                "/h2-console/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2LoginSuccessHandler)
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(memberStatusAuthorizationFilter, JwtFilter.class)
