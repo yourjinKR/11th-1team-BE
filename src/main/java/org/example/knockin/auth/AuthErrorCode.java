@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 public enum AuthErrorCode implements ErrorCode {
     INVALID_PROVIDER_TOKEN(HttpStatus.UNAUTHORIZED, "소셜 인증 토큰이 유효하지 않습니다."),
+    OAUTH2_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "OAuth2 로그인에 실패했습니다."),
     UNSUPPORTED_PROVIDER(HttpStatus.BAD_REQUEST, "지원하지 않는 소셜 로그인 제공자입니다.");
 
     private final HttpStatus httpStatus;

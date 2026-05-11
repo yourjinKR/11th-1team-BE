@@ -3,6 +3,7 @@ package org.example.knockin.config;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.auth.filter.JwtFilter;
 import org.example.knockin.auth.filter.MemberStatusAuthorizationFilter;
+import org.example.knockin.auth.OAuth2LoginFailureHandler;
 import org.example.knockin.auth.OAuth2LoginSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,6 +31,7 @@ public class SecurityConfig {
     private final JwtFilter jwtFilter;
     private final MemberStatusAuthorizationFilter memberStatusAuthorizationFilter;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -55,6 +57,7 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oAuth2LoginSuccessHandler)
+                        .failureHandler(oAuth2LoginFailureHandler)
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(memberStatusAuthorizationFilter, JwtFilter.class)
