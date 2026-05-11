@@ -1,7 +1,6 @@
-package org.example.knockin.controller;
+package org.example.knockin.controller.auth;
 
 import lombok.RequiredArgsConstructor;
-import org.example.knockin.entity.member.LoginProvider;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.service.impl.AuthServiceImpl;
 import org.springframework.http.HttpStatus;

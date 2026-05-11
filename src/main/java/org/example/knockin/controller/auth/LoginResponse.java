@@ -1,4 +1,4 @@
-package org.example.knockin.controller;
+package org.example.knockin.controller.auth;
 
 import org.example.knockin.entity.MemberEntity;
 import org.example.knockin.entity.member.MemberRole;
