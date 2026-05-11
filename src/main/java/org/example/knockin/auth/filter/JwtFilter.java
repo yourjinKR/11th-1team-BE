@@ -1,4 +1,4 @@
-package org.example.knockin.auth;
+package org.example.knockin.auth.filter;
 
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.auth.AuthMember;
 import org.example.knockin.auth.provider.JwtTokenProvider;
 import org.example.knockin.auth.provider.JwtTokenProvider.TokenClaims;
 import org.example.knockin.entity.MemberEntity;

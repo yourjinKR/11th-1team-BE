@@ -1,10 +1,11 @@
-package org.example.knockin.auth;
+package org.example.knockin.auth.filter;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.example.knockin.auth.AuthMember;
 import org.example.knockin.entity.member.MemberStatus;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;

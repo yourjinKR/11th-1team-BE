@@ -1,8 +1,8 @@
 package org.example.knockin.config;
 
 import lombok.RequiredArgsConstructor;
-import org.example.knockin.auth.JwtFilter;
-import org.example.knockin.auth.MemberStatusAuthorizationFilter;
+import org.example.knockin.auth.filter.JwtFilter;
+import org.example.knockin.auth.filter.MemberStatusAuthorizationFilter;
 import org.example.knockin.auth.OAuth2LoginSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
