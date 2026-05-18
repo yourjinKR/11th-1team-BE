@@ -61,12 +61,13 @@ jobs:
             REPOSITORY=/home/ubuntu/app/11th-1team-BE
             cd $REPOSITORY
             
-            CURRENT_PID=$(pgrep -f "java.*11th-1team-BE.*SNAPSHOT.jar")
+            CURRENT_PID=$(ps -ef | grep java | grep "11th-1team-BE" | grep -v grep | awk '{print $2}')
+            
             if [ -z "$CURRENT_PID" ]; then
               echo "> 현재 구동중인 애플리케이션이 없으므로 종료하지 않습니다."
             else
               echo "> kill -15 $CURRENT_PID"
-              kill -15 $CURRENT_PID
+              kill -15 $CURRENT_PID || true
               sleep 10
             fi
             
@@ -79,4 +80,4 @@ jobs:
             fi
             
             echo "> 새 애플리케이션 배포: ${JAR_PATH}"
-            nohup java -Dspring.profiles.active=prod -jar "${JAR_PATH}" > "${REPOSITORY}/nohup.out" 2>&1 &
+            nohup java -Dspring.profiles.active=prod -jar "${JAR_PATH}" > "${REPOSITORY}/nohup.out" 2>&1 < /dev/null &
