@@ -2,11 +2,13 @@ package org.example.knockin.global.auth.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.global.auth.exception.AuthErrorCode;
+import org.example.knockin.global.auth.exception.AuthException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -88,11 +90,9 @@ public class TokenProvider {
             return Jwts.parser().verifyWith(secretKey).build()
                     .parseSignedClaims(token).getPayload();
         } catch (ExpiredJwtException e) {
-            return e.getClaims();
-        } catch (MalformedJwtException e) {
-            throw new RuntimeException("[Error] : MalformedJwtException");
-        } catch (SecurityException e) {
-            throw new RuntimeException("[Error] : SecurityException");
+            throw new AuthException(AuthErrorCode.TOKEN_EXPIRED);
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new AuthException(AuthErrorCode.TOKEN_INVALID);
         }
     }
 }

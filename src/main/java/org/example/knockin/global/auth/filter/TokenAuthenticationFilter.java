@@ -6,12 +6,15 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.global.auth.exception.AuthErrorCode;
+import org.example.knockin.global.auth.exception.AuthException;
 import org.example.knockin.global.auth.util.TokenConstants;
 import org.example.knockin.global.auth.util.TokenProvider;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -39,8 +42,17 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
     private String resolveToken(HttpServletRequest request) {
         String token = request.getHeader(TokenConstants.AUTHORIZATION_HEADER);
-        if (!ObjectUtils.isEmpty(token) && token.startsWith(TokenConstants.BEARER_PREFIX)) {
-            return token.substring(TokenConstants.BEARER_PREFIX.length());
+        if (!ObjectUtils.isEmpty(token)) {
+            if (!token.startsWith(TokenConstants.BEARER_PREFIX)) {
+                throw new AuthException(AuthErrorCode.TOKEN_INVALID);
+            }
+
+            String accessToken = token.substring(TokenConstants.BEARER_PREFIX.length());
+            if (!StringUtils.hasText(accessToken)) {
+                throw new AuthException(AuthErrorCode.TOKEN_INVALID);
+            }
+
+            return accessToken;
         }
 
         Cookie[] cookies = request.getCookies();
@@ -50,6 +62,9 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
         for (Cookie cookie : cookies) {
             if (TokenConstants.ACCESS_TOKEN_COOKIE_NAME.equals(cookie.getName())) {
+                if (!StringUtils.hasText(cookie.getValue())) {
+                    throw new AuthException(AuthErrorCode.TOKEN_INVALID);
+                }
                 return cookie.getValue();
             }
         }
