@@ -1,4 +1,4 @@
-package org.example.knockin.repository;
+package org.example.knockin.repository.member;
 
 import java.util.Optional;
 import org.example.knockin.entity.auth.LoginProviderType;

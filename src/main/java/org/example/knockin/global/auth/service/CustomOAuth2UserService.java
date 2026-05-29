@@ -6,7 +6,7 @@ import org.example.knockin.entity.member.MemberRole;
 import org.example.knockin.global.auth.util.OAuth2UserInfoProvider;
 import org.example.knockin.global.auth.dto.OAuth2UserInfo;
 import org.example.knockin.global.auth.dto.PrincipalDetails;
-import org.example.knockin.repository.MemberRepository;
+import org.example.knockin.repository.member.MemberRepository;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;

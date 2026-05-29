@@ -1,10 +1,10 @@
-package org.example.knockin.repository.impl;
+package org.example.knockin.repository.member.impl;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.entity.member.Member;
-import org.example.knockin.repository.MemberRepositoryCustom;
+import org.example.knockin.repository.member.MemberRepositoryCustom;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 

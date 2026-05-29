@@ -1,4 +1,4 @@
-package org.example.knockin.repository;
+package org.example.knockin.repository.member;
 
 import java.util.List;
 import org.example.knockin.entity.member.Member;
