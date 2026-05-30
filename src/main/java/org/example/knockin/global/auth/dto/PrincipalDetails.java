@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import lombok.AllArgsConstructor;
-import org.example.knockin.entity.MemberEntity;
+import org.example.knockin.entity.member.Member;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -13,7 +13,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 
 @AllArgsConstructor
 public class PrincipalDetails implements OAuth2User, UserDetails {
-    private MemberEntity memberEntity;
+    private Member member;
     private Map<String, Object> attributes;
     private String attributeKey;
 
@@ -30,7 +30,7 @@ public class PrincipalDetails implements OAuth2User, UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return Collections.singletonList(
-                new SimpleGrantedAuthority(memberEntity.getRole().name()));
+                new SimpleGrantedAuthority(member.getRole().name()));
     }
 
     @Override
@@ -60,6 +60,6 @@ public class PrincipalDetails implements OAuth2User, UserDetails {
 
     @Override
     public String getUsername() {
-        return memberEntity.getProviderId().toString();
+        return member.getProviderId().toString();
     }
 }

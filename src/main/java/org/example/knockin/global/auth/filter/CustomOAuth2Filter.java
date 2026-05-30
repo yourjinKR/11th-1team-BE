@@ -1,14 +1,17 @@
 package org.example.knockin.global.auth.filter;
 
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import java.io.IOException;
+import java.time.Instant;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.example.knockin.global.auth.util.OAuth2SdkProvider;
 import org.example.knockin.global.auth.dto.OAuth2SdkRequest;
 import org.example.knockin.global.auth.handler.OAuth2FailureHandler;
 import org.example.knockin.global.auth.handler.OAuth2SuccessHandler;
+import org.example.knockin.global.auth.util.OAuth2SdkProvider;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,16 +20,13 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
-import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationExchange;
+import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
 
-import java.io.IOException;
-import java.time.Instant;
-import java.util.Map;
 
 @RequiredArgsConstructor
 public class CustomOAuth2Filter extends OncePerRequestFilter {

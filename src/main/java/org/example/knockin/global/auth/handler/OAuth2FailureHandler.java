@@ -1,15 +1,16 @@
 package org.example.knockin.global.auth.handler;
 
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
-import org.example.knockin.global.KnockInProps;
 import org.example.knockin.global.auth.exception.AuthErrorCode;
+import org.example.knockin.global.KnockInProps;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
+
 
 @Component
 @RequiredArgsConstructor

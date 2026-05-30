@@ -2,32 +2,33 @@ package org.example.knockin.config;
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.example.knockin.global.KnockInProps;
-import org.example.knockin.global.auth.service.CustomOAuth2UserService;
 import org.example.knockin.global.auth.filter.CustomOAuth2Filter;
 import org.example.knockin.global.auth.filter.TokenAuthenticationFilter;
 import org.example.knockin.global.auth.filter.TokenExceptionFilter;
 import org.example.knockin.global.auth.handler.CustomAccessDeniedHandler;
 import org.example.knockin.global.auth.handler.CustomAuthenticationEntryPoint;
-import org.example.knockin.global.auth.util.TokenProvider;
 import org.example.knockin.global.auth.handler.OAuth2FailureHandler;
 import org.example.knockin.global.auth.handler.OAuth2SuccessHandler;
 import org.example.knockin.global.auth.handler.SecurityErrorResponseWriter;
+import org.example.knockin.global.auth.service.CustomOAuth2UserService;
+import org.example.knockin.global.auth.util.TokenProvider;
+import org.example.knockin.global.KnockInProps;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 
 @Configuration
 @EnableWebSecurity

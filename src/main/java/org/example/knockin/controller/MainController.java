@@ -1,8 +1,9 @@
 package org.example.knockin.controller;
 
+import java.io.IOException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.example.knockin.entity.MemberEntity;
+import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.service.FileUploadService;
 import org.example.knockin.service.impl.MemberServiceImpl;
@@ -12,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 
 @RestController
 @RequiredArgsConstructor
@@ -23,13 +23,13 @@ public class MainController {
 
     @PostMapping("/save")
     public CommonResponse<?> save(@RequestBody String name) {
-        MemberEntity member = memberServiceImpl.save(name);
+        Member member = memberServiceImpl.save(name);
         return CommonResponse.status(HttpStatus.CREATED).body(member);
     }
 
     @GetMapping("/list")
     public CommonResponse<?> list() {
-        List<MemberEntity> members = memberServiceImpl.list();
+        List<Member> members = memberServiceImpl.list();
         return CommonResponse.status(HttpStatus.OK).body(members);
     }
 

@@ -1,0 +1,44 @@
+package org.example.knockin.entity.chat;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.example.knockin.entity.board.RoommateBoard;
+import org.example.knockin.entity.member.Member;
+import org.example.knockin.global.jpa.CreatedAtEntity;
+
+
+@Getter
+@Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "chatting_required")
+public class ChattingRequired extends CreatedAtEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "requester", nullable = false)
+    private Member requester;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "requestee", nullable = false)
+    private Member requestee;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "roommate_board_id")
+    private RoommateBoard roommateBoard;
+
+    @Column(name = "is_agree", nullable = false)
+    private Boolean isAgree;
+}

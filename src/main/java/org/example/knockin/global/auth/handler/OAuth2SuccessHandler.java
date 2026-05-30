@@ -6,9 +6,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.example.knockin.global.KnockInProps;
 import org.example.knockin.global.auth.util.TokenConstants;
 import org.example.knockin.global.auth.util.TokenProvider;
+import org.example.knockin.global.KnockInProps;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -16,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
+
 
 @NullMarked
 @Component
