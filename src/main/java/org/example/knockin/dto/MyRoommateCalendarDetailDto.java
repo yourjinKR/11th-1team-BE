@@ -10,7 +10,7 @@ public class MyRoommateCalendarDetailDto {
 
     @Data
     public static class Response {
-        private String id;
+        private Long id;
         private String title;
         private String contents;
     }

@@ -10,7 +10,7 @@ public class BoRoomTypeDetailDto {
 
     @Data
     public static class Response {
-        private String id;
+        private Long id;
         private String name;
     }
 }

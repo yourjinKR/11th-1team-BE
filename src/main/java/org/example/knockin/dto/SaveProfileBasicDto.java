@@ -1,6 +1,7 @@
 package org.example.knockin.dto;
 
 import lombok.Data;
+import org.example.knockin.entity.member.Gender;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -14,7 +15,7 @@ public class SaveProfileBasicDto {
         private LocalDate birth;
         private Gender gender;
         private String email;
-        private List<Integer> terms;
+        private List<Long> terms;
     }
 
     @Data

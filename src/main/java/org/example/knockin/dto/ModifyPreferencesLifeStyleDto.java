@@ -9,7 +9,7 @@ import java.util.List;
 public class ModifyPreferencesLifeStyleDto {
     @Data
     public static class Request {
-        private List<Integer> lifestyles;
+        private List<Long> lifestyles;
     }
 
     @Data

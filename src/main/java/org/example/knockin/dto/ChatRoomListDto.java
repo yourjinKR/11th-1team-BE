@@ -1,6 +1,7 @@
 package org.example.knockin.dto;
 
 import lombok.Data;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -16,9 +17,9 @@ public class ChatRoomListDto {
         @Data
         public static class ChatRoom {
             private String name;
-            private String creatAt;
-            private String chatRoomId;
-            private String isAgree;
+            private LocalDateTime creatAt;
+            private Long chatRoomId;
+            private Boolean isAgree;
         }
     }
 }

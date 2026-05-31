@@ -9,8 +9,8 @@ import java.util.List;
 public class SavePreferencesAllDto {
     @Data
     public static class Request {
-        private List<Integer> lifestyles;
-        private List<Integer> conditions;
+        private List<Long> lifestyles;
+        private List<Long> conditions;
     }
 
     @Data

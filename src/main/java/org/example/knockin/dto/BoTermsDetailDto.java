@@ -1,6 +1,7 @@
 package org.example.knockin.dto;
 
 import lombok.Data;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -15,10 +16,10 @@ public class BoTermsDetailDto {
 
         @Data
         public static class TermsItem {
-            private String id;
+            private Long id;
             private String title;
             private String contents;
-            private String createAt;
+            private LocalDateTime createAt;
         }
     }
 }

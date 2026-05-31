@@ -8,11 +8,11 @@ import java.time.LocalDateTime;
 public class CalendarDto {
     @Data
     public static class Request {
-        private String roommateId;
+        private Long roommateId;
         private String title;
         private String contents;
-        private String startDt;
-        private String endDt;
+        private LocalDateTime startDt;
+        private LocalDateTime endDt;
     }
 
     @Data

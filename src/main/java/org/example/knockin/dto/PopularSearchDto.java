@@ -15,7 +15,7 @@ public class PopularSearchDto {
 
         @Data
         public static class RankItem {
-            private String id;
+            private Long id;
             private String keyword;
         }
     }

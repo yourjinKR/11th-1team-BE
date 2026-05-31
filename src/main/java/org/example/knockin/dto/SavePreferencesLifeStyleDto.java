@@ -10,7 +10,7 @@ import java.util.List;
 public class SavePreferencesLifeStyleDto {
     @Data
     public static class Request {
-        private List<Integer> lifestyles;
+        private List<Long> lifestyles;
     }
 
     @Data

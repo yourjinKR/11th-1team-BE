@@ -1,6 +1,7 @@
 package org.example.knockin.dto;
 
 import lombok.Data;
+import org.example.knockin.entity.life.LifePatternType;
 import java.util.List;
 
 @Data
@@ -11,14 +12,14 @@ public class MyRoommateDto {
 
     @Data
     public static class Response {
-        private String userId;
+        private Long userId;
         private String userName;
         private Compatibility compatibility;
         private List<Lifestyle> preferences;
 
         @Data
         public static class Compatibility {
-            private String score;
+            private Integer score;
             private List<LifeStyleInfo> lifeStyleInfo;
         }
 
@@ -30,11 +31,11 @@ public class MyRoommateDto {
 
         @Data
         public static class Lifestyle {
-            private String lifestyleId;
+            private Long lifestyleId;
             private String name;
             private String value;
             private String description;
-            private String type;
+            private LifePatternType type;
         }
     }
 }

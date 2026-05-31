@@ -15,7 +15,7 @@ public class CalendarTypesDto {
 
         @Data
         public static class Type {
-            private String id;
+            private Long id;
             private String name;
         }
     }

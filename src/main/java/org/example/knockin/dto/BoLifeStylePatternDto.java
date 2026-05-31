@@ -1,6 +1,7 @@
 package org.example.knockin.dto;
 
 import lombok.Data;
+import org.example.knockin.entity.life.LifePatternType;
 
 import java.time.LocalDateTime;
 
@@ -9,7 +10,7 @@ public class BoLifeStylePatternDto {
     @Data
     public static class Request {
         private String name;
-        private String type;
+        private LifePatternType type;
         private String value;
         private String description;
     }

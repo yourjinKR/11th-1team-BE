@@ -1,6 +1,7 @@
 package org.example.knockin.dto;
 
 import lombok.Data;
+import java.time.LocalDateTime;
 
 @Data
 public class ChatMessageDto {
@@ -15,6 +16,6 @@ public class ChatMessageDto {
         private String message;
         private String type;
         private String sender;
-        private String createdAt;
+        private LocalDateTime createdAt;
     }
 }

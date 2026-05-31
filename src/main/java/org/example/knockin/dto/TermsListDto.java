@@ -15,7 +15,7 @@ public class TermsListDto {
 
         @Data
         public static class TermsItem {
-            private String id;
+            private Long id;
             private String title;
         }
     }

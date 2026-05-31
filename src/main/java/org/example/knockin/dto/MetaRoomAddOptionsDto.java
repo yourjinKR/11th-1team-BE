@@ -15,7 +15,7 @@ public class MetaRoomAddOptionsDto {
 
         @Data
         public static class RoomAddOptionItem {
-            private String id;
+            private Long id;
             private String name;
         }
     }

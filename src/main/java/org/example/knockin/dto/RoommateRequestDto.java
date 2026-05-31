@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 public class RoommateRequestDto {
     @Data
     public static class Request {
-        private String chatRoomId;
+        private Long chatRoomId;
     }
 
     @Data

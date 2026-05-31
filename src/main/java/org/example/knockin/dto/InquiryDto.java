@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 public class InquiryDto {
     @Data
     public static class Request {
-        private String categoryId;
+        private Long categoryId;
         private String title;
         private String contents;
     }

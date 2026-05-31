@@ -1,6 +1,7 @@
 package org.example.knockin.dto;
 
 import lombok.Data;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -15,9 +16,9 @@ public class BoVerificationCompanyListDto {
 
         @Data
         public static class EmployeeAuthItem {
-            private String isAccepted;
+            private Boolean isAccepted;
             private String email;
-            private String createAt;
+            private LocalDateTime createAt;
         }
     }
 }

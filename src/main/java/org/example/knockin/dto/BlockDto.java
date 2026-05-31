@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 public class BlockDto {
     @Data
     public static class Request {
-        private String userId;
+        private Long userId;
     }
 
     @Data

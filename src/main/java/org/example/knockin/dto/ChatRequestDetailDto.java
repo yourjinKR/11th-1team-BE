@@ -1,6 +1,8 @@
 package org.example.knockin.dto;
 
 import lombok.Data;
+import org.example.knockin.entity.life.LifePatternType;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -18,26 +20,26 @@ public class ChatRequestDetailDto {
         public static class RequesterInfo {
             private String name;
             private List<Lifestyle> lifeStyles;
-            private String score;
-            private String createAt;
+            private Integer score;
+            private LocalDateTime createAt;
         }
 
         @Data
         public static class RequesteeInfo {
             private String name;
             private List<Lifestyle> lifeStyles;
-            private String score;
-            private String createAt;
-            private String isAgree;
+            private Integer score;
+            private LocalDateTime createAt;
+            private Boolean isAgree;
         }
 
         @Data
         public static class Lifestyle {
-            private String lifestyleId;
+            private Long lifestyleId;
             private String name;
             private String value;
             private String description;
-            private String type;
+            private LifePatternType type;
         }
     }
 }

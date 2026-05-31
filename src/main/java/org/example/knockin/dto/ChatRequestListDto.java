@@ -1,6 +1,7 @@
 package org.example.knockin.dto;
 
 import lombok.Data;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -17,9 +18,9 @@ public class ChatRequestListDto {
         public static class ChatRequired {
             private String name;
             private String type;
-            private String score;
-            private String creatAt;
-            private String chatReqId;
+            private Integer score;
+            private LocalDateTime creatAt;
+            private Long chatReqId;
         }
     }
 }

@@ -1,6 +1,7 @@
 package org.example.knockin.dto;
 
 import lombok.Data;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -17,8 +18,8 @@ public class AlarmListDto {
         public static class Alarm {
             private String title;
             private String contents;
-            private String isRead;
-            private String createAt;
+            private Boolean isRead;
+            private LocalDateTime createAt;
         }
     }
 }

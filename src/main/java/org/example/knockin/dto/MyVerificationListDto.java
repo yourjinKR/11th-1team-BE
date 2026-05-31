@@ -1,6 +1,7 @@
 package org.example.knockin.dto;
 
 import lombok.Data;
+import java.time.LocalDateTime;
 
 @Data
 public class MyVerificationListDto {
@@ -15,9 +16,9 @@ public class MyVerificationListDto {
 
         @Data
         public static class AuthInfo {
-            private String isAccepted;
+            private Boolean isAccepted;
             private String email;
-            private String createAt;
+            private LocalDateTime createAt;
         }
     }
 }

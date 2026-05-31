@@ -9,7 +9,7 @@ import java.util.List;
 public class ModifyPreferencesConditionsDto {
     @Data
     public static class Request {
-        private List<Integer> conditions;
+        private List<Long> conditions;
     }
 
     @Data

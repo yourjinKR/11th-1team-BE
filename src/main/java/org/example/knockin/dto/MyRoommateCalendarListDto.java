@@ -1,6 +1,7 @@
 package org.example.knockin.dto;
 
 import lombok.Data;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -15,11 +16,11 @@ public class MyRoommateCalendarListDto {
 
         @Data
         public static class Calendar {
-            private String calendarId;
+            private Long calendarId;
             private String writer;
-            private String startDt;
-            private String endDt;
-            private String createAt;
+            private LocalDateTime startDt;
+            private LocalDateTime endDt;
+            private LocalDateTime createAt;
             private String type;
             private String title;
         }

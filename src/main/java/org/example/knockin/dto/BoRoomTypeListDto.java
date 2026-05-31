@@ -15,7 +15,7 @@ public class BoRoomTypeListDto {
 
         @Data
         public static class RoomTypeItem {
-            private String id;
+            private Long id;
             private String name;
         }
     }

@@ -15,9 +15,9 @@ public class MetaRegionsDto {
 
         @Data
         public static class RegionItem {
-            private String id;
+            private Long id;
             private String name;
-            private String parentId;
+            private Long parentId;
         }
     }
 }

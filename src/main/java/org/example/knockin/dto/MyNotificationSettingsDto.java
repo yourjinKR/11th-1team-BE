@@ -15,9 +15,9 @@ public class MyNotificationSettingsDto {
 
         @Data
         public static class AlarmSettingItem {
-            private String id;
+            private Long id;
             private String name;
-            private String isEnable;
+            private Boolean isEnable;
         }
     }
 }

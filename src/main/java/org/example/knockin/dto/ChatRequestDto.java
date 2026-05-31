@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 public class ChatRequestDto {
     @Data
     public static class Request {
-        private String requestee;
+        private Long requestee;
         private Long boardId;
     }
 

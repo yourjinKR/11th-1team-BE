@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 public class AlarmSettingDto {
     @Data
     public static class Request {
-        private String settingId;
+        private Long settingId;
         private Boolean enabled;
     }
 

@@ -15,9 +15,9 @@ public class BoardDto {
         private Integer deposit;
         private Integer mountlyRent;
         private Integer managementCost;
-        private String roomType;
-        private String region;
-        private LocalDate comeableAt;
+        private Long roomType;
+        private Long region;
+        private LocalDateTime comeableAt;
         private List<ImageDto> images;
 
         @Data

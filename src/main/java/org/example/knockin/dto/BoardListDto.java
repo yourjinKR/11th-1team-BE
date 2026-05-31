@@ -15,7 +15,7 @@ public class BoardListDto {
 
         @Data
         public static class BoardItem {
-            private String boardId;
+            private Long boardId;
             private String image;
         }
     }

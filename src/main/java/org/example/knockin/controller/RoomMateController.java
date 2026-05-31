@@ -1,12 +1,7 @@
 package org.example.knockin.controller;
 
-import org.example.knockin.dto.BoardDetailDto;
-import org.example.knockin.dto.BoardDto;
-import org.example.knockin.dto.BoardListDto;
-import org.example.knockin.dto.MatchDetailDto;
-import org.example.knockin.dto.MatchListDto;
-import org.example.knockin.dto.MatchScoreDto;
-import org.example.knockin.dto.ReportDto;
+import org.example.knockin.dto.*;
+import org.example.knockin.entity.member.Gender;
 import org.example.knockin.global.api.CommonResponse;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -22,7 +17,7 @@ public class RoomMateController {
     @GetMapping("/boards")
     public CommonResponse<BoardListDto.Response> findBoardList(
             @RequestParam(required = false) Long region,
-            @RequestParam(required = false) Integer gender,
+            @RequestParam(required = false) Gender gender,
             @RequestParam(required = false) Integer minDeposit,
             @RequestParam(required = false) Integer maxDeposit,
             @RequestParam(required = false) Integer minMounthRent,
