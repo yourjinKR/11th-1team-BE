@@ -9,5 +9,4 @@ import org.springframework.data.jpa.repository.JpaRepository;
 @NullMarked
 public interface MemberRepository extends JpaRepository<Member, Long>, MemberRepositoryCustom {
     Optional<Member> findById(Long memberId);
-    Optional<Member> findByProviderTypeAndProviderId(LoginProviderType providerType, String providerId);
 }
