@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.example.knockin.entity.member.Member;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -13,6 +14,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 
 @AllArgsConstructor
 public class PrincipalDetails implements OAuth2User, UserDetails {
+    @Getter
     private Member member;
     private Map<String, Object> attributes;
     private String attributeKey;
