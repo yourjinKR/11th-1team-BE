@@ -8,15 +8,18 @@ import java.util.List;
 @Data
 public class BoInquiryListDto {
     @Data
+    @Schema(name = "BoInquiryListRequest")
     public static class Request {
     }
 
     @Data
+    @Schema(name = "BoInquiryListResponse")
     public static class Response {
         @Schema(description = "문의 목록")
         private List<InquiryItem> inquiries;
 
         @Data
+        @Schema(name = "BoInquiryListInquiryItem")
         public static class InquiryItem {
             @Schema(description = "고유 식별 ID")
             private Long id;

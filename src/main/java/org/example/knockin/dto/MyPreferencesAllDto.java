@@ -8,10 +8,12 @@ import java.util.List;
 @Data
 public class MyPreferencesAllDto {
     @Data
+    @Schema(name = "MyPreferencesAllRequest")
     public static class Request {
     }
 
     @Data
+    @Schema(name = "MyPreferencesAllResponse")
     public static class Response {
         @Schema(description = "라이프스타일 목록")
         private List<Lifestyle> lifestyles;
@@ -19,6 +21,7 @@ public class MyPreferencesAllDto {
         private List<Condition> conditions;
 
         @Data
+        @Schema(name = "MyPreferencesAllLifestyle")
         public static class Lifestyle {
             @Schema(description = "고유 식별 ID")
             private Long lifestyleId;
@@ -33,6 +36,7 @@ public class MyPreferencesAllDto {
         }
 
         @Data
+        @Schema(name = "MyPreferencesAllCondition")
         public static class Condition {
             @Schema(description = "고유 식별 ID")
             private Long conditionsId;

@@ -1,5 +1,6 @@
 package org.example.knockin.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import org.example.knockin.entity.room.RoomProfileType;
 
@@ -10,6 +11,7 @@ import java.util.List;
 @Data
 public class SaveProfileRoomInfoDto {
     @Data
+    @Schema(name = "SaveProfileRoomInfoRequest")
     public static class Request {
         private RoomProfileType type;
         private Integer minDeposit;
@@ -24,6 +26,7 @@ public class SaveProfileRoomInfoDto {
     }
 
     @Data
+    @Schema(name = "SaveProfileRoomInfoResponse")
     public static class Response {
         private LocalDateTime updatedAt;
     }

@@ -10,10 +10,12 @@ import java.util.List;
 @Data
 public class MatchDetailDto {
     @Data
+    @Schema(name = "MatchDetailRequest")
     public static class Request {
     }
 
     @Data
+    @Schema(name = "MatchDetailResponse")
     public static class Response {
         @Schema(description = "최소 보증금")
         private Integer minDeposit;
@@ -51,6 +53,7 @@ public class MatchDetailDto {
         private Compatibility compatibility;
 
         @Data
+        @Schema(name = "MatchDetailLifestyle")
         public static class Lifestyle {
             @Schema(description = "고유 식별 ID")
             private Long lifestyleId;
@@ -65,6 +68,7 @@ public class MatchDetailDto {
         }
 
         @Data
+        @Schema(name = "MatchDetailPreference")
         public static class Preference {
             @Schema(description = "고유 식별 ID")
             private Long preferencesId;
@@ -79,6 +83,7 @@ public class MatchDetailDto {
         }
 
         @Data
+        @Schema(name = "MatchDetailCondition")
         public static class Condition {
             @Schema(description = "고유 식별 ID")
             private Long conditionsId;
@@ -87,6 +92,7 @@ public class MatchDetailDto {
         }
 
         @Data
+        @Schema(name = "MatchDetailCompatibility")
         public static class Compatibility {
             @Schema(description = "점수")
             private Integer score;
@@ -94,6 +100,7 @@ public class MatchDetailDto {
             private List<LifeStyleInfo> lifeStyleInfo;
 
             @Data
+            @Schema(name = "MatchDetailCompatibilityLifeStyleInfo")
             public static class LifeStyleInfo {
                 @Schema(description = "제목")
                 private String title;

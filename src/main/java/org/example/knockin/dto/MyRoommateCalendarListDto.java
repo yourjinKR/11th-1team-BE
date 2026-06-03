@@ -8,15 +8,18 @@ import java.util.List;
 @Data
 public class MyRoommateCalendarListDto {
     @Data
+    @Schema(name = "MyRoommateCalendarListRequest")
     public static class Request {
     }
 
     @Data
+    @Schema(name = "MyRoommateCalendarListResponse")
     public static class Response {
         @Schema(description = "캘린더 목록")
         private List<Calendar> calendars;
 
         @Data
+        @Schema(name = "MyRoommateCalendarListCalendar")
         public static class Calendar {
             @Schema(description = "고유 식별 ID")
             private Long calendarId;

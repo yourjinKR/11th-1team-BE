@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 @Data
 public class ChatMessageDto {
     @Data
+    @Schema(name = "ChatMessageRequest")
     public static class Request {
         @Schema(description = "메시지")
         private String message;
@@ -15,6 +16,7 @@ public class ChatMessageDto {
     }
 
     @Data
+    @Schema(name = "ChatMessageResponse")
     public static class Response {
         @Schema(description = "메시지")
         private String message;

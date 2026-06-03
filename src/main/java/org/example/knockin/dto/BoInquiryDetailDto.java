@@ -8,15 +8,18 @@ import java.util.List;
 @Data
 public class BoInquiryDetailDto {
     @Data
+    @Schema(name = "BoInquiryDetailRequest")
     public static class Request {
     }
 
     @Data
+    @Schema(name = "BoInquiryDetailResponse")
     public static class Response {
         @Schema(description = "문의 상세 정보")
         private InquiryDetail inquirie;
 
         @Data
+        @Schema(name = "BoInquiryDetailInquiryDetail")
         public static class InquiryDetail {
             @Schema(description = "고유 식별 ID")
             private Long id;
@@ -36,6 +39,7 @@ public class BoInquiryDetailDto {
             private List<Reply> reply;
 
             @Data
+            @Schema(name = "BoInquiryDetailInquiryDetailReply")
             public static class Reply {
                 @Schema(description = "고유 식별 ID")
                 private Long id;

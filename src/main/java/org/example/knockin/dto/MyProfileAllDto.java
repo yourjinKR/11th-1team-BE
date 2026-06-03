@@ -10,10 +10,12 @@ import java.util.List;
 @Data
 public class MyProfileAllDto {
     @Data
+    @Schema(name = "MyProfileAllRequest")
     public static class Request {
     }
 
     @Data
+    @Schema(name = "MyProfileAllResponse")
     public static class Response {
         @Schema(description = "라이프스타일 목록")
         private List<Lifestyle> lifestyles;
@@ -39,6 +41,7 @@ public class MyProfileAllDto {
         private Integer mounthRent;
 
         @Data
+        @Schema(name = "MyProfileAllLifestyle")
         public static class Lifestyle {
             @Schema(description = "고유 식별 ID")
             private Long lifestyleId;
@@ -53,6 +56,7 @@ public class MyProfileAllDto {
         }
 
         @Data
+        @Schema(name = "MyProfileAllRegion")
         public static class Region {
             @Schema(description = "고유 식별 ID")
             private Long regionId;
@@ -61,6 +65,7 @@ public class MyProfileAllDto {
         }
 
         @Data
+        @Schema(name = "MyProfileAllRoomProfile")
         public static class RoomProfile {
             @Schema(description = "고유 식별 ID")
             private Long roomProfileId;

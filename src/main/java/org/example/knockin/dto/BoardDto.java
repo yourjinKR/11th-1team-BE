@@ -1,15 +1,17 @@
 package org.example.knockin.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.NoArgsConstructor;
 
 @Data
 public class BoardDto {
     @Data
+    @Schema(name = "BoardSaveOrModifyRequest")
     public static class Request {
         @Schema(description = "제목")
         private String title;
@@ -31,15 +33,19 @@ public class BoardDto {
         private List<ImageDto> images;
 
         @Data
+        @Schema(name = "BoardImageRequest")
         public static class ImageDto {
             @Schema(description = "이미지 URL")
             private String image;
             @Schema(description = "썸네일 여부")
-            private Boolean thumnail;
+            private Boolean thumbnail;
         }
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(name = "BoardMutationResponse")
     public static class Response {
         @Schema(description = "날짜 및 시간")
         private LocalDateTime updatedAt;

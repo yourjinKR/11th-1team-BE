@@ -10,15 +10,18 @@ import java.util.List;
 @Data
 public class MatchListDto {
     @Data
+    @Schema(name = "MatchListRequest")
     public static class Request {
     }
 
     @Data
+    @Schema(name = "MatchListResponse")
     public static class Response {
         @Schema(description = "매칭 목록")
         private List<Match> matches;
 
         @Data
+        @Schema(name = "MatchListMatch")
         public static class Match {
             @Schema(description = "고유 식별 ID")
             private Long userId;
@@ -55,6 +58,7 @@ public class MatchListDto {
         }
 
         @Data
+        @Schema(name = "MatchListLifestyle")
         public static class Lifestyle {
             @Schema(description = "고유 식별 ID")
             private Long lifestyleId;
@@ -69,6 +73,7 @@ public class MatchListDto {
         }
 
         @Data
+        @Schema(name = "MatchListCondition")
         public static class Condition {
             @Schema(description = "고유 식별 ID")
             private Long conditionsId;

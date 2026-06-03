@@ -8,10 +8,12 @@ import java.util.List;
 @Data
 public class MyRoommateDto {
     @Data
+    @Schema(name = "MyRoommateRequest")
     public static class Request {
     }
 
     @Data
+    @Schema(name = "MyRoommateResponse")
     public static class Response {
         @Schema(description = "고유 식별 ID")
         private Long userId;
@@ -23,6 +25,7 @@ public class MyRoommateDto {
         private List<Lifestyle> preferences;
 
         @Data
+        @Schema(name = "MyRoommateCompatibility")
         public static class Compatibility {
             @Schema(description = "점수")
             private Integer score;
@@ -31,6 +34,7 @@ public class MyRoommateDto {
         }
 
         @Data
+        @Schema(name = "MyRoommateLifeStyleInfo")
         public static class LifeStyleInfo {
             @Schema(description = "제목")
             private String title;
@@ -39,6 +43,7 @@ public class MyRoommateDto {
         }
 
         @Data
+        @Schema(name = "MyRoommateLifestyle")
         public static class Lifestyle {
             @Schema(description = "고유 식별 ID")
             private Long lifestyleId;

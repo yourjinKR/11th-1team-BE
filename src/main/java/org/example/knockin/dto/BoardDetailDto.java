@@ -9,10 +9,12 @@ import java.util.List;
 @Data
 public class BoardDetailDto {
     @Data
+    @Schema(name = "BoardDetailRequest")
     public static class Request {
     }
 
     @Data
+    @Schema(name = "BoardDetailResponse")
     public static class Response {
         @Schema(description = "고유 식별 ID")
         private Long boardId;
@@ -52,6 +54,7 @@ public class BoardDetailDto {
         private Compatibility compatibility;
 
         @Data
+        @Schema(name = "BoardDetailLifestyle")
         public static class Lifestyle {
             @Schema(description = "고유 식별 ID")
             private Long lifestyleId;
@@ -66,6 +69,7 @@ public class BoardDetailDto {
         }
 
         @Data
+        @Schema(name = "BoardDetailPreference")
         public static class Preference {
             @Schema(description = "고유 식별 ID")
             private Long preferencesId;
@@ -80,6 +84,7 @@ public class BoardDetailDto {
         }
 
         @Data
+        @Schema(name = "BoardDetailCondition")
         public static class Condition {
             @Schema(description = "고유 식별 ID")
             private Long conditionsId;
@@ -88,6 +93,7 @@ public class BoardDetailDto {
         }
 
         @Data
+        @Schema(name = "BoardDetailCompatibility")
         public static class Compatibility {
             @Schema(description = "점수")
             private Integer score;
@@ -95,6 +101,7 @@ public class BoardDetailDto {
             private List<LifeStyleInfo> lifeStyleInfo;
 
             @Data
+            @Schema(name = "BoardDetailCompatibilityLifeStyleInfo")
             public static class LifeStyleInfo {
                 @Schema(description = "제목")
                 private String title;

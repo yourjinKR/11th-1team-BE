@@ -1,5 +1,6 @@
 package org.example.knockin.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import org.example.knockin.entity.member.Gender;
 import org.example.knockin.entity.room.RoomProfileType;
@@ -11,6 +12,7 @@ import java.util.List;
 @Data
 public class ModifyProfileAllDto {
     @Data
+    @Schema(name = "ModifyProfileAllRequest")
     public static class Request {
         private String name;
         private LocalDate birth;
@@ -31,6 +33,7 @@ public class ModifyProfileAllDto {
     }
 
     @Data
+    @Schema(name = "ModifyProfileAllResponse")
     public static class Response {
         private LocalDateTime updatedAt;
     }

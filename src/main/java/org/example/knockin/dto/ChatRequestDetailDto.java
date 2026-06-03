@@ -9,10 +9,12 @@ import java.util.List;
 @Data
 public class ChatRequestDetailDto {
     @Data
+    @Schema(name = "ChatRequestDetailRequest")
     public static class Request {
     }
 
     @Data
+    @Schema(name = "ChatRequestDetailResponse")
     public static class Response {
         @Schema(description = "요청자 정보")
         private RequesterInfo requester;
@@ -20,6 +22,7 @@ public class ChatRequestDetailDto {
         private RequesteeInfo requestee;
 
         @Data
+        @Schema(name = "ChatRequestDetailRequesterInfo")
         public static class RequesterInfo {
             @Schema(description = "이름")
             private String name;
@@ -32,6 +35,7 @@ public class ChatRequestDetailDto {
         }
 
         @Data
+        @Schema(name = "ChatRequestDetailRequesteeInfo")
         public static class RequesteeInfo {
             @Schema(description = "이름")
             private String name;
@@ -46,6 +50,7 @@ public class ChatRequestDetailDto {
         }
 
         @Data
+        @Schema(name = "ChatRequestDetailLifestyle")
         public static class Lifestyle {
             @Schema(description = "고유 식별 ID")
             private Long lifestyleId;
