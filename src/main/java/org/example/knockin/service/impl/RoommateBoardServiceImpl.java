@@ -45,6 +45,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
         RoommateBoard roommateBoard = RoommateBoard.builder()
                 .member(member)
                 .title(request.getTitle())
+                .contents(request.getContents())
                 .deposit(request.getDeposit())
                 .monthlyRent(request.getMountlyRent())
                 .managementCost(request.getManagementCost())
