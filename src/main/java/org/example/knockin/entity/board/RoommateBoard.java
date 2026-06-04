@@ -66,9 +66,11 @@ public class RoommateBoard extends BaseEntity {
 
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted;
+    @Builder.Default
+    private Boolean isDeleted = false;
 
     @ColumnDefault("0")
     @Column(name = "hits", nullable = false)
-    private Long hits;
+    @Builder.Default
+    private Long hits = 0L;
 }
