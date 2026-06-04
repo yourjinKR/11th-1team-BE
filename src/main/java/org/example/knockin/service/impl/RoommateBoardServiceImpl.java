@@ -80,6 +80,18 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
 
         List<File> files = fileRepository.findBySavedFileNameIn(savedFileNames);
 
+        List<String> foundSavedFileNames = files.stream()
+                .map(File::getSavedFileName)
+                .toList();
+
+        List<String> missingFileNames = savedFileNames.stream()
+                .filter(savedFileName -> !foundSavedFileNames.contains(savedFileName))
+                .toList();
+
+        if (!missingFileNames.isEmpty()) {
+            throw new IllegalArgumentException();
+        }
+
         return files.stream()
                 .map(file -> toBoardFile(roommateBoard, file, file.getSavedFileName().equals(thumbnailSavedFileName)))
                 .toList();
