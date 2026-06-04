@@ -173,6 +173,32 @@ class RoommateBoardServiceImplTest {
         verifyNoInteractions(fileRepository, roommateBoardFileRepository);
     }
 
+    @Test
+    @DisplayName("요청 이미지 URL이 DB에 존재하지 않으면 누락 파일명이 포함된 예외가 발생한다")
+    void saveThrowsWhenRequestedImageUrlDoesNotExist() {
+        BoardDto.Request request = createRequest(
+                createImage("thumbnail.jpg", true),
+                createImage("missing.jpg", false));
+        Long memberId = 42L;
+        Member memberRef = org.mockito.Mockito.mock(Member.class);
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+        RoommateBoard savedRoommateBoard = org.mockito.Mockito.mock(RoommateBoard.class);
+        File thumbnailFile = mockFile("thumbnail.jpg");
+        when(memberRepository.getReferenceById(memberId)).thenReturn(memberRef);
+        when(roomTypeRepository.findById(1L)).thenReturn(Optional.of(roomType));
+        when(regionRepository.findById(2L)).thenReturn(Optional.of(region));
+        when(roommateBoardRepository.save(any(RoommateBoard.class))).thenReturn(savedRoommateBoard);
+        when(fileRepository.findBySavedFileNameIn(List.of("thumbnail.jpg", "missing.jpg")))
+                .thenReturn(List.of(thumbnailFile));
+
+        assertThatThrownBy(() -> roommateBoardService.save(request, memberId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("missing.jpg");
+
+        verifyNoInteractions(roommateBoardFileRepository);
+    }
+
     private BoardDto.Request createRequest(ImageDto... images) {
         BoardDto.Request request = new BoardDto.Request();
         request.setTitle("Looking for a roommate");
