@@ -66,7 +66,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
 
     private List<RoommateBoardFile> createRoommateBoardFilesWithThumbnail(RoommateBoard roommateBoard, List<ImageDto> images) {
         ImageDto thumbnailImageDto = images.stream()
-                .filter(imageDto -> imageDto.getThumbnail() == true)
+                .filter(imageDto -> Boolean.TRUE.equals(imageDto.getThumbnail()))
                 .findFirst()
                 .orElseThrow(IllegalArgumentException::new);
         String thumbnailSavedFileName = thumbnailImageDto.getImage();
