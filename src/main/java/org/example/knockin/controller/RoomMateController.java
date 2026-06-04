@@ -2,10 +2,14 @@ package org.example.knockin.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.*;
+import org.example.knockin.dto.BoardDto.Response;
 import org.example.knockin.entity.member.Gender;
+import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.global.auth.dto.PrincipalDetails;
+import org.example.knockin.service.RoommateBoardService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -16,9 +20,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/roommate")
 @Tag(name = "4. 룸메이트 게시물/매칭")
 public class RoomMateController {
+
+    public final RoommateBoardService roommateBoardService;
+
     @GetMapping("/boards")
     @Operation(summary = "게시글 목록 조회")
     public CommonResponse<BoardListDto.Response> findBoardList(
@@ -50,7 +58,9 @@ public class RoomMateController {
     public CommonResponse<BoardDto.Response> saveBoard(
             @RequestBody BoardDto.Request request,
             @AuthenticationPrincipal PrincipalDetails details) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoardDto.Response());
+        Member member = details.getMember();
+        Response response = roommateBoardService.save(request, member);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @PutMapping("/boards/{boardId}")
