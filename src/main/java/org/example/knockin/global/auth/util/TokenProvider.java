@@ -7,14 +7,16 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.entity.member.Member;
+import org.example.knockin.global.auth.dto.PrincipalDetails;
 import org.example.knockin.global.auth.exception.AuthErrorCode;
 import org.example.knockin.global.auth.exception.AuthException;
+import org.example.knockin.repository.member.MemberRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -28,12 +30,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Component
 public class TokenProvider {
+    private final MemberRepository memberRepository;
+
     @Value("${jwt.key}")
     private String key;
     private SecretKey secretKey;
     public static final Duration ACCESS_TOKEN_EXPIRE_DURATION = Duration.ofMinutes(30);
     private static final long ACCESS_TOKEN_EXPIRE_TIME = ACCESS_TOKEN_EXPIRE_DURATION.toMillis();
     private static final String KEY_ROLE = "role";
+    private static final String KEY_MEMBER_ID = "memberId";
 
     @PostConstruct
     private void setSecretKey() {
@@ -47,6 +52,7 @@ public class TokenProvider {
     private String generateToken(Authentication authentication, long expireTime) {
         Date now = new Date();
         Date expiredDate = new Date(now.getTime() + expireTime);
+        PrincipalDetails principal = getPrincipalDetails(authentication);
 
         String authorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -55,6 +61,7 @@ public class TokenProvider {
         return Jwts.builder()
                 .subject(authentication.getName())
                 .claim(KEY_ROLE, authorities)
+                .claim(KEY_MEMBER_ID, principal.getMember().getId())
                 .issuedAt(now)
                 .expiration(expiredDate)
                 .signWith(secretKey, Jwts.SIG.HS512)
@@ -64,9 +71,26 @@ public class TokenProvider {
     public Authentication getAuthentication(String token) {
         Claims claims = parseClaims(token);
         List<SimpleGrantedAuthority> authorities = getAuthorities(claims);
+        Member member = getMember(claims);
 
-        User principal = new User(claims.getSubject(), "", authorities);
+        PrincipalDetails principal = new PrincipalDetails(member);
         return new UsernamePasswordAuthenticationToken(principal, token, authorities);
+    }
+
+    private PrincipalDetails getPrincipalDetails(Authentication authentication) {
+        if (authentication.getPrincipal() instanceof PrincipalDetails principalDetails) {
+            return principalDetails;
+        }
+        throw new AuthException(AuthErrorCode.AUTHENTICATION_FAILED);
+    }
+
+    private Member getMember(Claims claims) {
+        Number memberId = claims.get(KEY_MEMBER_ID, Number.class);
+        if (memberId == null) {
+            throw new AuthException(AuthErrorCode.TOKEN_INVALID);
+        }
+        return memberRepository.findById(memberId.longValue())
+                .orElseThrow(() -> new AuthException(AuthErrorCode.TOKEN_INVALID));
     }
 
     private List<SimpleGrantedAuthority> getAuthorities(Claims claims) {
