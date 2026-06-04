@@ -5,10 +5,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.knockin.dto.*;
 import org.example.knockin.entity.member.Gender;
 import org.example.knockin.global.api.CommonResponse;
+import org.example.knockin.global.auth.dto.PrincipalDetails;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -45,7 +47,9 @@ public class RoomMateController {
 
     @PostMapping("/boards")
     @Operation(summary = "게시글 저장")
-    public CommonResponse<BoardDto.Response> saveBoard(@RequestBody BoardDto.Request request) {
+    public CommonResponse<BoardDto.Response> saveBoard(
+            @RequestBody BoardDto.Request request,
+            @AuthenticationPrincipal PrincipalDetails details) {
         return CommonResponse.status(HttpStatus.OK).body(new BoardDto.Response());
     }
 
