@@ -14,6 +14,7 @@ import org.example.knockin.entity.room.RoomType;
 import org.example.knockin.repository.board.RoommateBoardFileRepository;
 import org.example.knockin.repository.board.RoommateBoardRepository;
 import org.example.knockin.repository.file.FileRepository;
+import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.room.RegionRepository;
 import org.example.knockin.repository.room.RoomTypeRepository;
 import org.example.knockin.service.RoommateBoardService;
@@ -29,10 +30,12 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     private final RegionRepository regionRepository;
     private final FileRepository fileRepository;
     private final RoommateBoardFileRepository roommateBoardFileRepository;
+    private final MemberRepository memberRepository;
 
     @Override
     @Transactional
-    public BoardDto.Response save(BoardDto.Request request, Member member) {
+    public BoardDto.Response save(BoardDto.Request request, Long memberId) {
+        Member memberRef = memberRepository.getReferenceById(memberId);
         Long roomTypeId = request.getRoomType();
         Long regionId = request.getRegion();
 
@@ -43,7 +46,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
                 .orElseThrow(IllegalArgumentException::new);
 
         RoommateBoard roommateBoard = RoommateBoard.builder()
-                .member(member)
+                .member(memberRef)
                 .title(request.getTitle())
                 .contents(request.getContents())
                 .deposit(request.getDeposit())

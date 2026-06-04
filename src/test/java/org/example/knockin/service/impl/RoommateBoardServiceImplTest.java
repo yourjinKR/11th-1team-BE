@@ -22,6 +22,7 @@ import org.example.knockin.entity.room.RoomType;
 import org.example.knockin.repository.board.RoommateBoardFileRepository;
 import org.example.knockin.repository.board.RoommateBoardRepository;
 import org.example.knockin.repository.file.FileRepository;
+import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.room.RegionRepository;
 import org.example.knockin.repository.room.RoomTypeRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -52,6 +53,9 @@ class RoommateBoardServiceImplTest {
     @Mock
     private RoommateBoardFileRepository roommateBoardFileRepository;
 
+    @Mock
+    private MemberRepository memberRepository;
+
     @InjectMocks
     private RoommateBoardServiceImpl roommateBoardService;
 
@@ -67,7 +71,8 @@ class RoommateBoardServiceImplTest {
         BoardDto.Request request = createRequest(
                 createImage("thumbnail.jpg", true),
                 createImage("room.jpg", false));
-        Member member = Member.builder().build();
+        Long memberId = 42L;
+        Member memberRef = org.mockito.Mockito.mock(Member.class);
         RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
         Region region = org.mockito.Mockito.mock(Region.class);
         RoommateBoard savedRoommateBoard = org.mockito.Mockito.mock(RoommateBoard.class);
@@ -75,6 +80,7 @@ class RoommateBoardServiceImplTest {
         File roomFile = mockFile("room.jpg");
         LocalDateTime updatedAt = LocalDateTime.of(2026, 6, 4, 16, 30);
 
+        when(memberRepository.getReferenceById(memberId)).thenReturn(memberRef);
         when(roomTypeRepository.findById(1L)).thenReturn(Optional.of(roomType));
         when(regionRepository.findById(2L)).thenReturn(Optional.of(region));
         when(roommateBoardRepository.save(any(RoommateBoard.class))).thenReturn(savedRoommateBoard);
@@ -82,11 +88,12 @@ class RoommateBoardServiceImplTest {
                 .thenReturn(List.of(thumbnailFile, roomFile));
         when(savedRoommateBoard.getUpdatedAt()).thenReturn(updatedAt);
 
-        BoardDto.Response response = roommateBoardService.save(request, member);
+        BoardDto.Response response = roommateBoardService.save(request, memberId);
 
+        verify(memberRepository).getReferenceById(memberId);
         verify(roommateBoardRepository).save(roommateBoardCaptor.capture());
         RoommateBoard boardToSave = roommateBoardCaptor.getValue();
-        assertThat(boardToSave.getMember()).isSameAs(member);
+        assertThat(boardToSave.getMember()).isSameAs(memberRef);
         assertThat(boardToSave.getTitle()).isEqualTo("Looking for a roommate");
         assertThat(boardToSave.getContents()).isEqualTo("Quiet home near the station");
         assertThat(boardToSave.getDeposit()).isEqualTo(10_000);
@@ -117,10 +124,12 @@ class RoommateBoardServiceImplTest {
     @DisplayName("존재하지 않는 방 유형으로 저장을 요청하면 예외가 발생한다")
     void saveThrowsWhenRoomTypeDoesNotExist() {
         BoardDto.Request request = createRequest(createImage("thumbnail.jpg", true));
-        Member member = Member.builder().build();
+        Long memberId = 42L;
+        Member memberRef = org.mockito.Mockito.mock(Member.class);
+        when(memberRepository.getReferenceById(memberId)).thenReturn(memberRef);
         when(roomTypeRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> roommateBoardService.save(request, member))
+        assertThatThrownBy(() -> roommateBoardService.save(request, memberId))
                 .isInstanceOf(IllegalArgumentException.class);
 
         verifyNoInteractions(regionRepository, roommateBoardRepository, fileRepository,
@@ -131,12 +140,14 @@ class RoommateBoardServiceImplTest {
     @DisplayName("존재하지 않는 지역으로 저장을 요청하면 예외가 발생한다")
     void saveThrowsWhenRegionDoesNotExist() {
         BoardDto.Request request = createRequest(createImage("thumbnail.jpg", true));
-        Member member = Member.builder().build();
+        Long memberId = 42L;
+        Member memberRef = org.mockito.Mockito.mock(Member.class);
         RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        when(memberRepository.getReferenceById(memberId)).thenReturn(memberRef);
         when(roomTypeRepository.findById(1L)).thenReturn(Optional.of(roomType));
         when(regionRepository.findById(2L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> roommateBoardService.save(request, member))
+        assertThatThrownBy(() -> roommateBoardService.save(request, memberId))
                 .isInstanceOf(IllegalArgumentException.class);
 
         verifyNoInteractions(roommateBoardRepository, fileRepository, roommateBoardFileRepository);
@@ -146,15 +157,17 @@ class RoommateBoardServiceImplTest {
     @DisplayName("썸네일로 지정된 이미지가 없으면 예외가 발생한다")
     void saveThrowsWhenNoImageIsMarkedAsThumbnail() {
         BoardDto.Request request = createRequest(createImage("room.jpg", null));
-        Member member = Member.builder().build();
+        Long memberId = 42L;
+        Member memberRef = org.mockito.Mockito.mock(Member.class);
         RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
         Region region = org.mockito.Mockito.mock(Region.class);
         RoommateBoard savedRoommateBoard = org.mockito.Mockito.mock(RoommateBoard.class);
+        when(memberRepository.getReferenceById(memberId)).thenReturn(memberRef);
         when(roomTypeRepository.findById(1L)).thenReturn(Optional.of(roomType));
         when(regionRepository.findById(2L)).thenReturn(Optional.of(region));
         when(roommateBoardRepository.save(any(RoommateBoard.class))).thenReturn(savedRoommateBoard);
 
-        assertThatThrownBy(() -> roommateBoardService.save(request, member))
+        assertThatThrownBy(() -> roommateBoardService.save(request, memberId))
                 .isInstanceOf(IllegalArgumentException.class);
 
         verifyNoInteractions(fileRepository, roommateBoardFileRepository);

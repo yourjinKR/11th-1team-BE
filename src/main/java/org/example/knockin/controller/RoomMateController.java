@@ -58,8 +58,8 @@ public class RoomMateController {
     public CommonResponse<BoardDto.Response> saveBoard(
             @RequestBody BoardDto.Request request,
             @AuthenticationPrincipal PrincipalDetails details) {
-        Member member = details.getMember();
-        Response response = roommateBoardService.save(request, member);
+        Long memberId = details.getMember().getId();
+        Response response = roommateBoardService.save(request, memberId);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
