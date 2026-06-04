@@ -14,7 +14,9 @@ import org.example.knockin.global.auth.handler.OAuth2SuccessHandler;
 import org.example.knockin.global.auth.util.OAuth2SdkProvider;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.client.authentication.OAuth2LoginAuthenticationToken;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -72,15 +74,13 @@ public class CustomOAuth2Filter extends OncePerRequestFilter {
                 OAuth2UserRequest userRequest = new OAuth2UserRequest(clientRegistration, oauth2Token);
                 OAuth2User oAuth2User = oAuth2UserService.loadUser(userRequest);
 
-                OAuth2LoginAuthenticationToken authentication = new OAuth2LoginAuthenticationToken(
-                        clientRegistration,
-                        new OAuth2AuthorizationExchange(null, null),
+                OAuth2AuthenticationToken authentication = new OAuth2AuthenticationToken(
                         oAuth2User,
                         oAuth2User.getAuthorities(),
-                        oauth2Token
+                        clientRegistration.getRegistrationId()
                 );
 
-                var context = SecurityContextHolder.createEmptyContext();
+                SecurityContext context = SecurityContextHolder.createEmptyContext();
                 context.setAuthentication(authentication);
                 SecurityContextHolder.setContext(context);
 

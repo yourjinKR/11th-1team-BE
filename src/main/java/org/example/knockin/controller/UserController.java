@@ -2,24 +2,29 @@ package org.example.knockin.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.*;
 import org.example.knockin.global.api.CommonResponse;
+import org.example.knockin.global.auth.dto.PrincipalDetails;
+import org.example.knockin.service.impl.MemberServiceImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/users/me")
+@RequiredArgsConstructor
 @Tag(name = "2. 온보딩/프로필")
 public class UserController {
-    @DeleteMapping("/")
+    private final MemberServiceImpl memberService;
+
+    @DeleteMapping("")
     @Operation(summary = "회원 탈퇴")
-    public CommonResponse<DeleteUserDto.Response> deleteUser(@AuthenticationPrincipal User user) {
-        return CommonResponse.status(HttpStatus.OK).body(new DeleteUserDto.Response());
+    public CommonResponse<DeleteUserDto.Response> deleteUser(@AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(memberService.deleteMember(principalDetails.getMember().getProviderId(), principalDetails.getMember().getProviderType()));
     }
 
     @PostMapping("/profile/basic")

@@ -7,6 +7,7 @@ import org.example.knockin.global.auth.util.OAuth2UserInfoProvider;
 import org.example.knockin.global.auth.dto.OAuth2UserInfo;
 import org.example.knockin.global.auth.dto.PrincipalDetails;
 import org.example.knockin.repository.member.MemberRepository;
+import org.example.knockin.service.impl.MemberServiceImpl;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -20,7 +21,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
-    private final MemberRepository memberRepository;
+    private final MemberServiceImpl memberService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -37,21 +38,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .getInfoClass();
 
         OAuth2UserInfo oAuth2UserInfo = objectMapper.convertValue(oAuth2UserAttributes, infoClass);
-        Member member = getOrSave(oAuth2UserInfo);
+        Member member = memberService.getOrSave(oAuth2UserInfo);
 
         return new PrincipalDetails(member, oAuth2UserAttributes, userNameAttributeName);
-    }
-
-    public Member getOrSave(OAuth2UserInfo oAuth2UserInfo) {
-        String providerId = String.valueOf(oAuth2UserInfo.getId());
-        return memberRepository.findByProviderTypeAndProviderId(oAuth2UserInfo.getProviderType() ,providerId)
-                .orElseGet(() -> {
-                    Member newMember = Member.builder()
-                            .providerType(oAuth2UserInfo.getProviderType())
-                            .providerId(String.valueOf(oAuth2UserInfo.getId()))
-                            .role(MemberRole.USER)
-                            .build();
-                    return memberRepository.save(newMember);
-                });
     }
 }

@@ -2,6 +2,7 @@ package org.example.knockin.config;
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.entity.member.MemberRole;
 import org.example.knockin.global.auth.filter.CustomOAuth2Filter;
 import org.example.knockin.global.auth.filter.TokenAuthenticationFilter;
 import org.example.knockin.global.auth.filter.TokenExceptionFilter;
@@ -15,6 +16,7 @@ import org.example.knockin.global.auth.util.TokenProvider;
 import org.example.knockin.global.KnockInProps;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -68,7 +70,19 @@ public class SecurityConfig {
                         "/v3/api-docs/**",
                         "/swagger-resources/**",
                         "/webjars/**"
-                ).permitAll().anyRequest().authenticated())
+                ).permitAll()
+                .requestMatchers(HttpMethod.GET,
+                                "/terms",
+                                "/terms/*",
+                                "/search/popular",
+                                "/meta/lifestyle-patterns",
+                                "/meta/room-types",
+                                "/meta/regions",
+                                "/meta/room-add-options",
+                                "/roommate/boards",
+                                "/roommate/matches"
+                ).permitAll()
+                .requestMatchers("/bo/**").hasAuthority(MemberRole.ADMIN.name()).anyRequest().authenticated())
                 .build();
     }
 

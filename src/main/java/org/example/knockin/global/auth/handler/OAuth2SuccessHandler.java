@@ -3,12 +3,19 @@ package org.example.knockin.global.auth.handler;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.global.auth.dto.AuthResponse;
-import org.example.knockin.global.auth.util.TokenConstants;
+import org.example.knockin.global.auth.dto.PrincipalDetails;
+import org.example.knockin.global.auth.exception.AuthErrorCode;
 import org.example.knockin.global.auth.util.TokenProvider;
 import org.example.knockin.global.KnockInProps;
+import org.example.knockin.global.exception.BusinessException;
+import org.example.knockin.service.impl.MemberServiceImpl;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -16,6 +23,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.util.ObjectUtils;
 import tools.jackson.databind.ObjectMapper;
 
 
@@ -26,31 +34,33 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final TokenProvider tokenProvider;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final KnockInProps knockInProps;
+    private final MemberServiceImpl memberService;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
         String accessToken = tokenProvider.generateAccessToken(authentication);
+        PrincipalDetails principalDetails = (PrincipalDetails) authentication.getPrincipal();
+
+        if(ObjectUtils.isEmpty(principalDetails)) throw new BusinessException(AuthErrorCode.ILLEGAL_LOGIN_ACCESS);
+        Member member = principalDetails.getMember();
+        AuthResponse authResponse = memberService.findMemberForLogin(member, accessToken);
+        CommonResponse<AuthResponse> commonResponse = CommonResponse.status(HttpStatus.OK).body(authResponse);
 
         if (request.getAttribute("isSdkLogin") != null) {
             response.setContentType("application/json;charset=UTF-8");
-            AuthResponse authResponse = AuthResponse.builder()
-                    .accessToken(accessToken)
-                    .basicInfo(true)
-                    .preferenceInfo(false)
-                    .build();
-            
-            CommonResponse<AuthResponse> commonResponse = CommonResponse.status(HttpStatus.OK).body(authResponse);
             response.getWriter().write(objectMapper.writeValueAsString(commonResponse));
         } else {
-            ResponseCookie accessTokenCookie = ResponseCookie.from(TokenConstants.ACCESS_TOKEN_COOKIE_NAME, accessToken)
-                    .httpOnly(true)
+            String authResponseJson = objectMapper.writeValueAsString(authResponse);
+            String encodedAuthResponse = URLEncoder.encode(authResponseJson, StandardCharsets.UTF_8);
+
+            ResponseCookie authInfoCookie = ResponseCookie.from("authInfo", encodedAuthResponse)
                     .secure(true)
                     .sameSite("None")
                     .path("/")
                     .maxAge(TokenProvider.ACCESS_TOKEN_EXPIRE_DURATION)
                     .build();
 
-            response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
+            response.addHeader(HttpHeaders.SET_COOKIE, authInfoCookie.toString());
             response.sendRedirect(knockInProps.getClientSuccessUrl());
         }
     }
