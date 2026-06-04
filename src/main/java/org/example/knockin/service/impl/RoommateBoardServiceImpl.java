@@ -69,6 +69,10 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     }
 
     private List<RoommateBoardFile> createRoommateBoardFilesWithThumbnail(RoommateBoard roommateBoard, List<ImageDto> images) {
+        if (images == null || images.isEmpty()) {
+            return List.of();
+        }
+
         ImageDto thumbnailImageDto = images.stream()
                 .filter(imageDto -> Boolean.TRUE.equals(imageDto.getThumbnail()))
                 .findFirst()
