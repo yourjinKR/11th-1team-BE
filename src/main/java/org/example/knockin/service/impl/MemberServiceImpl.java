@@ -2,6 +2,7 @@ package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.DeleteUserDto;
+import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.MemberRole;
 import org.example.knockin.global.auth.dto.AuthResponse;
@@ -10,11 +11,13 @@ import org.example.knockin.global.auth.exception.AuthErrorCode;
 import org.example.knockin.global.auth.service.Oauth2DeleteFactory;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.repository.member.MemberRepository;
+import org.osgi.annotation.versioning.ProviderType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -44,8 +47,8 @@ public class MemberServiceImpl {
     }
 
     @Transactional
-    public DeleteUserDto.Response deleteMember(String userName) {
-        Member member = memberRepository.findByProviderId(userName).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+    public DeleteUserDto.Response deleteMember(String userName, LoginProviderType providerType) {
+        Member member = memberRepository.findMemberByProvider(userName, providerType).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
 
         if(oauth2DeleteFactory.getDeleteService(member.getProviderType()).requestUnlink(member.getProviderId())) {
             member.delete();
@@ -66,5 +69,9 @@ public class MemberServiceImpl {
         if (!membersToDelete.isEmpty()) {
             memberRepository.deleteAll(membersToDelete);
         }
+    }
+
+    public Optional<Member> findById(Long id) {
+        return memberRepository.findById(id);
     }
 }

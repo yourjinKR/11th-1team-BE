@@ -19,9 +19,13 @@ public class PrincipalDetails implements OAuth2User, UserDetails {
     private Map<String, Object> attributes;
     private String attributeKey;
 
+    public PrincipalDetails(Member member) {
+        this(member, Collections.emptyMap(), null);
+    }
+
     @Override
     public String getName() {
-        return attributes.get(attributeKey).toString();
+        return attributeKey == null ? getUsername() : attributes.get(attributeKey).toString();
     }
 
     @Override
