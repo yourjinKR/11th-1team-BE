@@ -43,7 +43,7 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                                 .from(preferenceCondition)
                                 .where(preferenceCondition.member.eq(member))
                                 .exists().as("preferenceInfo"),
-                        member.deleteState.as("isDelete")
+                        member.isDelete.as("isDelete")
                 ))
                 .from(member)
                 .where(member.id.eq(memberEntity.getId()))
@@ -55,7 +55,7 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
     }
 
     public List<Member> findMemberByDelete() {
-        return jpaQueryFactory.selectFrom(member).where(member.deleteState.eq(true)).fetch();
+        return jpaQueryFactory.selectFrom(member).where(member.isDelete.eq(true)).fetch();
     }
 
     private BooleanExpression providerIdEq(String providerId) {

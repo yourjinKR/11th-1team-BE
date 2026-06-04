@@ -61,8 +61,8 @@ public class Member extends CreatedAtEntity {
     @Column(name = "role", nullable = false, length = 20)
     private MemberRole role;
 
-    @Column(name = "delete_state", nullable = false, length = 5, comment = "삭제 여부")
-    private boolean deleteState;
+    @Column(name = "is_delete", nullable = false, length = 5, comment = "삭제 여부")
+    private boolean isDelete;
 
     @Column(name = "deleted_at", comment = "삭제 일시")
     private LocalDateTime deletedAt;
@@ -143,12 +143,12 @@ public class Member extends CreatedAtEntity {
     private List<RoomProfile> roomProfiles = new ArrayList<>();
 
     public void delete() {
-        this.deleteState = true;
+        this.isDelete = true;
         this.deletedAt = LocalDateTime.now();
     }
 
     public void deleteRecover() {
-        this.deleteState = false;
+        this.isDelete = false;
         this.deletedAt = null;
     }
 }

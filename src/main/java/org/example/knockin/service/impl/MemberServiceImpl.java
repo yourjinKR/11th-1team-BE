@@ -31,7 +31,7 @@ public class MemberServiceImpl {
                             .providerType(oAuth2UserInfo.getProviderType())
                             .providerId(String.valueOf(oAuth2UserInfo.getId()))
                             .role(MemberRole.USER)
-                            .deleteState(false)
+                            .isDelete(false)
                             .build();
                     return memberRepository.save(newMember);
                 });
