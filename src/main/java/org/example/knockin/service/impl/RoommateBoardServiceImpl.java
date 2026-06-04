@@ -32,6 +32,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     private final RoommateBoardFileRepository roommateBoardFileRepository;
     private final MemberRepository memberRepository;
 
+    // TODO: 예외처리 custom ErrorCode로 처리 필요
     @Override
     @Transactional
     public BoardDto.Response save(BoardDto.Request request, Long memberId) {
@@ -40,10 +41,10 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
         Long regionId = request.getRegion();
 
         RoomType roomType = roomTypeRepository.findById(roomTypeId)
-                .orElseThrow(IllegalArgumentException::new);
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 방 타입 입니다. roomTypeId: " + roomTypeId));
 
         Region region = regionRepository.findById(regionId)
-                .orElseThrow(IllegalArgumentException::new);
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 지역명입니다. regionId: " + regionId));
 
         RoommateBoard roommateBoard = RoommateBoard.builder()
                 .member(memberRef)
@@ -89,7 +90,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
                 .toList();
 
         if (!missingFileNames.isEmpty()) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("존재하지 않는 파일이 포함되어 있습니다: " + missingFileNames);
         }
 
         return files.stream()
