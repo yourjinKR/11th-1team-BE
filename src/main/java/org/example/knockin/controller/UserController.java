@@ -4,12 +4,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.knockin.dto.*;
 import org.example.knockin.global.api.CommonResponse;
+import org.example.knockin.global.auth.dto.PrincipalDetails;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     @DeleteMapping("/")
     @Operation(summary = "회원 탈퇴")
-    public CommonResponse<DeleteUserDto.Response> deleteUser(@AuthenticationPrincipal User user) {
+    public CommonResponse<DeleteUserDto.Response> deleteUser(@AuthenticationPrincipal PrincipalDetails details) {
         return CommonResponse.status(HttpStatus.OK).body(new DeleteUserDto.Response());
     }
 
