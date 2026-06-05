@@ -7,6 +7,7 @@ import org.example.knockin.dto.*;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.global.auth.dto.PrincipalDetails;
 import org.example.knockin.service.impl.MemberServiceImpl;
+import org.example.knockin.service.impl.OnBoardingServiceImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "2. 온보딩/프로필")
 public class UserController {
     private final MemberServiceImpl memberService;
+    private final OnBoardingServiceImpl onBoardingService;
 
     @DeleteMapping("")
     @Operation(summary = "회원 탈퇴")
@@ -29,8 +31,8 @@ public class UserController {
 
     @PostMapping("/profile/basic")
     @Operation(summary = "기본정보 저장")
-    public CommonResponse<SaveProfileBasicDto.Response> saveBasicInfo(@RequestBody SaveProfileBasicDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new SaveProfileBasicDto.Response());
+    public CommonResponse<SaveProfileBasicDto.Response> saveBasicInfo(@RequestBody SaveProfileBasicDto.Request request, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(onBoardingService.saveBasicInfoLogic(request, principalDetails.getMember().getId()));
     }
 
     @PostMapping("/profile/lifestyle")

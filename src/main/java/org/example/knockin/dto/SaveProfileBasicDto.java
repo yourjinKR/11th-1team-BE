@@ -1,5 +1,6 @@
 package org.example.knockin.dto;
 
+import lombok.Builder;
 import lombok.Data;
 import org.example.knockin.entity.member.Gender;
 
@@ -19,6 +20,7 @@ public class SaveProfileBasicDto {
     }
 
     @Data
+    @Builder
     public static class Response {
         private LocalDateTime updatedAt;
     }

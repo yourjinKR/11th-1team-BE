@@ -11,14 +11,16 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+
+import lombok.*;
 import org.example.knockin.global.jpa.BaseEntity;
 
 @Getter
 @Entity
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "basic_information")
 public class BasicInformation extends BaseEntity {
@@ -35,7 +37,7 @@ public class BasicInformation extends BaseEntity {
     private String name;
 
     @Column(name = "birth", nullable = false)
-    private LocalDateTime birth;
+    private LocalDate birth;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "gender", nullable = false, length = 20)
