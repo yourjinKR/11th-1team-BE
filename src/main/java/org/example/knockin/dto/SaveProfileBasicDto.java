@@ -1,7 +1,9 @@
 package org.example.knockin.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.example.knockin.entity.member.Gender;
 
 import java.time.LocalDate;
@@ -12,6 +14,8 @@ import java.util.List;
 public class SaveProfileBasicDto {
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Request {
         private String name;
         private LocalDate birth;

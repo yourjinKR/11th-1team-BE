@@ -1,7 +1,9 @@
 package org.example.knockin.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -10,6 +12,8 @@ import java.util.List;
 public class SaveProfileLifeStyleDto {
     @Data
     @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class Request {
         private List<Long> lifestyles;
     }
