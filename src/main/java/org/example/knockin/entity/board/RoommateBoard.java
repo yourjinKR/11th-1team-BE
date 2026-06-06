@@ -54,7 +54,7 @@ public class RoommateBoard extends BaseEntity {
     private Integer managementCost;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "room_type", nullable = false)
+    @JoinColumn(name = "room_type_id", nullable = false)
     private RoomType roomType;
 
     @ManyToOne(fetch = FetchType.LAZY)

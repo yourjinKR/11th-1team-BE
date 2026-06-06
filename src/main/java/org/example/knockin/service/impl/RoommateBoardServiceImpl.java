@@ -7,6 +7,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.BoardDto;
 import org.example.knockin.dto.BoardDto.Request.FileDto;
+import org.example.knockin.dto.BoardListDto;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.board.RoommateBoardFile;
 import org.example.knockin.entity.file.File;
@@ -22,6 +23,7 @@ import org.example.knockin.repository.board.RoommateBoardFileRepository;
 import org.example.knockin.repository.board.RoommateBoardRepository;
 import org.example.knockin.service.FileService;
 import org.example.knockin.service.RoommateBoardService;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -37,7 +39,6 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     private final TransactionTemplate transactionTemplate;
     private final MetaServiceImpl metaService;
 
-    // TODO: 예외처리 custom ErrorCode로 처리 필요
     @Override
     public BoardDto.Response save(BoardDto.Request request, Long memberId) {
         Member member = memberService.findById(memberId)
@@ -119,6 +120,16 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
 
         LocalDateTime updatedAt = savedRoommateBoard.getUpdatedAt();
         return new BoardDto.Response(updatedAt);
+    }
+
+    public void findList(BoardListDto.Request request, Pageable pageable) {
+        // 필터링 및 페이징
+        // 입주 시기 out, 삭제된 컨텐츠 내부 필터
+
+
+
+
+
     }
 
     private record FileWithThumbnail(File file, boolean thumbNail) { }
