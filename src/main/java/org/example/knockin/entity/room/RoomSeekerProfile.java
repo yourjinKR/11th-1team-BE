@@ -26,10 +26,4 @@ public class RoomSeekerProfile extends RoomProfile {
 
     @Column(name = "max_monthly_rent", nullable = false)
     private Integer maxMonthlyRent;
-
-    @Column(name ="is_comeable_at_negotiable")
-    private Boolean isComeableAtNegotiable;
-
-    @Column(name = "comeable_at", nullable = false)
-    private LocalDateTime comeableAt;
 }

@@ -8,6 +8,8 @@ import lombok.experimental.SuperBuilder;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.jpa.CreatedAtEntity;
 
+import java.time.LocalDateTime;
+
 
 @Getter
 @Entity
@@ -29,4 +31,10 @@ public class RoomProfile extends CreatedAtEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "type", length = 20, insertable = false, updatable = false)
     private RoomProfileType type;
+
+    @Column(name ="is_comeable_at_negotiable")
+    private Boolean isComeableAtNegotiable;
+
+    @Column(name = "comeable_at", nullable = false)
+    private LocalDateTime comeableAt;
 }

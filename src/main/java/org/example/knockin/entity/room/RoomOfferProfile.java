@@ -23,10 +23,4 @@ public class RoomOfferProfile extends RoomProfile {
 
     @Column(name = "monthly_rent", nullable = false)
     private Integer monthlyRent;
-
-    @Column(name ="is_comeable_at_negotiable")
-    private Boolean isComeableAtNegotiable;
-
-    @Column(name = "comeable_at", nullable = false)
-    private LocalDateTime comeableAt;
 }
