@@ -1,10 +1,8 @@
 package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.example.knockin.dto.SaveProfileAllDto;
-import org.example.knockin.dto.SaveProfileBasicDto;
-import org.example.knockin.dto.SaveProfileLifeStyleDto;
-import org.example.knockin.dto.SaveProfileRoomInfoDto;
+import org.example.knockin.dto.*;
+import org.example.knockin.entity.agreement.AgreementLog;
 import org.example.knockin.entity.agreement.MemberAgreement;
 import org.example.knockin.entity.life.MemberLifePattern;
 import org.example.knockin.entity.member.BasicInformation;
@@ -28,6 +26,9 @@ import org.springframework.util.ObjectUtils;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -180,5 +181,48 @@ public class OnBoardingServiceImpl {
         if(ObjectUtils.isEmpty(saveRoomInfo(roomInfoRequest,member))) throw new BusinessException(OnBoardErrorCode.ONBOARD_ROOM_INFO_SAVE_ERROR);
 
         return SaveProfileAllDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public void modifyBasicInfo(ModifyProfileBasicDto.Request request, Member member) {
+        BasicInformation basicInformation = basicInformationRepository.findByMember(member).getFirst();
+        basicInformation.modifyBasicInformation(request);
+    }
+
+    @Transactional
+    public void modifyAgreement(ModifyProfileBasicDto.Request request, Member member) {
+        List<AgreementLog> requestAgreementList = metaService.findByAgreementLogIsCurrent(request.getTerms());
+        List<AgreementLog> memberAgreementList = memberAgreementRepository.findByMember(member).stream().map(MemberAgreement::getAgreementLog).toList();
+
+        Set<Long> memberAgreementIds = memberAgreementList.stream().map(AgreementLog::getId).collect(Collectors.toSet());
+        List<AgreementLog> skipList = requestAgreementList.stream().filter(reqLog -> memberAgreementIds.contains(reqLog.getId())).toList();
+
+        if (skipList.isEmpty()) {
+            memberAgreementRepository.findByMember(member).forEach(MemberAgreement::disableAgree);
+        } else {
+            memberAgreementRepository.findByMemberAndAgreementLogNotIn(member, skipList).forEach(MemberAgreement::disableAgree);
+        }
+
+        requestAgreementList.forEach(item -> {
+            boolean isNotInSkipList = skipList.stream().noneMatch(skipItem -> Objects.equals(skipItem.getId(), item.getId()));
+
+            if (isNotInSkipList) {
+                memberAgreementRepository.save(MemberAgreement.builder()
+                        .member(member)
+                        .agreementLog(item)
+                        .isAgreed(true)
+                        .build());
+            }
+        });
+    }
+
+    @Transactional
+    public ModifyProfileBasicDto.Response modifyBasicInfoLogic(ModifyProfileBasicDto.Request request, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+
+        modifyBasicInfo(request, member);
+        modifyAgreement(request, member);
+
+        return ModifyProfileBasicDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 }

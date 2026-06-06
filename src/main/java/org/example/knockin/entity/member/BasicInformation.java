@@ -15,6 +15,7 @@ import jakarta.persistence.Table;
 import java.time.LocalDate;
 
 import lombok.*;
+import org.example.knockin.dto.ModifyProfileBasicDto;
 import org.example.knockin.global.jpa.BaseEntity;
 
 @Getter
@@ -45,4 +46,11 @@ public class BasicInformation extends BaseEntity {
 
     @Column(name = "email", nullable = false, length = 50)
     private String email;
+
+    public void modifyBasicInformation(ModifyProfileBasicDto.Request request) {
+        this.name = request.getName();
+        this.birth = request.getBirth();
+        this.gender = request.getGender();
+        this.email = request.getEmail();
+    }
 }

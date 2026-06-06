@@ -55,8 +55,8 @@ public class UserController {
 
     @PutMapping("/profile/basic")
     @Operation(summary = "기본정보 수정")
-    public CommonResponse<ModifyProfileBasicDto.Response> modifyBasicInfo(@RequestBody ModifyProfileBasicDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new ModifyProfileBasicDto.Response());
+    public CommonResponse<ModifyProfileBasicDto.Response> modifyBasicInfo(@RequestBody ModifyProfileBasicDto.Request request, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(onBoardingService.modifyBasicInfoLogic(request, principalDetails.getMember().getId()));
     }
 
     @PutMapping("/profile/lifestyle")
