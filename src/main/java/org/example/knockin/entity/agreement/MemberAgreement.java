@@ -36,4 +36,8 @@ public class MemberAgreement extends CreatedAtEntity {
 
     @Column(name = "is_agreed", nullable = false)
     private Boolean isAgreed;
+
+    public void disableAgree() {
+        this.isAgreed = false;
+    }
 }
