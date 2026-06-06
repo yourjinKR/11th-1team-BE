@@ -61,7 +61,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                     .build();
 
             response.addHeader(HttpHeaders.SET_COOKIE, authInfoCookie.toString());
-            response.sendRedirect(knockInProps.getClientSuccessUrl());
+//            response.sendRedirect(knockInProps.getClientSuccessUrl());
         }
     }
 }
