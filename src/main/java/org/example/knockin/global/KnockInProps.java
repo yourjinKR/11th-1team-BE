@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "app")
 public class KnockInProps {
     private String clientUrl;
+    private String serverUrl;
     private String clientSuccessUrl;
     private String clientErrorUrl;
     private List<String> corsUrls;
