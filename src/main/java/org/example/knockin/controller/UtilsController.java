@@ -59,5 +59,10 @@ public class UtilsController {
     public CommonResponse<MetaRoomAddOptionsDto.Response> findRoomAddOptions() {
         return CommonResponse.status(HttpStatus.OK).body(new MetaRoomAddOptionsDto.Response());
     }
+
+    @GetMapping("/auth/success")
+    public CommonResponse<String> authSuccess() {
+        return CommonResponse.status(HttpStatus.OK).body("로그인에 성공하였습니다.");
+    }
 }
 

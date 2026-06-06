@@ -3,8 +3,6 @@ package org.example.knockin.global.auth.handler;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.entity.member.Member;
@@ -12,6 +10,7 @@ import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.global.auth.dto.AuthResponse;
 import org.example.knockin.global.auth.dto.PrincipalDetails;
 import org.example.knockin.global.auth.exception.AuthErrorCode;
+import org.example.knockin.global.auth.util.TokenConstants;
 import org.example.knockin.global.auth.util.TokenProvider;
 import org.example.knockin.global.KnockInProps;
 import org.example.knockin.global.exception.BusinessException;
@@ -50,17 +49,17 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write(objectMapper.writeValueAsString(commonResponse));
         } else {
-            String authResponseJson = objectMapper.writeValueAsString(authResponse);
-            String encodedAuthResponse = URLEncoder.encode(authResponseJson, StandardCharsets.UTF_8);
+            boolean secureCookie = knockInProps.getClientSuccessUrl().startsWith("https://");
 
-            ResponseCookie authInfoCookie = ResponseCookie.from("authInfo", encodedAuthResponse)
-                    .secure(true)
-                    .sameSite("None")
+            ResponseCookie accessTokenCookie = ResponseCookie.from(TokenConstants.ACCESS_TOKEN_COOKIE_NAME, accessToken)
+                    .httpOnly(true)
+                    .secure(secureCookie)
+                    .sameSite(secureCookie ? "None" : "Lax")
                     .path("/")
                     .maxAge(TokenProvider.ACCESS_TOKEN_EXPIRE_DURATION)
                     .build();
 
-            response.addHeader(HttpHeaders.SET_COOKIE, authInfoCookie.toString());
+            response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
             response.sendRedirect(knockInProps.getClientSuccessUrl());
         }
     }

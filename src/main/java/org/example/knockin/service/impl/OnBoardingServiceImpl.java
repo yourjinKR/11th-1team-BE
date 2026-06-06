@@ -7,6 +7,7 @@ import org.example.knockin.dto.SaveProfileLifeStyleDto;
 import org.example.knockin.dto.SaveProfileRoomInfoDto;
 import org.example.knockin.entity.agreement.MemberAgreement;
 import org.example.knockin.entity.life.MemberLifePattern;
+import org.example.knockin.entity.life.MemberLifePatternLog;
 import org.example.knockin.entity.member.BasicInformation;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.*;
@@ -15,6 +16,7 @@ import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.MetaErrorCode;
 import org.example.knockin.global.exception.OnBoardErrorCode;
 import org.example.knockin.repository.agreement.MemberAgreementRepository;
+import org.example.knockin.repository.life.MemberLifePatternLogRepository;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.room.OfferRoomTypeRepository;
@@ -36,6 +38,7 @@ public class OnBoardingServiceImpl {
     private final MemberServiceImpl memberService;
     private final MemberAgreementRepository memberAgreementRepository;
     private final MemberLifePatternRepository memberLifePatternRepository;
+    private final MemberLifePatternLogRepository memberLifePatternLogRepository;
     private final RoomProfileRepository roomProfileRepository;
     private final OfferRoomTypeRepository offerRoomTypeRepository;
     private final SeekerRoomTypeRepository seekerRoomTypeRepository;
@@ -70,11 +73,15 @@ public class OnBoardingServiceImpl {
     @Transactional
     public List<MemberLifePattern> saveMemberLifeStyle(SaveProfileLifeStyleDto.Request request, Member member) {
         List<MemberLifePattern> memberLifePatternList = new ArrayList<>();
+        List<MemberLifePatternLog> memberLifePatternLogList = new ArrayList<>();
 
         metaService.findByLifeStyle(request.getLifestyles()).forEach(item -> {
             memberLifePatternList.add(MemberLifePattern.builder().member(member).lifePatternInformation(item).build());
+            memberLifePatternLogList.add(MemberLifePatternLog.builder().member(member).lifePatternInformation(item).build());
         });
 
+
+        memberLifePatternLogRepository.saveAll(memberLifePatternLogList);
         return memberLifePatternRepository.saveAll(memberLifePatternList);
     }
 
