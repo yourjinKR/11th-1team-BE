@@ -105,12 +105,7 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                 .leftJoin(aliases.parentRegion().parent, aliases.grandParentRegion())
                 .join(roommateBoard.member, member)
                 .leftJoin(member.basicInformations, basicInformation)
-                .on(basicInformation.id.eq(
-                        JPAExpressions
-                                .select(aliases.latestBasicInformation().id.max())
-                                .from(aliases.latestBasicInformation())
-                                .where(aliases.latestBasicInformation().member.id.eq(member.id))
-                ))
+                .on(latestBasicInformationIdEq(aliases))
                 .where(searchCondition)
                 .orderBy(toBoardOrderSpecifiers(pageable.getSort()))
                 .offset(pageable.getOffset())
@@ -127,12 +122,7 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                 .leftJoin(aliases.parentRegion().parent, aliases.grandParentRegion())
                 .join(roommateBoard.member, member)
                 .leftJoin(member.basicInformations, basicInformation)
-                .on(basicInformation.id.eq(
-                        JPAExpressions
-                                .select(aliases.latestBasicInformation().id.max())
-                                .from(aliases.latestBasicInformation())
-                                .where(aliases.latestBasicInformation().member.id.eq(member.id))
-                ))
+                .on(latestBasicInformationIdEq(aliases))
                 .where(searchCondition)
                 .fetchOne();
     }
@@ -162,12 +152,7 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                 .leftJoin(aliases.parentRegion().parent, aliases.grandParentRegion())
                 .join(roommateBoard.member, member)
                 .leftJoin(member.basicInformations, basicInformation)
-                .on(basicInformation.id.eq(
-                        JPAExpressions
-                                .select(aliases.latestBasicInformation().id.max())
-                                .from(aliases.latestBasicInformation())
-                                .where(aliases.latestBasicInformation().member.id.eq(member.id))
-                ))
+                .on(latestBasicInformationIdEq(aliases))
                 .where(roommateBoard.id.in(boardIds))
                 .fetch();
     }
@@ -274,6 +259,15 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
         if (orders.isEmpty()) orders.add(roommateBoard.createdAt.desc());
         orders.add(roommateBoard.id.desc());
         return orders.toArray(new OrderSpecifier[0]);
+    }
+
+    private BooleanExpression latestBasicInformationIdEq(SearchAliases aliases) {
+        return basicInformation.id.eq(
+                JPAExpressions
+                        .select(aliases.latestBasicInformation().id.max())
+                        .from(aliases.latestBasicInformation())
+                        .where(aliases.latestBasicInformation().member.id.eq(member.id))
+        );
     }
 
     private BooleanExpression regionEq(Long regionId) {
