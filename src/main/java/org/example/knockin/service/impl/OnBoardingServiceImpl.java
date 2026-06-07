@@ -370,4 +370,51 @@ public class OnBoardingServiceImpl {
         modifyRoomInfo(request, member);
         return ModifyProfileRoomInfoDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
+
+    @Transactional
+    public ModifyProfileAllDto.Response modifyAll(ModifyProfileAllDto.Request request, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+
+        ModifyProfileBasicDto.Request basicRequest = ModifyProfileBasicDto.Request.builder()
+                .name(request.getName())
+                .birth(request.getBirth())
+                .gender(request.getGender())
+                .email(request.getEmail())
+                .terms(request.getTerms())
+                .build();
+
+        List<ModifyProfileLifeStyleDto.Request.LifeStyleInfo> mappedLifestyles = request.getLifestyles().stream()
+                .map(info -> {
+                    ModifyProfileLifeStyleDto.Request.LifeStyleInfo targetInfo = new ModifyProfileLifeStyleDto.Request.LifeStyleInfo();
+                    targetInfo.setId(info.getId());
+                    targetInfo.setLifestyleId(info.getLifestyleId());
+                    return targetInfo;
+                }).toList();
+
+        ModifyProfileLifeStyleDto.Request lifeStyleRequest = ModifyProfileLifeStyleDto.Request.builder()
+                .lifestyles(mappedLifestyles)
+                .build();
+
+        ModifyProfileRoomInfoDto.Request roomInfoRequest = ModifyProfileRoomInfoDto.Request.builder()
+                .type(request.getType())
+                .minDeposit(request.getMinDeposit())
+                .maxDeposit(request.getMaxDeposit())
+                .minMounthRent(request.getMinMounthRent())
+                .maxMounthRent(request.getMaxMounthRent())
+                .comeEnableAt(request.getComeEnableAt())
+                .isComeableAtNegotiable(request.isComeableAtNegotiable())
+                .region(request.getRegion())
+                .roomProfile(request.getRoomProfile())
+                .deposit(request.getDeposit())
+                .mounthRent(request.getMounthRent())
+                .build();
+
+        modifyBasicInfo(basicRequest, member);
+        modifyAgreement(basicRequest, member);
+        modifyLifeStyle(lifeStyleRequest, member);
+        modifyLifeStyleLog(member);
+        modifyRoomInfo(roomInfoRequest, member);
+
+        return ModifyProfileAllDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
 }

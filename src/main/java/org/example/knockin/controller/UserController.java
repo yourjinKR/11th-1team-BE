@@ -73,8 +73,8 @@ public class UserController {
 
     @PutMapping("/profile/all")
     @Operation(summary = "전체 정보 수정")
-    public CommonResponse<ModifyProfileAllDto.Response> modifyAll(@RequestBody ModifyProfileAllDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new ModifyProfileAllDto.Response());
+    public CommonResponse<ModifyProfileAllDto.Response> modifyAll(@RequestBody ModifyProfileAllDto.Request request, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(onBoardingService.modifyAll(request, principalDetails.getMember().getId()));
     }
 
     @PostMapping("/preferences/lifestyle")

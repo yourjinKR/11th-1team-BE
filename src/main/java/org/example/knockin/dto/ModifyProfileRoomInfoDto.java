@@ -13,6 +13,7 @@ import java.util.List;
 @Data
 public class ModifyProfileRoomInfoDto {
     @Data
+    @Builder
     @AllArgsConstructor
     @NoArgsConstructor
     public static class Request {
