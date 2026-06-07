@@ -37,4 +37,9 @@ public class RoomProfile extends CreatedAtEntity {
 
     @Column(name = "comeable_at", nullable = false)
     private LocalDateTime comeableAt;
+
+    protected void updateCommonInfo(Boolean isComeableAtNegotiable, LocalDateTime comeableAt) {
+        this.isComeableAtNegotiable = isComeableAtNegotiable;
+        this.comeableAt = comeableAt;
+    }
 }

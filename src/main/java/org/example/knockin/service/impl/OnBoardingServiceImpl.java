@@ -273,4 +273,89 @@ public class OnBoardingServiceImpl {
         modifyLifeStyle(request, member);
         return ModifyProfileLifeStyleDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
+
+    @Transactional
+    public void modifyRoomInfo(ModifyProfileRoomInfoDto.Request request, Member member) {
+        RoomProfile roomProfile = roomProfileRepository.findByMember(member).getFirst();
+        RoomProfileType targetType = request.getType();
+
+        if (roomProfile.getType() != targetType) {
+            if (roomProfile instanceof RoomOfferProfile roomOfferProfile) {
+                offerRoomTypeRepository.deleteByRoomOfferProfile(roomOfferProfile);
+            } else if (roomProfile instanceof RoomSeekerProfile seekerProfile) {
+                seekerRoomTypeRepository.deleteByRoomSeekerProfile(seekerProfile);
+                roomSeekerProfileRegionRepository.deleteByRoomSeekerProfile(seekerProfile);
+            }
+
+            roomProfileRepository.delete(roomProfile);
+            roomProfileRepository.flush();
+
+            if (targetType == RoomProfileType.SEEKER) {
+                RoomSeekerProfile newSeekerProfile = roomProfileRepository.save(RoomSeekerProfile.builder()
+                        .member(member)
+                        .minDeposit(request.getMinDeposit())
+                        .maxDeposit(request.getMaxDeposit())
+                        .minMonthlyRent(request.getMinMounthRent())
+                        .maxMonthlyRent(request.getMaxMounthRent())
+                        .isComeableAtNegotiable(request.isComeableAtNegotiable())
+                        .comeableAt(request.getComeEnableAt())
+                        .build());
+
+                List<RoomSeekerProfileRegion> seekerRegions = metaService.findByRegions(request.getRegion()).stream().map(region -> RoomSeekerProfileRegion.builder().roomSeekerProfile(newSeekerProfile).region(region).build()).toList();
+                roomSeekerProfileRegionRepository.saveAll(seekerRegions);
+
+                List<SeekerRoomType> seekerRoomTypes = metaService.findByRoomTypes(request.getRoomProfile()).stream().map(roomType -> SeekerRoomType.builder().roomSeekerProfile(newSeekerProfile).roomType(roomType).build()).toList();
+                seekerRoomTypeRepository.saveAll(seekerRoomTypes);
+            } else if (targetType == RoomProfileType.OFFER) {
+                Region region = metaService.findByRegionId(request.getRegion().getFirst())
+                        .orElseThrow(() -> new BusinessException(MetaErrorCode.REGION_NOT_FOUND));
+
+                RoomOfferProfile newOfferProfile = roomProfileRepository.save(RoomOfferProfile.builder()
+                        .member(member)
+                        .region(region)
+                        .deposit(request.getDeposit())
+                        .monthlyRent(request.getMounthRent())
+                        .isComeableAtNegotiable(request.isComeableAtNegotiable())
+                        .comeableAt(request.getComeEnableAt())
+                        .build());
+
+                List<OfferRoomType> offerRoomTypes = metaService.findByRoomTypes(request.getRoomProfile()).stream().map(roomType -> OfferRoomType.builder().roomOfferProfile(newOfferProfile).roomType(roomType).build()).toList();
+                offerRoomTypeRepository.saveAll(offerRoomTypes);
+            }
+        } else {
+            List<RoomType> roomTypeList = metaService.findByRoomTypes(request.getRoomProfile());
+
+            if (roomProfile instanceof RoomOfferProfile roomOfferProfile) {
+                Region region = metaService.findByRegionId(request.getRegion().getFirst()).orElseThrow(() -> new BusinessException(MetaErrorCode.REGION_NOT_FOUND));
+
+                roomOfferProfile.updateOffer(request, region);
+                offerRoomTypeRepository.deleteByRoomOfferProfile(roomOfferProfile);
+
+                List<OfferRoomType> offerRoomTypeList = roomTypeList.stream().map(item -> OfferRoomType.builder().roomType(item).roomOfferProfile(roomOfferProfile).build()).toList();
+                offerRoomTypeRepository.saveAll(offerRoomTypeList);
+            } else if (roomProfile instanceof RoomSeekerProfile seekerProfile) {
+                List<Region> regionList = metaService.findByRegions(request.getRegion());
+
+                seekerProfile.updateSeeker(request);
+                seekerRoomTypeRepository.deleteByRoomSeekerProfile(seekerProfile);
+
+                List<SeekerRoomType> seekerRoomTypes = roomTypeList.stream().map(item -> SeekerRoomType.builder().roomType(item).roomSeekerProfile(seekerProfile).build()).toList();
+                seekerRoomTypeRepository.saveAll(seekerRoomTypes);
+
+                roomSeekerProfileRegionRepository.deleteByRoomSeekerProfile(seekerProfile);
+
+                List<RoomSeekerProfileRegion> roomSeekerProfileRegionList = regionList.stream().map(item -> RoomSeekerProfileRegion.builder().roomSeekerProfile(seekerProfile).region(item).build()).toList();
+                roomSeekerProfileRegionRepository.saveAll(roomSeekerProfileRegionList);
+            } else {
+                throw new BusinessException(OnBoardErrorCode.ONBOARD_ROOM_INFO_VAILDATION_FAIL);
+            }
+        }
+    }
+
+    @Transactional
+    public ModifyProfileRoomInfoDto.Response modifyRoomInfoLogic(ModifyProfileRoomInfoDto.Request request, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+        modifyRoomInfo(request, member);
+        return ModifyProfileRoomInfoDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
 }

@@ -1,6 +1,9 @@
 package org.example.knockin.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.example.knockin.entity.room.RoomProfileType;
 
 import java.time.LocalDate;
@@ -10,6 +13,8 @@ import java.util.List;
 @Data
 public class ModifyProfileRoomInfoDto {
     @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class Request {
         private RoomProfileType type;
         private Integer minDeposit;
@@ -21,9 +26,11 @@ public class ModifyProfileRoomInfoDto {
         private List<Long> roomProfile;
         private Integer deposit;
         private Integer mounthRent;
+        private boolean isComeableAtNegotiable;
     }
 
     @Data
+    @Builder
     public static class Response {
         private LocalDateTime updatedAt;
     }
