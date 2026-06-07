@@ -29,6 +29,8 @@ import org.hibernate.annotations.ColumnDefault;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "roommate_board")
 public class RoommateBoard extends BaseEntity {
+    public static final long COMEABLE_DATE_VISIBLE_GRACE_DAYS = 7;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")

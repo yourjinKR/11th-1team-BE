@@ -137,7 +137,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
                 request.getMaxDeposit(),
                 request.getMinMounthRent(),
                 request.getMaxMounthRent(),
-                LocalDateTime.now(),
+                LocalDateTime.now().minusDays(RoommateBoard.COMEABLE_DATE_VISIBLE_GRACE_DAYS),
                 pageable
         );
 

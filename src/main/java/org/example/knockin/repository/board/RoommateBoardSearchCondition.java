@@ -14,7 +14,7 @@ public record RoommateBoardSearchCondition(
         @Nullable Integer maxDeposit,
         @Nullable Integer minMounthRent,
         @Nullable Integer maxMounthRent,
-        LocalDateTime now,
+        LocalDateTime endDate,
         Pageable pageable
 ) {
 }
