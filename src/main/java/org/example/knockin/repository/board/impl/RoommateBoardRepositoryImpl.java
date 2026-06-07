@@ -63,7 +63,7 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                 depositBetween(condition.minDeposit(), condition.maxDeposit()),
                 mounthRentBetween(condition.minMounthRent(), condition.maxMounthRent()),
                 isNotDeleted(),
-                comeableDateNotExpired()
+                comeableDateNotExpired(condition.now())
         };
 
         Pageable pageable = condition.pageable();
@@ -307,8 +307,8 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
         return roommateBoard.isDeleted.isFalse();
     }
 
-    private BooleanExpression comeableDateNotExpired() {
-        return roommateBoard.comeableDate.goe(LocalDateTime.now());
+    private BooleanExpression comeableDateNotExpired(LocalDateTime now) {
+        return roommateBoard.comeableDate.goe(now);
     }
 
     public record BoardBaseRow(
