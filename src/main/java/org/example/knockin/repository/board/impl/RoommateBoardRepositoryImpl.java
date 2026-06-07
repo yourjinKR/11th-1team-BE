@@ -92,7 +92,6 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
     private List<Long> fetchBoardIds(Predicate[] searchCondition, Pageable pageable, SearchAliases aliases) {
         return jpaQueryFactory
                 .select(roommateBoard.id)
-                .distinct()
                 .from(roommateBoard)
                 .join(roommateBoard.region, aliases.boardRegion())
                 .leftJoin(aliases.boardRegion().parent, aliases.parentRegion())

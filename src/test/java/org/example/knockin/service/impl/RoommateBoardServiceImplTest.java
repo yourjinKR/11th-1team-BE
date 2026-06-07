@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.stream.StreamSupport;
 import org.example.knockin.dto.BoardDto;
 import org.example.knockin.dto.BoardDto.Request.FileDto;
+import org.example.knockin.dto.BoardListDto;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.board.RoommateBoardFile;
 import org.example.knockin.entity.file.File;
@@ -27,6 +28,7 @@ import org.example.knockin.global.exception.FileErrorCode;
 import org.example.knockin.global.exception.MemberErrorCode;
 import org.example.knockin.global.exception.MetaErrorCode;
 import org.example.knockin.repository.board.RoommateBoardFileRepository;
+import org.example.knockin.repository.board.RoommateBoardSearchCondition;
 import org.example.knockin.repository.board.RoommateBoardRepository;
 import org.example.knockin.service.FileService;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +42,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 @ExtendWith(MockitoExtension.class)
@@ -78,6 +83,9 @@ class RoommateBoardServiceImplTest {
 
     @Captor
     private ArgumentCaptor<List<File>> uploadedFilesCaptor;
+
+    @Captor
+    private ArgumentCaptor<RoommateBoardSearchCondition> searchConditionCaptor;
 
     @BeforeEach
     void setUpTransactionTemplate() {
@@ -270,6 +278,26 @@ class RoommateBoardServiceImplTest {
         verify(fileService).deleteAll(uploadedFilesCaptor.capture());
         assertThat(uploadedFilesCaptor.getValue()).containsExactly(thumbnailFile);
         verifyNoInteractions(roommateBoardFileRepository);
+    }
+
+    @Test
+    @DisplayName("목록 조회 시 입주 가능시기 노출 기준을 현재 시각 기준 7일 전으로 전달한다")
+    void getBoardListPassesComeableDateGraceEndDate() {
+        BoardListDto.Request request = new BoardListDto.Request();
+        Pageable pageable = PageRequest.of(0, 20);
+        LocalDateTime beforeEndDate = LocalDateTime.now()
+                .minusDays(RoommateBoard.COMEABLE_DATE_VISIBLE_GRACE_DAYS);
+        when(roommateBoardRepository.search(any(RoommateBoardSearchCondition.class)))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        roommateBoardService.getBoardList(request, pageable);
+
+        LocalDateTime afterEndDate = LocalDateTime.now()
+                .minusDays(RoommateBoard.COMEABLE_DATE_VISIBLE_GRACE_DAYS);
+        verify(roommateBoardRepository).search(searchConditionCaptor.capture());
+        RoommateBoardSearchCondition condition = searchConditionCaptor.getValue();
+        assertThat(condition.endDate()).isBetween(beforeEndDate, afterEndDate);
+        assertThat(condition.pageable()).isSameAs(pageable);
     }
 
     private BoardDto.Request createRequest(FileDto... images) {
