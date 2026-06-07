@@ -268,9 +268,21 @@ public class OnBoardingServiceImpl {
     }
 
     @Transactional
+    public void modifyLifeStyleLog(Member member) {
+        List<MemberLifePattern> memberLifePatternList = memberLifePatternRepository.findByMember(member);
+        List<MemberLifePatternLog> logList = memberLifePatternList.stream().map(pattern ->
+                MemberLifePatternLog.builder().member(member).lifePatternInformation(pattern.getLifePatternInformation()).build()).toList();
+
+        if (!logList.isEmpty()) {
+            memberLifePatternLogRepository.saveAll(logList);
+        }
+    }
+
+    @Transactional
     public ModifyProfileLifeStyleDto.Response modifyLifeStyleLogic(ModifyProfileLifeStyleDto.Request request, Long memberId) {
         Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
         modifyLifeStyle(request, member);
+        modifyLifeStyleLog(member);
         return ModifyProfileLifeStyleDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 }
