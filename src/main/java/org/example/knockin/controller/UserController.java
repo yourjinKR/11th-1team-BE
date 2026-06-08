@@ -85,8 +85,8 @@ public class UserController {
 
     @PostMapping("/preferences/conditions")
     @Operation(summary = "선호 조건 저장")
-    public CommonResponse<SavePreferencesConditionsDto.Response> savePreConditions(@RequestBody SavePreferencesConditionsDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new SavePreferencesConditionsDto.Response());
+    public CommonResponse<SavePreferencesConditionsDto.Response> savePreConditions(@RequestBody SavePreferencesConditionsDto.Request request, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(onBoardingService.savePreferenceConditionLogic(request, principalDetails.getMember().getId()));
     }
 
     @PostMapping("/preferences/all")

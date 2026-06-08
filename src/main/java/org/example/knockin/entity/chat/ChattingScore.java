@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.example.knockin.entity.life.MemberLifePatternLog;
 import org.example.knockin.entity.life.PreferenceConditionLog;
+import org.example.knockin.entity.life.PreferenceConditionWeightLog;
 
 
 @Getter
@@ -37,6 +38,11 @@ public class ChattingScore {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "life_pattern_information_log_id", nullable = false)
     private MemberLifePatternLog lifePatternInformationLog;
+
+    @MapsId("preferenceConditionWeightLog")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "preference_condition_weight_log_id", nullable = false)
+    private PreferenceConditionWeightLog preferenceConditionWeightLog;
 
     @Column(name = "score", nullable = false)
     private Integer score;

@@ -22,4 +22,7 @@ public class RoommateScoreId implements Serializable {
 
     @Column(name = "life_pattern_information_log_id")
     private Long lifePatternInformationLogId;
+
+    @Column(name = "preference_condition_weight_log_id")
+    private Long preferenceConditionWeightLog;
 }

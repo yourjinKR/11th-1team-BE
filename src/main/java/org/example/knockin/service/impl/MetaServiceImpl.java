@@ -2,11 +2,13 @@ package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.entity.agreement.AgreementLog;
+import org.example.knockin.entity.life.LifePattern;
 import org.example.knockin.entity.life.LifePatternInformation;
 import org.example.knockin.entity.room.Region;
 import org.example.knockin.entity.room.RoomType;
 import org.example.knockin.repository.agreement.AgreementLogRepository;
 import org.example.knockin.repository.life.LifePatternInformationRepository;
+import org.example.knockin.repository.life.LifePatternRepository;
 import org.example.knockin.repository.room.RegionRepository;
 import org.example.knockin.repository.room.RoomTypeRepository;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,7 @@ import java.util.Optional;
 public class MetaServiceImpl {
     private final AgreementLogRepository agreementLogRepository;
     private final LifePatternInformationRepository lifePatternInformationRepository;
+    private final LifePatternRepository lifePatternRepository;
     private final RegionRepository regionRepository;
     private final RoomTypeRepository roomTypeRepository;
 
@@ -28,6 +31,10 @@ public class MetaServiceImpl {
 
     public List<LifePatternInformation> findByLifeStyle(List<Long> lifeStyles) {
         return lifePatternInformationRepository.findByLifeStyles(lifeStyles);
+    }
+
+    public List<LifePattern> findLifePatternByLifeStyle(List<Long> lifeStyles) {
+        return lifePatternRepository.findAllById(lifeStyles);
     }
 
     public Optional<Region> findByRegionId(Long id) {

@@ -1,12 +1,13 @@
 package org.example.knockin.entity.life;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.example.knockin.entity.member.Member;
 
 @Getter
 @Entity
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "preference_condition_weight_log")
 public class PreferenceConditionWeightLog {
@@ -15,8 +16,8 @@ public class PreferenceConditionWeightLog {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "preference_condition_log_id")
-    private PreferenceConditionLog preferenceConditionLog;
+    @JoinColumn(name = "member_id")
+    private Member member;
 
     @ManyToOne
     @JoinColumn(name = "life_pattern_id")

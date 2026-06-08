@@ -43,6 +43,8 @@ public class OnBoardingServiceImpl {
     private final LifePatternInformationRepository lifePatternInformationRepository;
     private final PreferenceConditionRepository preferenceConditionRepository;
     private final PreferenceConditionLogRepository preferenceConditionLogRepository;
+    private final PreferenceConditionWeightRepository preferenceConditionWeightRepository;
+    private final PreferenceConditionWeightLogRepository preferenceConditionWeightLogRepository;
 
     @Transactional
     public BasicInformation saveBasicInfo(SaveProfileBasicDto.Request request, Member member) {
@@ -424,11 +426,46 @@ public class OnBoardingServiceImpl {
     }
 
     @Transactional
+    public List<PreferenceConditionLog> savePreferenceLifeStyleLog(SavePreferencesLifeStyleDto.Request request, Member member) {
+        List<PreferenceConditionLog> preferenceConditionLogList = new ArrayList<>();
+        metaService.findByLifeStyle(request.getLifestyles()).forEach(item ->
+                preferenceConditionLogList.add(PreferenceConditionLog.builder().member(member).lifePatternInformation(item).build()));
+        return preferenceConditionLogRepository.saveAll(preferenceConditionLogList);
+    }
+
+    @Transactional
     public SavePreferencesLifeStyleDto.Response savePreferenceLifeStyleLogic(SavePreferencesLifeStyleDto.Request request, Long memberId) {
         Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
 
         if(savePreferenceLifeStyle(request, member).isEmpty()) throw new BusinessException(OnBoardErrorCode.ONBOARD_PREFERENCE_STEP1_SAVE_ERROR);
+        if(savePreferenceLifeStyleLog(request, member).isEmpty()) throw new BusinessException(OnBoardErrorCode.ONBOARD_PREFERENCE_STEP1_LOG_SAVE_ERROR);
 
         return SavePreferencesLifeStyleDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public List<PreferenceConditionWeight>  savePreferenceCondition(SavePreferencesConditionsDto.Request request, Member member) {
+        List<PreferenceConditionWeight> preferenceConditionWeightList = new ArrayList<>();
+        metaService.findLifePatternByLifeStyle(request.getConditions()).forEach(item ->
+                preferenceConditionWeightList.add(PreferenceConditionWeight.builder().member(member).lifePattern(item).build()));
+        return preferenceConditionWeightRepository.saveAll(preferenceConditionWeightList);
+    }
+
+    @Transactional
+    public List<PreferenceConditionWeightLog>  savePreferenceConditionLog(SavePreferencesConditionsDto.Request request, Member member) {
+        List<PreferenceConditionWeightLog> preferenceConditionWeightLogList = new ArrayList<>();
+        metaService.findLifePatternByLifeStyle(request.getConditions()).forEach(item ->
+                preferenceConditionWeightLogList.add(PreferenceConditionWeightLog.builder().member(member).lifePattern(item).build()));
+        return preferenceConditionWeightLogRepository.saveAll(preferenceConditionWeightLogList);
+    }
+
+    @Transactional
+    public SavePreferencesConditionsDto.Response savePreferenceConditionLogic(SavePreferencesConditionsDto.Request request, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+
+        if(savePreferenceCondition(request, member).isEmpty()) throw new BusinessException(OnBoardErrorCode.ONBOARD_PREFERENCE_STEP2_SAVE_ERROR);
+        if(savePreferenceConditionLog(request, member).isEmpty()) throw new BusinessException(OnBoardErrorCode.ONBOARD_PREFERENCE_STEP2_LOG_SAVE_ERROR);
+
+        return SavePreferencesConditionsDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 }
