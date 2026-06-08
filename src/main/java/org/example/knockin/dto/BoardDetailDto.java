@@ -2,6 +2,7 @@ package org.example.knockin.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.life.LifePatternType;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,10 +19,7 @@ public class BoardDetailDto {
         @Schema(description = "고유 식별 ID")
         private Long boardId;
 
-        @Schema(description = "썸네일 URL 목록")
-        private String thumbNailImageUrl;
-
-        @Schema(description = "이미지 URL 목록")
+        @Schema(description = "이미지 URL 목록, 맨 앞이 썸네일입니다")
         private List<String> imageUrls;
 
         @Schema(description = "제목")
@@ -39,7 +37,7 @@ public class BoardDetailDto {
         @Schema(description = "방 타입명")
         private String roomTypeName;
 
-        @Schema(description = "지역명 full name")
+        @Schema(description = "지역명 풀네임")
         private String regionFullName;
 
         @Schema(description = "날짜 및 시간")
@@ -51,16 +49,16 @@ public class BoardDetailDto {
         @Schema(description = "내용")
         private String contents;
 
-        @Schema(description = "방 옵션 목록")
-        private List<Long> roomOptions;
+        @Schema(description = "방 추가 옵션 목록")
+        private List<String> roomExtraOptionNames;
 
-        @Schema(description = "라이프스타일 목록")
-        private List<Lifestyle> lifeStyles;
+        @Schema(description = "고정 상단 생활패턴")
+        private List<Lifestyle> primaryLifeStyles;
 
-        @Schema(description = "선호도 목록")
-        private List<Preference> preferences;
+        @Schema(description = "더보기 생활패턴")
+        private List<Lifestyle> additionalLifeStyles;
 
-        @Schema(description = "선호 룸메이트 조건 조건 목록")
+        @Schema(description = "선호 룸메이트 조건 목록")
         private List<Condition> conditions;
 
         @Schema(description = "등록자 이름")
@@ -70,16 +68,13 @@ public class BoardDetailDto {
         private String memberProfileImageUrl;
 
         @Schema(description = "등록자 나이")
-        private String memberAge;
+        private Integer memberAge;
 
         @Schema(description = "등록자 성별")
         private Gender gender;
 
-        @Schema(description = "학생 인증 여부")
-        private Boolean isAuthStudent;
-
-        @Schema(description = "직장인 인증 여부")
-        private Boolean isAuthEmployee;
+        @Schema(description = "승인된 신원 인증")
+        private List<AuthenticationType> authentications;
 
         @Schema(description = "적합도")
         private Compatibility compatibility;
@@ -99,23 +94,9 @@ public class BoardDetailDto {
         }
 
         @Data
-        public static class Preference {
-            @Schema(description = "고유 식별 ID")
-            private Long preferencesId;
-            @Schema(description = "이름")
-            private String name;
-            @Schema(description = "값")
-            private String value;
-            @Schema(description = "설명")
-            private String description;
-            @Schema(description = "타입/유형")
-            private LifePatternType type;
-        }
-
-        @Data
         public static class Condition {
             @Schema(description = "고유 식별 ID")
-            private Long conditionsId;
+            private Long conditionId;
             @Schema(description = "이름")
             private String name;
         }
