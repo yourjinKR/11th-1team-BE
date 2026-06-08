@@ -79,8 +79,8 @@ public class UserController {
 
     @PostMapping("/preferences/lifestyle")
     @Operation(summary = "선호 라이프스타일 저장")
-    public CommonResponse<SavePreferencesLifeStyleDto.Response> savePreLifeStyle(@RequestBody SavePreferencesLifeStyleDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new SavePreferencesLifeStyleDto.Response());
+    public CommonResponse<SavePreferencesLifeStyleDto.Response> savePreLifeStyle(@RequestBody SavePreferencesLifeStyleDto.Request request, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(onBoardingService.savePreferenceLifeStyleLogic(request, principalDetails.getMember().getId()));
     }
 
     @PostMapping("/preferences/conditions")

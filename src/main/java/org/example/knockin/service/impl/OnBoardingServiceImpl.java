@@ -4,10 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.*;
 import org.example.knockin.entity.agreement.AgreementLog;
 import org.example.knockin.entity.agreement.MemberAgreement;
-import org.example.knockin.entity.life.LifePattern;
-import org.example.knockin.entity.life.LifePatternInformation;
-import org.example.knockin.entity.life.MemberLifePattern;
-import org.example.knockin.entity.life.MemberLifePatternLog;
+import org.example.knockin.entity.life.*;
 import org.example.knockin.entity.member.BasicInformation;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.*;
@@ -416,5 +413,16 @@ public class OnBoardingServiceImpl {
         modifyRoomInfo(roomInfoRequest, member);
 
         return ModifyProfileAllDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public List<PreferenceCondition> savePreferenceLifeStyle(SavePreferencesLifeStyleDto.Request request, Member member) {
+        return null;
+    }
+
+    @Transactional
+    public SavePreferencesLifeStyleDto.Response savePreferenceLifeStyleLogic(SavePreferencesLifeStyleDto.Request request, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+        return SavePreferencesLifeStyleDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 }
