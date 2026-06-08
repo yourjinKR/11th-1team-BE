@@ -18,6 +18,7 @@ import java.util.Optional;
 import static org.example.knockin.entity.member.QMember.member;
 import static org.example.knockin.entity.life.QPreferenceCondition.preferenceCondition;
 import static org.example.knockin.entity.life.QMemberLifePattern.memberLifePattern;
+import static org.example.knockin.entity.life.QPreferenceConditionWeight.preferenceConditionWeight;
 
 @Repository
 @RequiredArgsConstructor
@@ -42,7 +43,12 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                         JPAExpressions.selectOne()
                                 .from(preferenceCondition)
                                 .where(preferenceCondition.member.eq(member))
-                                .exists().as("preferenceInfo"),
+                                .exists()
+                                .and(JPAExpressions.selectOne()
+                                                .from(preferenceConditionWeight)
+                                                .where(preferenceConditionWeight.member.eq(member))
+                                                .exists())
+                                .as("preferenceInfo"),
                         member.isDelete.as("isDelete")
                 ))
                 .from(member)
