@@ -31,10 +31,10 @@ public class BoardListDto {
         @Schema(description = "최대 보증금")
         Integer maxDeposit;
 
-        @Schema(description = "최대 월세")
+        @Schema(description = "최소 월세")
         Integer minMounthRent;
 
-        @Schema(description = "최소 월세")
+        @Schema(description = "최대 월세")
         Integer maxMounthRent;
     }
 
