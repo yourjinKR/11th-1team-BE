@@ -9,6 +9,7 @@ import org.example.knockin.dto.BoardDto.Response;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.global.auth.dto.PrincipalDetails;
 import org.example.knockin.service.RoommateBoardService;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -31,8 +32,8 @@ public class RoomMateController {
     @GetMapping("/boards")
     @Operation(summary = "게시글 목록 조회")
     public CommonResponse<Page<BoardListDto.Response>> findBoardList(
-            @Validated @ModelAttribute BoardListDto.Request request,
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            @ParameterObject @Validated @ModelAttribute BoardListDto.Request request,
+            @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<BoardListDto.Response> responses = roommateBoardService.getBoardList(request, pageable);
         return CommonResponse.status(HttpStatus.OK).body(responses);
     }
