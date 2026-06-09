@@ -1,7 +1,10 @@
 package org.example.knockin.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.life.LifePatternType;
 import java.time.LocalDateTime;
@@ -9,18 +12,24 @@ import java.util.List;
 import org.example.knockin.entity.member.Gender;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class BoardDetailDto {
+
     @Data
     public static class Request {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Response {
         @Schema(description = "고유 식별 ID")
         private Long boardId;
 
-        @Schema(description = "이미지 URL 목록, 맨 앞이 썸네일입니다")
-        private List<String> imageUrls;
+        @Schema(description = "이미지 정보 목록")
+        private List<ImageInfo> images;
 
         @Schema(description = "제목")
         private String title;
@@ -80,6 +89,16 @@ public class BoardDetailDto {
         private Compatibility compatibility;
 
         @Data
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class ImageInfo {
+            private String url;
+            private boolean isThumbnail;
+        }
+
+        @Data
+        @NoArgsConstructor
+        @AllArgsConstructor
         public static class Lifestyle {
             @Schema(description = "고유 식별 ID")
             private Long lifestyleId;
@@ -94,6 +113,8 @@ public class BoardDetailDto {
         }
 
         @Data
+        @NoArgsConstructor
+        @AllArgsConstructor
         public static class Condition {
             @Schema(description = "고유 식별 ID")
             private Long conditionId;
@@ -102,6 +123,8 @@ public class BoardDetailDto {
         }
 
         @Data
+        @NoArgsConstructor
+        @AllArgsConstructor
         public static class Compatibility {
             @Schema(description = "점수")
             private Integer score;
@@ -109,6 +132,8 @@ public class BoardDetailDto {
             private List<LifeStyleInfo> lifeStyleInfo;
 
             @Data
+            @NoArgsConstructor
+            @AllArgsConstructor
             public static class LifeStyleInfo {
                 @Schema(description = "제목")
                 private String title;

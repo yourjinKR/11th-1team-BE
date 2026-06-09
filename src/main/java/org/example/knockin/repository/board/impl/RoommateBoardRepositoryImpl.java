@@ -1,14 +1,22 @@
 package org.example.knockin.repository.board.impl;
 
+import static org.example.knockin.entity.auth.QAuthentication.authentication;
 import static org.example.knockin.entity.board.QRoommateBoard.roommateBoard;
+import static org.example.knockin.entity.board.QRoommateBoardFile.roommateBoardFile;
+import static org.example.knockin.entity.board.QRoommateBoardOption.roommateBoardOption;
+import static org.example.knockin.entity.file.QBasicInformationFile.basicInformationFile;
+import static org.example.knockin.entity.file.QFile.file;
+import static org.example.knockin.entity.life.QLifePattern.lifePattern;
+import static org.example.knockin.entity.life.QLifePatternInformation.lifePatternInformation;
+import static org.example.knockin.entity.life.QMemberLifePattern.memberLifePattern;
+import static org.example.knockin.entity.life.QPreferenceCondition.preferenceCondition;
 import static org.example.knockin.entity.member.QBasicInformation.basicInformation;
 import static org.example.knockin.entity.member.QMember.member;
-import static org.example.knockin.entity.board.QRoommateBoardFile.roommateBoardFile;
-import static org.example.knockin.entity.room.QRoomType.roomType;
 import static org.example.knockin.entity.room.QRegion.region;
-import static org.example.knockin.entity.auth.QAuthentication.authentication;
+import static org.example.knockin.entity.room.QRoomExtraOption.roomExtraOption;
+import static org.example.knockin.entity.room.QRoomType.roomType;
 
-
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Predicate;
@@ -24,14 +32,19 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.Builder;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.dto.BoardDetailDto;
+import org.example.knockin.dto.BoardDetailDto.Response.ImageInfo;
+import org.example.knockin.dto.BoardDetailDto.Response.Lifestyle;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.file.QFile;
+import org.example.knockin.entity.life.QLifePattern;
+import org.example.knockin.entity.life.QLifePatternInformation;
 import org.example.knockin.entity.member.Gender;
 import org.example.knockin.entity.member.QBasicInformation;
 import org.example.knockin.entity.room.QRegion;
-import org.example.knockin.global.jpa.QueryDslUtils;
+import org.example.knockin.global.util.DateUtils;
+import org.example.knockin.global.util.QueryDslUtils;
 import org.example.knockin.repository.board.RoommateBoardListRow;
 import org.example.knockin.repository.board.RoommateBoardRepositoryCustom;
 import org.example.knockin.repository.board.RoommateBoardSearchCondition;
@@ -218,6 +231,7 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
         return boardIds.stream()
                 .map(boardId -> {
                     BoardBaseRow row = baseRowByBoardId.get(boardId);
+                    String regionFullName = parseToRegionFullName(row.grandParentRegionName, row.parentRegionName, row.regionName);
 
                     return new RoommateBoardListRow(
                             row.boardId(),
@@ -228,7 +242,7 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                             row.managementCost(),
                             List.of(row.roomTypeName()),
                             row.comeableDate(),
-                            row.regionFullName(),
+                            regionFullName,
                             row.memberName(),
                             authByMemberId.getOrDefault(row.memberId(), List.of()),
                             row.hits(),
@@ -263,6 +277,206 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                         .from(aliases.latestBasicInformation())
                         .where(aliases.latestBasicInformation().member.id.eq(member.id))
         );
+    }
+
+    @Override
+        public BoardDetailDto.Response viewDetail(@NonNull Long boardId) {
+            QRegion boardRegion = new QRegion("boardRegion");
+            QRegion parentRegion = new QRegion("parentRegion");
+            QRegion grandParentRegion = new QRegion("grandParentRegion");
+            SearchAliases searchAliases = new SearchAliases(boardRegion, parentRegion, grandParentRegion, null, null);
+
+            // 기본 정보
+            Tuple tuple = getBoardBasicInfoTuple(boardId, searchAliases);
+
+            // 게시물 파일
+            List<ImageInfo> images = findImagesById(boardId);
+
+            // 추가 옵션
+            List<String> roomExtraOptionNames = findExtraOptionNamesById(boardId);
+
+            assert tuple != null;
+        Long memberId = tuple.get(basicInformation.member.id);
+
+        // 생활패턴
+        BooleanExpression isPrimaryExpression = lifePattern.name.in("취침", "청결", "소음", "흡연");
+        Map<Boolean, List<Lifestyle>> memberLifePatternMap = findLifeStylePrimaryKeyMapByMemberId(memberId,
+                isPrimaryExpression);
+
+        List<BoardDetailDto.Response.Lifestyle> primaryLifeStyles = memberLifePatternMap.get(true);
+        List<BoardDetailDto.Response.Lifestyle> additionalLifeStyles = memberLifePatternMap.get(false);
+
+        // 선호 조건
+        List<BoardDetailDto.Response.Condition> conditions = findPreferenceConditionsByMemberId(memberId);
+
+        // 승인된 신원 인증
+
+        // 지역명 파싱
+        String regionFullName = parseToRegionFullName(
+                tuple.get(boardRegion.name),
+                tuple.get(parentRegion.name),
+                tuple.get(grandParentRegion.name)
+        );
+
+        int memberAge = DateUtils.calculateAge(tuple.get(basicInformation.birth));
+
+        return BoardDetailDto.Response.builder()
+                .boardId(tuple.get(roommateBoard.id))
+                .images(images)
+                .title(tuple.get(roommateBoard.title))
+                .deposit(tuple.get(roommateBoard.deposit))
+                .managementCost(tuple.get(roommateBoard.managementCost))
+                .monthlyRent(tuple.get(roommateBoard.monthlyRent))
+                .roomTypeName(tuple.get(roommateBoard.roomType.name))
+                .regionFullName(regionFullName)
+                .createdAt(tuple.get(roommateBoard.createdAt))
+                .hits(tuple.get(roommateBoard.hits))
+                .roomExtraOptionNames(roomExtraOptionNames)
+                .primaryLifeStyles(primaryLifeStyles)
+                .additionalLifeStyles(additionalLifeStyles)
+                .conditions(conditions)
+                .memberName(tuple.get(basicInformation.name))
+                .memberAge(memberAge)
+                .gender(tuple.get(basicInformation.gender))
+                .authentications(findAcceptedAuthenticationTypeByMemberId(memberId))
+                .compatibility(null) // 아직 계산식 미정
+                .build();
+    }
+
+    private Tuple getBoardBasicInfoTuple(Long boardId, SearchAliases searchAliases) {
+        QRegion boardRegion = searchAliases.boardRegion();
+        QRegion parentRegion = searchAliases.parentRegion();
+        QRegion grandParentRegion = searchAliases.grandParentRegion();
+
+        return jpaQueryFactory
+                .select(
+                        roommateBoard.id,
+                        roommateBoard.title,
+                        roommateBoard.deposit,
+                        roommateBoard.managementCost,
+                        roommateBoard.monthlyRent,
+                        roommateBoard.roomType.name,
+                        boardRegion.name,
+                        parentRegion.name,
+                        grandParentRegion.name,
+                        roommateBoard.createdAt,
+                        roommateBoard.hits,
+                        roommateBoard.contents,
+                        basicInformation.name,
+                        basicInformationFile.file.savedFileName,
+                        basicInformation.birth,
+                        basicInformation.gender
+                )
+                .from(roommateBoard)
+                .where(
+                        roommateBoard.id.eq(boardId),
+                        roommateBoard.isDeleted.isFalse()
+                )
+                .join(roommateBoard.roomType, roomType)
+                .join(roommateBoard.region, boardRegion)
+                .leftJoin(boardRegion.parent, parentRegion)
+                .leftJoin(parentRegion.parent, grandParentRegion)
+                .join(roommateBoard.member, member)
+                // 1:N 관계이지만 서비스적으로 1:1 유지 가정
+                .leftJoin(basicInformation)
+                .on(basicInformation.id.eq(
+                        JPAExpressions
+                                .select(basicInformation.id.max())
+                                .from(basicInformation)
+                                .where(basicInformation.member.id.eq(member.id))
+                ))
+                // 1:N 관계이지만 서비스적으로 1:1 유지 가정
+                .leftJoin(basicInformationFile)
+                .on(basicInformationFile.id.eq(
+                        JPAExpressions.select(file.id.max())
+                                .from(file)
+                                .where(file.id.eq(basicInformationFile.id))
+                ))
+                .fetchOne();
+    }
+
+    private List<ImageInfo> findImagesById(Long boardId) {
+        return jpaQueryFactory
+                .select(Projections.constructor(
+                        ImageInfo.class,
+                        roommateBoardFile.file.savedFileName,
+                        roommateBoardFile.isThumbnail
+                ))
+                .from(roommateBoardFile)
+                .join(roommateBoardFile.file, file)
+                .where(
+                        roommateBoardFile.roommateBoard.id.eq(boardId),
+                        file.isDeleted.isFalse()
+                )
+                .fetch();
+    }
+
+    private List<String> findExtraOptionNamesById(Long boardId) {
+        return jpaQueryFactory
+                .select(roomExtraOption.name)
+                .from(roomExtraOption)
+                .join(roommateBoardOption.roomExtraOption, roomExtraOption)
+                .where(
+                        roommateBoardOption.roommateBoard.id.eq(boardId),
+                        roomExtraOption.isDeleted.isFalse()
+                )
+                .fetch();
+    }
+
+    private Map<Boolean, List<Lifestyle>> findLifeStylePrimaryKeyMapByMemberId(Long memberId, BooleanExpression isPrimaryExpression) {
+        List<Tuple> tuples = jpaQueryFactory
+                .select(
+                        lifePattern.id,
+                        lifePattern.name,
+                        lifePatternInformation.dvalue,
+                        lifePatternInformation.description,
+                        lifePattern.dtype,
+                        isPrimaryExpression
+                )
+                .from(memberLifePattern)
+                .where(memberLifePattern.member.id.eq(memberId))
+                .join(memberLifePattern.lifePatternInformation, lifePatternInformation)
+                .leftJoin(lifePatternInformation.lifePattern, lifePattern)
+                .fetch();
+
+        return tuples.stream()
+                .collect(Collectors.partitioningBy(
+                        tuple -> Boolean.TRUE.equals(tuple.get(isPrimaryExpression)),
+                        Collectors.mapping(tuple -> new Lifestyle(
+                                tuple.get(lifePattern.id),
+                                tuple.get(lifePattern.name),
+                                tuple.get(lifePatternInformation.dvalue),
+                                tuple.get(lifePatternInformation.description),
+                                tuple.get(lifePattern.dtype)
+                        ), Collectors.toList())
+                ));
+    }
+
+    private List<BoardDetailDto.Response.Condition> findPreferenceConditionsByMemberId(Long memberId) {
+        return jpaQueryFactory
+                .select(Projections.constructor(
+                        BoardDetailDto.Response.Condition.class,
+                        lifePattern.id,
+                        lifePattern.name
+                ))
+                .from(preferenceCondition)
+                .where(preferenceCondition.member.id.eq(memberId))
+                .join(preferenceCondition.lifePatternInformation, lifePatternInformation)
+                .leftJoin(lifePatternInformation.lifePattern, lifePattern)
+                .fetch();
+    }
+
+    private List<AuthenticationType> findAcceptedAuthenticationTypeByMemberId(Long memberId) {
+        return jpaQueryFactory
+                .select(authentication.type)
+                .from(authentication)
+                .where(
+                        authentication.member.id.eq(memberId),
+                        authentication.isAccepted.isTrue(),
+                        authentication.isDeleted.isFalse()
+                )
+                .join(authentication.member, member)
+                .fetch();
     }
 
     private BooleanExpression regionEq(Long regionId) {
@@ -343,12 +557,17 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
             Long memberId,
             String memberName
     ) {
-        public String regionFullName() {
-            return Stream.of(grandParentRegionName, parentRegionName, regionName)
-                    .filter(Objects::nonNull)
-                    .filter(name -> !name.isBlank())
-                    .collect(Collectors.joining(" "));
-        }
+    }
+
+    private String parseToRegionFullName(
+            String grandParentRegionName,
+            String parentRegionName,
+            String regionName
+    ) {
+        return Stream.of(grandParentRegionName, parentRegionName, regionName)
+                .filter(Objects::nonNull)
+                .filter(name -> !name.isBlank())
+                .collect(Collectors.joining(" "));
     }
 
     public record BoardThumbnailRow(

@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.dto.BoardDetailDto;
+import org.example.knockin.dto.BoardDetailDto.Response;
 import org.example.knockin.dto.BoardDto;
 import org.example.knockin.dto.BoardDto.Request.FileDto;
 import org.example.knockin.dto.BoardListDto;
@@ -161,6 +163,11 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
                 .hits(row.hits())
                 .badges(row.badges())
                 .build();
+    }
+
+    @Override
+    public BoardDetailDto.Response getBoardDetail(Long boardId) {
+        return roommateBoardRepository.viewDetail(boardId);
     }
 
     private record FileWithThumbnail(File file, boolean thumbNail) { }

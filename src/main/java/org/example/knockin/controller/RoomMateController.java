@@ -40,7 +40,7 @@ public class RoomMateController {
     @GetMapping("/boards/{boardId}")
     @Operation(summary = "게시글 상세 조회")
     public CommonResponse<BoardDetailDto.Response> findBoard(@PathVariable Long boardId) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoardDetailDto.Response());
+        return CommonResponse.status(HttpStatus.OK).body(roommateBoardService.getBoardDetail(boardId));
     }
 
     @PostMapping("/boards/likes")
