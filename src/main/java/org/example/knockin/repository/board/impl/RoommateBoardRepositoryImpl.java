@@ -280,44 +280,33 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
     }
 
     @Override
-        public BoardDetailDto.Response viewDetail(@NonNull Long boardId) {
-            QRegion boardRegion = new QRegion("boardRegion");
-            QRegion parentRegion = new QRegion("parentRegion");
-            QRegion grandParentRegion = new QRegion("grandParentRegion");
-            SearchAliases searchAliases = new SearchAliases(boardRegion, parentRegion, grandParentRegion, null, null);
+    public BoardDetailDto.Response viewDetail(@NonNull Long boardId) {
+        QRegion boardRegion = new QRegion("boardRegion");
+        QRegion parentRegion = new QRegion("parentRegion");
+        QRegion grandParentRegion = new QRegion("grandParentRegion");
+        SearchAliases searchAliases = new SearchAliases(boardRegion, parentRegion, grandParentRegion, null, null);
 
-            // 기본 정보
-            Tuple tuple = getBoardBasicInfoTuple(boardId, searchAliases);
+        increaseHitsByBoardId(boardId);
 
-            // 게시물 파일
-            List<ImageInfo> images = findImagesById(boardId);
+        Tuple tuple = getBoardBasicInfoTuple(boardId, searchAliases);
 
-            // 추가 옵션
-            List<String> roomExtraOptionNames = findExtraOptionNamesById(boardId);
+        List<ImageInfo> images = findImagesById(boardId);
 
-            assert tuple != null;
+        List<String> roomExtraOptionNames = findExtraOptionNamesById(boardId);
+
+        assert tuple != null;
         Long memberId = tuple.get(basicInformation.member.id);
-
-        // 생활패턴
         BooleanExpression isPrimaryExpression = lifePattern.name.in("취침", "청결", "소음", "흡연");
         Map<Boolean, List<Lifestyle>> memberLifePatternMap = findLifeStylePrimaryKeyMapByMemberId(memberId,
                 isPrimaryExpression);
-
         List<BoardDetailDto.Response.Lifestyle> primaryLifeStyles = memberLifePatternMap.get(true);
         List<BoardDetailDto.Response.Lifestyle> additionalLifeStyles = memberLifePatternMap.get(false);
 
-        // 선호 조건
         List<BoardDetailDto.Response.Condition> conditions = findPreferenceConditionsByMemberId(memberId);
 
-        // 승인된 신원 인증
+        List<AuthenticationType> authenticationTypes = findAcceptedAuthenticationTypeByMemberId(memberId);
 
-        // 지역명 파싱
-        String regionFullName = parseToRegionFullName(
-                tuple.get(boardRegion.name),
-                tuple.get(parentRegion.name),
-                tuple.get(grandParentRegion.name)
-        );
-
+        String regionFullName = parseToRegionFullName(tuple.get(boardRegion.name), tuple.get(parentRegion.name), tuple.get(grandParentRegion.name));
         int memberAge = DateUtils.calculateAge(tuple.get(basicInformation.birth));
 
         return BoardDetailDto.Response.builder()
@@ -338,8 +327,9 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                 .memberName(tuple.get(basicInformation.name))
                 .memberAge(memberAge)
                 .gender(tuple.get(basicInformation.gender))
-                .authentications(findAcceptedAuthenticationTypeByMemberId(memberId))
-                .compatibility(null) // 아직 계산식 미정
+                .authentications(authenticationTypes)
+                //TODO: 계산식 확정 후 적용
+                .compatibility(null)
                 .build();
     }
 
@@ -477,6 +467,14 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                 )
                 .join(authentication.member, member)
                 .fetch();
+    }
+
+    private Long increaseHitsByBoardId(Long boardId) {
+        return jpaQueryFactory
+                .update(roommateBoard)
+                .set(roommateBoard.hits, roommateBoard.hits.add(1))
+                .where(roommateBoard.id.eq(boardId), roommateBoard.isDeleted.isFalse())
+                .execute();
     }
 
     private BooleanExpression regionEq(Long regionId) {
