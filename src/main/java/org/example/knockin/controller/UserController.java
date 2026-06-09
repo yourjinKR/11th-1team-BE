@@ -109,8 +109,8 @@ public class UserController {
 
     @PutMapping("/preferences/all")
     @Operation(summary = "선호 전체 수정")
-    public CommonResponse<ModifyPreferencesAllDto.Response> modifyPreAll(@RequestBody ModifyPreferencesAllDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new ModifyPreferencesAllDto.Response());
+    public CommonResponse<ModifyPreferencesAllDto.Response> modifyPreAll(@RequestBody ModifyPreferencesAllDto.Request request, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(onBoardingService.modifyPreAll(request, principalDetails.getMember().getId()));
     }
 
     @GetMapping("/preferences/all")

@@ -11,6 +11,7 @@ import java.util.List;
 @Data
 public class ModifyPreferencesLifeStyleDto {
     @Data
+    @Builder
     @AllArgsConstructor
     @NoArgsConstructor
     public static class Request {

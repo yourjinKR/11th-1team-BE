@@ -11,6 +11,7 @@ import java.util.List;
 @Data
 public class ModifyPreferencesConditionsDto {
     @Data
+    @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Request {

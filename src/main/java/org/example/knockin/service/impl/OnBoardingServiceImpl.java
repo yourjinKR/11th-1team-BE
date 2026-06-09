@@ -554,4 +554,19 @@ public class OnBoardingServiceImpl {
 
         return ModifyPreferencesConditionsDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
+
+    @Transactional
+    public ModifyPreferencesAllDto.Response modifyPreAll(ModifyPreferencesAllDto.Request request, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+
+        ModifyPreferencesLifeStyleDto.Request lifeStyleRequest = ModifyPreferencesLifeStyleDto.Request.builder().lifestyles(request.getLifestyles()).build();
+        ModifyPreferencesConditionsDto.Request conditionRequest = ModifyPreferencesConditionsDto.Request.builder().conditions(request.getConditions()).build();
+
+        modifyPreferenceLifeStyle(lifeStyleRequest,member);
+        modifyPreferenceLifeStyleLog(member);
+        modifyPreCondition(conditionRequest, member);
+        modifyPreConditionLog(member);
+
+        return ModifyPreferencesAllDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
 }
