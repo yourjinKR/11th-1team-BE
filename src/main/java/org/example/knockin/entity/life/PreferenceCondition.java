@@ -33,4 +33,8 @@ public class PreferenceCondition extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "life_pattern_information_id", nullable = false)
     private LifePatternInformation lifePatternInformation;
+
+    public void modifyPreferenceCondition(LifePatternInformation lifePatternInformation) {
+        this.lifePatternInformation = lifePatternInformation;
+    }
 }
