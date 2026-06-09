@@ -4,10 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.*;
 import org.example.knockin.entity.agreement.AgreementLog;
 import org.example.knockin.entity.agreement.MemberAgreement;
-import org.example.knockin.entity.life.LifePattern;
-import org.example.knockin.entity.life.LifePatternInformation;
-import org.example.knockin.entity.life.MemberLifePattern;
-import org.example.knockin.entity.life.MemberLifePatternLog;
+import org.example.knockin.entity.life.*;
 import org.example.knockin.entity.member.BasicInformation;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.*;
@@ -16,9 +13,7 @@ import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.MetaErrorCode;
 import org.example.knockin.global.exception.OnBoardErrorCode;
 import org.example.knockin.repository.agreement.MemberAgreementRepository;
-import org.example.knockin.repository.life.LifePatternInformationRepository;
-import org.example.knockin.repository.life.MemberLifePatternLogRepository;
-import org.example.knockin.repository.life.MemberLifePatternRepository;
+import org.example.knockin.repository.life.*;
 import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.room.OfferRoomTypeRepository;
 import org.example.knockin.repository.room.RoomProfileRepository;
@@ -46,6 +41,8 @@ public class OnBoardingServiceImpl {
     private final RoomSeekerProfileRegionRepository roomSeekerProfileRegionRepository;
     private final MetaServiceImpl metaService;
     private final LifePatternInformationRepository lifePatternInformationRepository;
+    private final PreferenceConditionRepository preferenceConditionRepository;
+    private final PreferenceConditionLogRepository preferenceConditionLogRepository;
 
     @Transactional
     public BasicInformation saveBasicInfo(SaveProfileBasicDto.Request request, Member member) {
@@ -416,5 +413,22 @@ public class OnBoardingServiceImpl {
         modifyRoomInfo(roomInfoRequest, member);
 
         return ModifyProfileAllDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public List<PreferenceCondition> savePreferenceLifeStyle(SavePreferencesLifeStyleDto.Request request, Member member) {
+        List<PreferenceCondition> preferenceConditionList = new ArrayList<>();
+        metaService.findByLifeStyle(request.getLifestyles()).forEach(item ->
+                preferenceConditionList.add(PreferenceCondition.builder().member(member).lifePatternInformation(item).build()));
+        return preferenceConditionRepository.saveAll(preferenceConditionList);
+    }
+
+    @Transactional
+    public SavePreferencesLifeStyleDto.Response savePreferenceLifeStyleLogic(SavePreferencesLifeStyleDto.Request request, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+
+        if(savePreferenceLifeStyle(request, member).isEmpty()) throw new BusinessException(OnBoardErrorCode.ONBOARD_PREFERENCE_STEP1_SAVE_ERROR);
+
+        return SavePreferencesLifeStyleDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 }

@@ -13,6 +13,8 @@ public enum OnBoardErrorCode implements ErrorCode{
     ONBOARD_LIFE_STYLE_NOT_FOUND(HttpStatus.NOT_FOUND, "생활패턴을 찾지 못하였습니다."),
     ONBOARD_LIFE_STYLE_VAILDATION_FAIL(HttpStatus.NOT_FOUND, "적절하지 않는 생활패턴을 값 입니다."),
     ONBOARD_ROOM_INFO_VAILDATION_FAIL(HttpStatus.INTERNAL_SERVER_ERROR, "방 프로필 수정중 예상치 못한 에러가 발생하였습니다."),
+    ONBOARD_PREFERENCE_STEP1_SAVE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "선호조건 Step1을 저장하지 못하였습니다."),
+    ONBOARD_PREFERENCE_STEP2_SAVE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "선호조건 Step2을 저장하지 못하였습니다."),
     ONBOARD_ROOM_INFO_SAVE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "방정보 저장을 하지 못하였습니다.");
 
     private final HttpStatus httpStatus;
