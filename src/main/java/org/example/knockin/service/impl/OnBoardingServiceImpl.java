@@ -468,4 +468,19 @@ public class OnBoardingServiceImpl {
 
         return SavePreferencesConditionsDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
+
+    @Transactional
+    public SavePreferencesAllDto.Response savePreferenceAll(SavePreferencesAllDto.Request request, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+
+        SavePreferencesLifeStyleDto.Request lifeStyleRequest = new SavePreferencesLifeStyleDto.Request(request.getLifestyles());
+        SavePreferencesConditionsDto.Request conditionRequest = new SavePreferencesConditionsDto.Request(request.getConditions());
+
+        if(savePreferenceLifeStyle(lifeStyleRequest, member).isEmpty()) throw new BusinessException(OnBoardErrorCode.ONBOARD_PREFERENCE_STEP1_SAVE_ERROR);
+        if(savePreferenceLifeStyleLog(lifeStyleRequest, member).isEmpty()) throw new BusinessException(OnBoardErrorCode.ONBOARD_PREFERENCE_STEP1_LOG_SAVE_ERROR);
+        if(savePreferenceCondition(conditionRequest, member).isEmpty()) throw new BusinessException(OnBoardErrorCode.ONBOARD_PREFERENCE_STEP2_SAVE_ERROR);
+        if(savePreferenceConditionLog(conditionRequest, member).isEmpty()) throw new BusinessException(OnBoardErrorCode.ONBOARD_PREFERENCE_STEP2_LOG_SAVE_ERROR);
+
+        return SavePreferencesAllDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
 }

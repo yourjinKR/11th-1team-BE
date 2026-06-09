@@ -91,8 +91,8 @@ public class UserController {
 
     @PostMapping("/preferences/all")
     @Operation(summary = "선호 전체 저장")
-    public CommonResponse<SavePreferencesAllDto.Response> savePreAll(@RequestBody SavePreferencesAllDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new SavePreferencesAllDto.Response());
+    public CommonResponse<SavePreferencesAllDto.Response> savePreAll(@RequestBody SavePreferencesAllDto.Request request, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(onBoardingService.savePreferenceAll(request, principalDetails.getMember().getId()));
     }
 
     @PutMapping("/preferences/lifestyle")
