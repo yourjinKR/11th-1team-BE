@@ -569,4 +569,9 @@ public class OnBoardingServiceImpl {
 
         return ModifyPreferencesAllDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
+
+    public MyProfileAllDto.Response findProfileAll(Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+        return memberService.findProfileAll(member);
+    }
 }

@@ -1,6 +1,7 @@
 package org.example.knockin.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 import lombok.Data;
 import org.example.knockin.entity.life.LifePatternType;
 import org.example.knockin.entity.room.RoomProfileType;
@@ -14,6 +15,7 @@ public class MyProfileAllDto {
     }
 
     @Data
+    @Builder
     public static class Response {
         @Schema(description = "라이프스타일 목록")
         private List<Lifestyle> lifestyles;

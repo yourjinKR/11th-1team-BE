@@ -2,20 +2,22 @@ package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.DeleteUserDto;
+import org.example.knockin.dto.MyProfileAllDto;
 import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.MemberRole;
+import org.example.knockin.entity.room.*;
 import org.example.knockin.global.auth.dto.AuthResponse;
 import org.example.knockin.global.auth.dto.OAuth2UserInfo;
 import org.example.knockin.global.auth.exception.AuthErrorCode;
 import org.example.knockin.global.auth.service.Oauth2DeleteFactory;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.repository.member.MemberRepository;
-import org.osgi.annotation.versioning.ProviderType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -73,5 +75,83 @@ public class MemberServiceImpl {
 
     public Optional<Member> findById(Long id) {
         return memberRepository.findById(id);
+    }
+
+    public MyProfileAllDto.Response findProfileAll(Member member) {
+        List<MyProfileAllDto.Response.Lifestyle> lifestyles = memberRepository.findByLifePattern(member);
+        List<MyProfileAllDto.Response.Region> regions = new ArrayList<>();
+        List<MyProfileAllDto.Response.RoomProfile> roomProfiles = new ArrayList<>();
+        RoomProfileType type = null;
+        LocalDateTime comeEnableAt = null;
+        Integer deposit = null;
+        Integer mounthRent = null;
+        Integer minDeposit = null;
+        Integer maxDeposit = null;
+        Integer minMounthRent = null;
+        Integer maxMounthRent = null;
+
+        RoomProfile roomProfileEntity = memberRepository.findByRoomProfile(member).orElse(null);
+        if (roomProfileEntity != null) {
+            type = roomProfileEntity.getType();
+            comeEnableAt = roomProfileEntity.getComeableAt();
+
+            if (roomProfileEntity instanceof RoomOfferProfile offer) {
+                deposit = offer.getDeposit();
+                mounthRent = offer.getMonthlyRent();
+
+                if (offer.getRegion() != null) {
+                    MyProfileAllDto.Response.Region regDto = new MyProfileAllDto.Response.Region();
+                    regDto.setRegionId(offer.getRegion().getId());
+                    regDto.setRegion(getFullRegionName(offer.getRegion()));
+                    regions.add(regDto);
+                }
+
+                roomProfiles = memberRepository.findRoomTypes(offer);
+            } else if (roomProfileEntity instanceof RoomSeekerProfile seeker) {
+                minDeposit = seeker.getMinDeposit();
+                maxDeposit = seeker.getMaxDeposit();
+                minMounthRent = seeker.getMinMonthlyRent();
+                maxMounthRent = seeker.getMaxMonthlyRent();
+
+                List<Region> seekerRegions = memberRepository.findSeekerRegionEntities(seeker);
+                for (Region region : seekerRegions) {
+                    MyProfileAllDto.Response.Region regDto = new MyProfileAllDto.Response.Region();
+                    regDto.setRegionId(region.getId());
+                    regDto.setRegion(getFullRegionName(region));
+                    regions.add(regDto);
+                }
+                roomProfiles = memberRepository.findRoomTypes(seeker);
+            }
+        }
+
+        return MyProfileAllDto.Response.builder()
+                .lifestyles(lifestyles)
+                .type(type)
+                .comeEnableAt(comeEnableAt)
+                .deposit(deposit)
+                .mounthRent(mounthRent)
+                .minDeposit(minDeposit)
+                .maxDeposit(maxDeposit)
+                .minMounthRent(minMounthRent)
+                .maxMounthRent(maxMounthRent)
+                .region(regions)
+                .roomProfile(roomProfiles)
+                .build();
+    }
+
+    private String getFullRegionName(Region regionEntity) {
+        if (regionEntity == null) {
+            return "";
+        }
+
+        List<String> regionNames = new ArrayList<>();
+        Region current = regionEntity;
+
+        while (current != null) {
+            regionNames.add(0, current.getName());
+            current = current.getParent();
+        }
+
+        return String.join(" ", regionNames);
     }
 }
