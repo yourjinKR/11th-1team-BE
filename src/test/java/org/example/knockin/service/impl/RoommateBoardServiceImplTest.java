@@ -3,7 +3,9 @@ package org.example.knockin.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -13,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
+import org.example.knockin.dto.BoardDetailDto;
 import org.example.knockin.dto.BoardDto;
 import org.example.knockin.dto.BoardDto.Request.FileDto;
 import org.example.knockin.dto.BoardListDto;
@@ -27,6 +30,7 @@ import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.FileErrorCode;
 import org.example.knockin.global.exception.MemberErrorCode;
 import org.example.knockin.global.exception.MetaErrorCode;
+import org.example.knockin.global.exception.RoommateBoardErrorCode;
 import org.example.knockin.repository.board.RoommateBoardFileRepository;
 import org.example.knockin.repository.board.RoommateBoardSearchCondition;
 import org.example.knockin.repository.board.RoommateBoardRepository;
@@ -38,6 +42,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.support.TransactionCallback;
@@ -298,6 +303,40 @@ class RoommateBoardServiceImplTest {
         RoommateBoardSearchCondition condition = searchConditionCaptor.getValue();
         assertThat(condition.endDate()).isBetween(beforeEndDate, afterEndDate);
         assertThat(condition.pageable()).isSameAs(pageable);
+    }
+
+    @Test
+    @DisplayName("상세 조회는 조회수를 증가시킨 뒤 게시글 상세 정보를 반환한다")
+    void getBoardDetailIncreasesHitsThenReturnsDetail() {
+        // Given
+        Long boardId = 1L;
+        BoardDetailDto.Response expectedResponse = new BoardDetailDto.Response();
+        when(roommateBoardRepository.increaseHitsById(boardId)).thenReturn(1);
+        when(roommateBoardRepository.viewDetail(boardId)).thenReturn(expectedResponse);
+
+        // When
+        BoardDetailDto.Response response = roommateBoardService.getBoardDetail(boardId);
+
+        // Then
+        assertThat(response).isSameAs(expectedResponse);
+        InOrder inOrder = inOrder(roommateBoardRepository);
+        inOrder.verify(roommateBoardRepository).increaseHitsById(boardId);
+        inOrder.verify(roommateBoardRepository).viewDetail(boardId);
+    }
+
+    @Test
+    @DisplayName("상세 조회는 조회수 증가 대상이 없으면 게시글 없음 예외를 던진다")
+    void getBoardDetailThrowsWhenHitUpdateDoesNotAffectBoard() {
+        // Given
+        Long boardId = 999L;
+        when(roommateBoardRepository.increaseHitsById(boardId)).thenReturn(0);
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.getBoardDetail(boardId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
+        verify(roommateBoardRepository).increaseHitsById(boardId);
+        verify(roommateBoardRepository, never()).viewDetail(any());
     }
 
     private BoardDto.Request createRequest(FileDto... images) {

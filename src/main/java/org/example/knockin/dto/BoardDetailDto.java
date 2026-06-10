@@ -28,7 +28,7 @@ public class BoardDetailDto {
         private Long boardId;
 
         @Schema(description = "이미지 정보 목록")
-        private List<ImageInfo> images;
+        private List<FileDetailDto> images;
 
         @Schema(description = "제목")
         private String title;
@@ -90,9 +90,11 @@ public class BoardDetailDto {
         @Data
         @NoArgsConstructor
         @AllArgsConstructor
-        public static class ImageInfo {
+        public static class FileDetailDto {
+            @Schema(description = "게시물 파일 식별 ID")
+            private Long boardFileId;
+            @Schema(description = "이미지 URL")
             private String url;
-            private boolean isThumbnail;
         }
 
         @Data

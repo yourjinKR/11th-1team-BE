@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.BoardDetailDto;
-import org.example.knockin.dto.BoardDetailDto.Response.ImageInfo;
+import org.example.knockin.dto.BoardDetailDto.Response.FileDetailDto;
 import org.example.knockin.dto.BoardDetailDto.Response.Lifestyle;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.file.QBasicInformationFile;
@@ -288,14 +288,12 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
         QFile profileFile = new QFile("profileFile");
         SearchAliases searchAliases = new SearchAliases(boardRegion, parentRegion, grandParentRegion, null, null);
 
-        increaseHitsByBoardId(boardId);
-
         Tuple tuple = getBoardBasicInfoTuple(boardId, searchAliases, profileFile);
         if (tuple == null) {
             throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND);
         }
 
-        List<ImageInfo> images = findImagesById(boardId);
+        List<FileDetailDto> images = findImagesById(boardId);
 
         List<String> roomExtraOptionNames = findExtraOptionNamesById(boardId);
 
@@ -396,12 +394,12 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                 .fetchOne();
     }
 
-    private List<ImageInfo> findImagesById(Long boardId) {
+    private List<FileDetailDto> findImagesById(Long boardId) {
         return jpaQueryFactory
                 .select(Projections.constructor(
-                        ImageInfo.class,
-                        roommateBoardFile.file.savedFileName,
-                        roommateBoardFile.isThumbnail
+                        FileDetailDto.class,
+                        roommateBoardFile.id,
+                        file.savedFileName
                 ))
                 .from(roommateBoardFile)
                 .join(roommateBoardFile.file, file)
@@ -484,14 +482,6 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                 )
                 .join(authentication.member, member)
                 .fetch();
-    }
-
-    private Long increaseHitsByBoardId(Long boardId) {
-        return jpaQueryFactory
-                .update(roommateBoard)
-                .set(roommateBoard.hits, roommateBoard.hits.add(1))
-                .where(roommateBoard.id.eq(boardId), roommateBoard.isDeleted.isFalse())
-                .execute();
     }
 
     private BooleanExpression regionEq(Long regionId) {

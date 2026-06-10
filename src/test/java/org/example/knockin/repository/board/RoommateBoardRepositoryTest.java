@@ -48,7 +48,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 @DataJpaTest
 @ActiveProfiles("test")
 @Import(QueryDslConfig.class)
-@DisplayName("룸메이트 게시글 목록 조회 Repository")
+@DisplayName("룸메이트 게시글 Repository")
 class RoommateBoardRepositoryTest {
 
     @Autowired
@@ -159,8 +159,8 @@ class RoommateBoardRepositoryTest {
     }
 
     @Test
-    @DisplayName("상세 조회는 게시글 상세 화면에 필요한 정보를 조립하고 조회수를 증가시킨다")
-    void viewDetailReturnsBoardDetailAndIncrementsHits() {
+    @DisplayName("상세 조회는 게시글 상세 화면에 필요한 정보를 조립한다")
+    void viewDetailReturnsBoardDetail() {
         // Given
         Member member = persistMember("provider-detail");
         LocalDate birth = LocalDate.of(1998, 1, 1);
@@ -177,7 +177,7 @@ class RoommateBoardRepositoryTest {
         for (int i = 1; i <= 11; i++) {
             persistBoardFile(board, persistFile("room-" + i + ".jpg"), false);
         }
-        persistBoardFile(board, persistFile("thumbnail.jpg"), true);
+        RoommateBoardFile thumbnailBoardFile = persistBoardFile(board, persistFile("thumbnail.jpg"), true);
 
         RoomExtraOption fullOption = persistRoomExtraOption("풀옵션");
         persistRoommateBoardOption(board, fullOption);
@@ -200,7 +200,7 @@ class RoommateBoardRepositoryTest {
         assertThat(response.getBoardId()).isEqualTo(board.getId());
         assertThat(response.getTitle()).isEqualTo("상세 게시글");
         assertThat(response.getContents()).isEqualTo("테스트 게시글 내용");
-        assertThat(response.getHits()).isEqualTo(1L);
+        assertThat(response.getHits()).isZero();
         assertThat(response.getRoomTypeName()).isEqualTo("원룸");
         assertThat(response.getRegionFullName()).isEqualTo("서울 강남구 역삼동");
         assertThat(response.getMemberName()).isEqualTo("상세작성자");
@@ -210,8 +210,8 @@ class RoommateBoardRepositoryTest {
         assertThat(response.getAuthentications()).containsExactly(AuthenticationType.STUDENT);
         assertThat(response.getRoomExtraOptionNames()).containsExactly("풀옵션");
         assertThat(response.getImages()).hasSize(10);
+        assertThat(response.getImages().getFirst().getBoardFileId()).isEqualTo(thumbnailBoardFile.getId());
         assertThat(response.getImages().getFirst().getUrl()).isEqualTo("thumbnail.jpg");
-        assertThat(response.getImages().getFirst().isThumbnail()).isTrue();
         assertThat(response.getPrimaryLifeStyles())
                 .extracting(BoardDetailDto.Response.Lifestyle::getName)
                 .containsExactly("취침");
@@ -221,6 +221,51 @@ class RoommateBoardRepositoryTest {
         assertThat(response.getConditions())
                 .extracting(BoardDetailDto.Response.Condition::getName)
                 .containsExactly("흡연");
+    }
+
+    @Test
+    @DisplayName("조회수 증가 쿼리는 삭제되지 않은 게시글의 조회수를 1 증가시킨다")
+    void increaseHitsByIdIncrementsVisibleBoardHits() {
+        // Given
+        Member member = persistMember("provider-hit-up");
+        RoomType roomType = persistRoomType("투룸");
+        Region region = persistRegion("방배동", 3, null);
+        RoommateBoard board = persistBoard("조회수 증가 게시글", member, roomType, region, LocalDateTime.of(2026, 7, 1, 9, 0));
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        int updatedCount = roommateBoardRepository.increaseHitsById(board.getId());
+        entityManager.flush();
+        entityManager.clear();
+
+        // Then
+        RoommateBoard foundBoard = entityManager.find(RoommateBoard.class, board.getId());
+        assertThat(updatedCount).isEqualTo(1);
+        assertThat(foundBoard.getHits()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("조회수 증가 쿼리는 삭제된 게시글이면 변경하지 않는다")
+    void increaseHitsByIdDoesNotUpdateDeletedBoard() {
+        // Given
+        Member member = persistMember("provider-deleted-hit-up");
+        RoomType roomType = persistRoomType("원룸");
+        Region region = persistRegion("논현동", 3, null);
+        RoommateBoard board = persistBoard("삭제된 게시글", member, roomType, region, LocalDateTime.of(2026, 7, 1, 9, 0));
+        ReflectionTestUtils.setField(board, "isDeleted", true);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        int updatedCount = roommateBoardRepository.increaseHitsById(board.getId());
+        entityManager.flush();
+        entityManager.clear();
+
+        // Then
+        RoommateBoard foundBoard = entityManager.find(RoommateBoard.class, board.getId());
+        assertThat(updatedCount).isZero();
+        assertThat(foundBoard.getHits()).isZero();
     }
 
     @Test
