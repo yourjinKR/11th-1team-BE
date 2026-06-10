@@ -3,8 +3,10 @@ package org.example.knockin.repository.member;
 import java.util.List;
 import java.util.Optional;
 
+import org.example.knockin.dto.MyPreferencesAllDto;
 import org.example.knockin.dto.MyProfileAllDto;
 import org.example.knockin.entity.auth.LoginProviderType;
+import org.example.knockin.entity.life.PreferenceConditionWeight;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.Region;
 import org.example.knockin.entity.room.RoomProfile;
@@ -29,4 +31,6 @@ public interface MemberRepositoryCustom {
     Optional<RoomProfile> findByRoomProfile(Member memberEntity);
     List<MyProfileAllDto.Response.RoomProfile> findRoomTypes(RoomProfile profile);
     List<Region> findSeekerRegionEntities(RoomSeekerProfile seeker);
+    List<MyPreferencesAllDto.Response.Lifestyle> findPreferenceLifeStyle(Member member);
+    List<MyPreferencesAllDto.Response.Condition> findPreferenceCondition(Member member);
 }

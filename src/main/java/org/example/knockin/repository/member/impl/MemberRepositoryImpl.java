@@ -5,8 +5,10 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.dto.MyPreferencesAllDto;
 import org.example.knockin.dto.MyProfileAllDto;
 import org.example.knockin.entity.auth.LoginProviderType;
+import org.example.knockin.entity.life.PreferenceConditionWeight;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.Region;
 import org.example.knockin.entity.room.RoomOfferProfile;
@@ -86,6 +88,7 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
     @Override
     public List<MyProfileAllDto.Response.Lifestyle> findByLifePattern(Member memberEntity) {
         return jpaQueryFactory.select(Projections.fields(MyProfileAllDto.Response.Lifestyle.class,
+                        memberLifePattern.id.as("id"),
                         lifePattern.id.as("lifestyleId"),
                         lifePattern.name.as("name"),
                         lifePatternInformation.dvalue.as("value"),
@@ -141,6 +144,31 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                 .from(roomSeekerProfileRegion)
                 .join(roomSeekerProfileRegion.region, region)
                 .where(roomSeekerProfileRegion.roomSeekerProfile.eq(seeker))
+                .fetch();
+    }
+
+    public List<MyPreferencesAllDto.Response.Lifestyle> findPreferenceLifeStyle(Member memberEntity) {
+        return jpaQueryFactory.select(Projections.fields(MyPreferencesAllDto.Response.Lifestyle.class,
+                        preferenceCondition.id.as("id"),
+                        lifePattern.id.as("lifestyleId"),
+                        lifePattern.name.as("name"),
+                        lifePatternInformation.dvalue.as("value"),
+                        lifePatternInformation.description.as("description"),
+                        lifePattern.dtype.as("type")))
+                .from(preferenceCondition)
+                .join(preferenceCondition.lifePatternInformation, lifePatternInformation)
+                .join(lifePatternInformation.lifePattern, lifePattern)
+                .where(preferenceCondition.member.eq(memberEntity))
+                .fetch();
+    }
+
+    public List<MyPreferencesAllDto.Response.Condition> findPreferenceCondition(Member memberEntity) {
+        return jpaQueryFactory.select(Projections.fields(MyPreferencesAllDto.Response.Condition.class,
+                        lifePattern.id.as("conditionsId"),
+                        lifePattern.name.as("name")))
+                .from(preferenceConditionWeight)
+                .join(preferenceConditionWeight.lifePattern, lifePattern)
+                .where(preferenceConditionWeight.member.eq(memberEntity))
                 .fetch();
     }
 

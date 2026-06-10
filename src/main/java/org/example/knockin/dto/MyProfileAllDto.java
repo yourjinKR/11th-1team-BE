@@ -43,6 +43,8 @@ public class MyProfileAllDto {
         @Data
         public static class Lifestyle {
             @Schema(description = "고유 식별 ID")
+            private Long id;
+            @Schema(description = "생활패턴 고유 식별 ID")
             private Long lifestyleId;
             @Schema(description = "이름")
             private String name;

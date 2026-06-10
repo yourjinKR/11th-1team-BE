@@ -2,6 +2,7 @@ package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.DeleteUserDto;
+import org.example.knockin.dto.MyPreferencesAllDto;
 import org.example.knockin.dto.MyProfileAllDto;
 import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.member.Member;
@@ -136,6 +137,13 @@ public class MemberServiceImpl {
                 .maxMounthRent(maxMounthRent)
                 .region(regions)
                 .roomProfile(roomProfiles)
+                .build();
+    }
+
+    public MyPreferencesAllDto.Response findPreAll(Member member) {
+        return MyPreferencesAllDto.Response.builder()
+                .lifestyles(memberRepository.findPreferenceLifeStyle(member))
+                .conditions(memberRepository.findPreferenceCondition(member))
                 .build();
     }
 

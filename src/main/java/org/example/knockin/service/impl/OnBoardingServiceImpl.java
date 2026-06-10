@@ -574,4 +574,9 @@ public class OnBoardingServiceImpl {
         Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
         return memberService.findProfileAll(member);
     }
+
+    public MyPreferencesAllDto.Response findPreAll(Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+        return memberService.findPreAll(member);
+    }
 }
