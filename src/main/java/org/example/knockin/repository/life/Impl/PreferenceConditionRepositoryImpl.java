@@ -2,35 +2,32 @@ package org.example.knockin.repository.life.Impl;
 
 import static org.example.knockin.entity.life.QLifePattern.lifePattern;
 import static org.example.knockin.entity.life.QLifePatternInformation.lifePatternInformation;
-import static org.example.knockin.entity.life.QMemberLifePattern.memberLifePattern;
+import static org.example.knockin.entity.life.QPreferenceCondition.preferenceCondition;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.BoardDetailDto;
-import org.example.knockin.repository.life.MemberLifePatternRepositoryCustom;
+import org.example.knockin.repository.life.PreferenceConditionRepositoryCustom;
 import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor
-public class MemberLifePatternRepositoryImpl implements MemberLifePatternRepositoryCustom {
+public class PreferenceConditionRepositoryImpl implements PreferenceConditionRepositoryCustom {
     private final JPAQueryFactory jpaQueryFactory;
 
     @Override
-    public List<BoardDetailDto.Response.Lifestyle> getLifeStyleDto(Long memberId) {
+    public List<BoardDetailDto.Response.Condition> getConditionDtoByMemberId(Long memberId) {
         return jpaQueryFactory
                 .select(Projections.constructor(
-                        BoardDetailDto.Response.Lifestyle.class,
+                        BoardDetailDto.Response.Condition.class,
                         lifePattern.id,
-                        lifePattern.name,
-                        lifePatternInformation.dvalue,
-                        lifePatternInformation.description,
-                        lifePattern.dtype
+                        lifePattern.name
                 ))
-                .from(memberLifePattern)
-                .where(memberLifePattern.member.id.eq(memberId))
-                .join(memberLifePattern.lifePatternInformation, lifePatternInformation)
+                .from(preferenceCondition)
+                .where(preferenceCondition.member.id.eq(memberId))
+                .join(preferenceCondition.lifePatternInformation, lifePatternInformation)
                 .leftJoin(lifePatternInformation.lifePattern, lifePattern)
                 .fetch();
     }

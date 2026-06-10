@@ -4,11 +4,17 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.BoardDetailDto;
+import org.example.knockin.dto.BoardDetailDto.Response.BasicInfo;
+import org.example.knockin.dto.BoardDetailDto.Response.Condition;
+import org.example.knockin.dto.BoardDetailDto.Response.Lifestyle;
 import org.example.knockin.dto.BoardDto;
 import org.example.knockin.dto.BoardDto.Request.FileDto;
 import org.example.knockin.dto.BoardListDto;
+import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.board.RoommateBoardFile;
 import org.example.knockin.entity.file.File;
@@ -21,10 +27,14 @@ import org.example.knockin.global.exception.FileErrorCode;
 import org.example.knockin.global.exception.MemberErrorCode;
 import org.example.knockin.global.exception.MetaErrorCode;
 import org.example.knockin.global.exception.RoommateBoardErrorCode;
+import org.example.knockin.repository.auth.AuthenticationRepository;
 import org.example.knockin.repository.board.RoommateBoardFileRepository;
 import org.example.knockin.repository.board.RoommateBoardListRow;
 import org.example.knockin.repository.board.RoommateBoardRepository;
 import org.example.knockin.repository.board.RoommateBoardSearchCondition;
+import org.example.knockin.repository.life.MemberLifePatternRepository;
+import org.example.knockin.repository.life.PreferenceConditionRepository;
+import org.example.knockin.repository.room.RoomExtraOptionRepository;
 import org.example.knockin.service.FileService;
 import org.example.knockin.service.RoommateBoardService;
 import org.jspecify.annotations.NullMarked;
@@ -40,12 +50,18 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class RoommateBoardServiceImpl implements RoommateBoardService {
 
+    private static final List<String> PRIMARY_TYPE_NAMES = List.of("취침", "청결", "소음", "흡연");
+
     private final RoommateBoardRepository roommateBoardRepository;
     private final RoommateBoardFileRepository roommateBoardFileRepository;
     private final MemberServiceImpl memberService;
     private final FileService fileService;
     private final TransactionTemplate transactionTemplate;
     private final MetaServiceImpl metaService;
+    private final PreferenceConditionRepository preferenceConditionRepository;
+    private final RoomExtraOptionRepository roomExtraOptionRepository;
+    private final MemberLifePatternRepository memberLifePatternRepository;
+    private final AuthenticationRepository authenticationRepository;
 
     @Override
     public BoardDto.Response save(BoardDto.Request request, Long memberId) {
@@ -170,7 +186,38 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     @Transactional
     public BoardDetailDto.Response getBoardDetail(Long boardId) {
         increaseHits(boardId);
-        return roommateBoardRepository.viewDetail(boardId);
+
+        BasicInfo basicInfo = roommateBoardRepository.getBasicInfo(boardId)
+                .orElseThrow(() -> new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
+
+        Long memberId = basicInfo.getMemberId();
+
+        List<BoardDetailDto.Response.FileDetailDto> images = roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId);
+        List<String> roomExtraOptionNames = roomExtraOptionRepository.getExtraOptionsNameByBoardId(boardId);
+        Map<Boolean, List<Lifestyle>> lifeStyleMap = divideByIsPrimary(memberLifePatternRepository.getLifeStyleDto(memberId));
+        List<Condition> conditions = preferenceConditionRepository.getConditionDtoByMemberId(memberId);
+        List<AuthenticationType> authenticationTypes = authenticationRepository.getAcceptedAuthenticationTypeByMemberId(memberId);
+
+        return BoardDetailDto.Response.builder()
+                .basicInfo(basicInfo)
+                .images(images)
+                .roomExtraOptionNames(roomExtraOptionNames)
+                .primaryLifeStyles(lifeStyleMap.get(true))
+                .additionalLifeStyles(lifeStyleMap.get(false))
+                .conditions(conditions)
+                .authentications(authenticationTypes)
+                .compatibility(null)
+                .build();
+    }
+
+    // TODO: 정책 확정 후 갱신
+    private Map<Boolean, List<BoardDetailDto.Response.Lifestyle>> divideByIsPrimary(List<BoardDetailDto.Response.Lifestyle> lifeStyles) {
+        if (lifeStyles.isEmpty()) return Map.of();
+
+        return lifeStyles.stream()
+                .collect(Collectors.partitioningBy(
+                        lifestyle -> PRIMARY_TYPE_NAMES.contains(lifestyle.getName())
+                ));
     }
 
     private void increaseHits(Long boardId) {

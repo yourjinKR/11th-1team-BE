@@ -6,6 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface PreferenceConditionRepository extends JpaRepository<PreferenceCondition, Long> {
+public interface PreferenceConditionRepository extends JpaRepository<PreferenceCondition, Long>, PreferenceConditionRepositoryCustom {
     List<PreferenceCondition> findByMember(Member member);
 }
