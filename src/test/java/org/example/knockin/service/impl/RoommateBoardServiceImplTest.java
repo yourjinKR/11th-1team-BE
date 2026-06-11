@@ -11,7 +11,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
@@ -19,10 +21,13 @@ import org.example.knockin.dto.BoardDetailDto;
 import org.example.knockin.dto.BoardDto;
 import org.example.knockin.dto.BoardDto.Request.FileDto;
 import org.example.knockin.dto.BoardListDto;
+import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.board.RoommateBoardFile;
 import org.example.knockin.entity.file.File;
 import org.example.knockin.entity.file.FileType;
+import org.example.knockin.entity.life.LifePatternType;
+import org.example.knockin.entity.member.Gender;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.Region;
 import org.example.knockin.entity.room.RoomType;
@@ -31,9 +36,14 @@ import org.example.knockin.global.exception.FileErrorCode;
 import org.example.knockin.global.exception.MemberErrorCode;
 import org.example.knockin.global.exception.MetaErrorCode;
 import org.example.knockin.global.exception.RoommateBoardErrorCode;
+import org.example.knockin.repository.auth.AuthenticationRepository;
 import org.example.knockin.repository.board.RoommateBoardFileRepository;
+import org.example.knockin.repository.board.RoommateBoardOptionRepository;
 import org.example.knockin.repository.board.RoommateBoardSearchCondition;
 import org.example.knockin.repository.board.RoommateBoardRepository;
+import org.example.knockin.repository.board.row.BasicInfoRow;
+import org.example.knockin.repository.life.MemberLifePatternRepository;
+import org.example.knockin.repository.life.PreferenceConditionRepository;
 import org.example.knockin.service.FileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -53,7 +63,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("룸메이트 게시글 저장 서비스")
+@DisplayName("룸메이트 게시글 서비스")
 class RoommateBoardServiceImplTest {
 
     @Mock
@@ -61,6 +71,18 @@ class RoommateBoardServiceImplTest {
 
     @Mock
     private RoommateBoardFileRepository roommateBoardFileRepository;
+
+    @Mock
+    private RoommateBoardOptionRepository roommateBoardOptionRepository;
+
+    @Mock
+    private PreferenceConditionRepository preferenceConditionRepository;
+
+    @Mock
+    private MemberLifePatternRepository memberLifePatternRepository;
+
+    @Mock
+    private AuthenticationRepository authenticationRepository;
 
     @Mock
     private MemberServiceImpl memberService;
@@ -306,22 +328,90 @@ class RoommateBoardServiceImplTest {
     }
 
     @Test
-    @DisplayName("상세 조회는 조회수를 증가시킨 뒤 게시글 상세 정보를 반환한다")
-    void getBoardDetailIncreasesHitsThenReturnsDetail() {
+    @DisplayName("상세 조회는 조회수 증가 후 원천 데이터를 응답 DTO로 조립한다")
+    void getBoardDetailIncreasesHitsThenComposesResponse() {
         // Given
         Long boardId = 1L;
-        BoardDetailDto.Response expectedResponse = new BoardDetailDto.Response();
+        Long memberId = 7L;
+        LocalDate birth = LocalDate.of(1998, 1, 1);
+        BasicInfoRow basicInfoRow = createBasicInfoRow(boardId, memberId, birth);
+        List<BoardDetailDto.Response.FileDetailDto> images = List.of(
+                new BoardDetailDto.Response.FileDetailDto(101L, "thumbnail.jpg"),
+                new BoardDetailDto.Response.FileDetailDto(102L, "room.jpg")
+        );
+        List<String> roomExtraOptionNames = List.of("풀옵션", "주차 가능");
+        BoardDetailDto.Response.Lifestyle sleep = new BoardDetailDto.Response.Lifestyle(
+                1L, "취침", "23:00", "일찍 자요", LifePatternType.SCALE);
+        BoardDetailDto.Response.Lifestyle visitor = new BoardDetailDto.Response.Lifestyle(
+                2L, "방문객", "가끔", "가끔 방문해요", LifePatternType.SINGLE_CHOICE);
+        List<BoardDetailDto.Response.Condition> conditions = List.of(
+                new BoardDetailDto.Response.Condition(3L, "흡연")
+        );
+        List<AuthenticationType> authenticationTypes = List.of(AuthenticationType.STUDENT);
+
         when(roommateBoardRepository.increaseHitsById(boardId)).thenReturn(1);
-        when(roommateBoardRepository.viewDetail(boardId)).thenReturn(expectedResponse);
+        when(roommateBoardRepository.getBasicInfo(boardId)).thenReturn(Optional.of(basicInfoRow));
+        when(roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId)).thenReturn(images);
+        when(roommateBoardOptionRepository.getExtraOptionsNameByBoardId(boardId)).thenReturn(roomExtraOptionNames);
+        when(memberLifePatternRepository.getLifeStyleDto(memberId)).thenReturn(List.of(visitor, sleep));
+        when(preferenceConditionRepository.getConditionDtoByMemberId(memberId)).thenReturn(conditions);
+        when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(memberId)).thenReturn(authenticationTypes);
 
         // When
         BoardDetailDto.Response response = roommateBoardService.getBoardDetail(boardId);
 
         // Then
-        assertThat(response).isSameAs(expectedResponse);
+        assertThat(response.getBoardId()).isEqualTo(boardId);
+        assertThat(response.getImages()).isSameAs(images);
+        assertThat(response.getTitle()).isEqualTo("상세 게시글");
+        assertThat(response.getDeposit()).isEqualTo(1_000);
+        assertThat(response.getManagementCost()).isEqualTo(10);
+        assertThat(response.getMonthlyRent()).isEqualTo(50);
+        assertThat(response.getRoomTypeName()).isEqualTo("원룸");
+        assertThat(response.getRegionFullName()).isEqualTo("서울 강남구 역삼동");
+        assertThat(response.getHits()).isEqualTo(3L);
+        assertThat(response.getContents()).isEqualTo("상세 내용");
+        assertThat(response.getRoomExtraOptionNames()).isSameAs(roomExtraOptionNames);
+        assertThat(response.getPrimaryLifeStyles()).containsExactly(sleep);
+        assertThat(response.getAdditionalLifeStyles()).containsExactly(visitor);
+        assertThat(response.getConditions()).isSameAs(conditions);
+        assertThat(response.getMemberName()).isEqualTo("상세작성자");
+        assertThat(response.getMemberProfileImageUrl()).isEqualTo("profile.jpg");
+        assertThat(response.getMemberAge()).isEqualTo(Period.between(birth, LocalDate.now()).getYears());
+        assertThat(response.getGender()).isEqualTo(Gender.FEMALE);
+        assertThat(response.getAuthentications()).isSameAs(authenticationTypes);
+        assertThat(response.getCompatibility()).isNotNull();
         InOrder inOrder = inOrder(roommateBoardRepository);
         inOrder.verify(roommateBoardRepository).increaseHitsById(boardId);
-        inOrder.verify(roommateBoardRepository).viewDetail(boardId);
+        inOrder.verify(roommateBoardRepository).getBasicInfo(boardId);
+        verify(roommateBoardFileRepository).getFileDetailDtoByBoardId(boardId);
+        verify(roommateBoardOptionRepository).getExtraOptionsNameByBoardId(boardId);
+        verify(memberLifePatternRepository).getLifeStyleDto(memberId);
+        verify(preferenceConditionRepository).getConditionDtoByMemberId(memberId);
+        verify(authenticationRepository).getAcceptedAuthenticationTypeByMemberId(memberId);
+    }
+
+    @Test
+    @DisplayName("상세 조회는 생활패턴이 없으면 빈 목록을 응답한다")
+    void getBoardDetailReturnsEmptyLifeStyleListsWhenMemberHasNoLifeStyles() {
+        // Given
+        Long boardId = 1L;
+        Long memberId = 7L;
+        BasicInfoRow basicInfoRow = createBasicInfoRow(boardId, memberId, LocalDate.of(1998, 1, 1));
+        when(roommateBoardRepository.increaseHitsById(boardId)).thenReturn(1);
+        when(roommateBoardRepository.getBasicInfo(boardId)).thenReturn(Optional.of(basicInfoRow));
+        when(roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId)).thenReturn(List.of());
+        when(roommateBoardOptionRepository.getExtraOptionsNameByBoardId(boardId)).thenReturn(List.of());
+        when(memberLifePatternRepository.getLifeStyleDto(memberId)).thenReturn(List.of());
+        when(preferenceConditionRepository.getConditionDtoByMemberId(memberId)).thenReturn(List.of());
+        when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(memberId)).thenReturn(List.of());
+
+        // When
+        BoardDetailDto.Response response = roommateBoardService.getBoardDetail(boardId);
+
+        // Then
+        assertThat(response.getPrimaryLifeStyles()).isEmpty();
+        assertThat(response.getAdditionalLifeStyles()).isEmpty();
     }
 
     @Test
@@ -336,7 +426,27 @@ class RoommateBoardServiceImplTest {
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
         verify(roommateBoardRepository).increaseHitsById(boardId);
-        verify(roommateBoardRepository, never()).viewDetail(any());
+        verify(roommateBoardRepository, never()).getBasicInfo(any());
+        verifyNoInteractions(roommateBoardFileRepository, roommateBoardOptionRepository,
+                memberLifePatternRepository, preferenceConditionRepository, authenticationRepository);
+    }
+
+    @Test
+    @DisplayName("상세 조회는 조회수 증가 후 기본 정보가 없으면 게시글 없음 예외를 던진다")
+    void getBoardDetailThrowsWhenBasicInfoDoesNotExistAfterHitUpdate() {
+        // Given
+        Long boardId = 999L;
+        when(roommateBoardRepository.increaseHitsById(boardId)).thenReturn(1);
+        when(roommateBoardRepository.getBasicInfo(boardId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.getBoardDetail(boardId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
+        verify(roommateBoardRepository).increaseHitsById(boardId);
+        verify(roommateBoardRepository).getBasicInfo(boardId);
+        verifyNoInteractions(roommateBoardFileRepository, roommateBoardOptionRepository,
+                memberLifePatternRepository, preferenceConditionRepository, authenticationRepository);
     }
 
     private BoardDto.Request createRequest(FileDto... images) {
@@ -367,6 +477,28 @@ class RoommateBoardServiceImplTest {
                 .savedFileName(savedFileName)
                 .fileExt(extension)
                 .build();
+    }
+
+    private BasicInfoRow createBasicInfoRow(Long boardId, Long memberId, LocalDate birth) {
+        return new BasicInfoRow(
+                boardId,
+                "상세 게시글",
+                1_000,
+                10,
+                50,
+                "원룸",
+                "역삼동",
+                "강남구",
+                "서울",
+                LocalDateTime.of(2026, 6, 1, 12, 0),
+                3L,
+                "상세 내용",
+                memberId,
+                "상세작성자",
+                "profile.jpg",
+                birth,
+                Gender.FEMALE
+        );
     }
 
     private MultipartFile emptyMultipartFile() {

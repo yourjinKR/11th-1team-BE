@@ -1,17 +1,14 @@
 package org.example.knockin.repository.board;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Period;
 import java.util.List;
 import jakarta.persistence.EntityManager;
 import org.example.knockin.config.QueryDslConfig;
-import org.example.knockin.dto.BoardDetailDto;
 import org.example.knockin.entity.auth.Authentication;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.auth.LoginProviderType;
@@ -33,8 +30,10 @@ import org.example.knockin.entity.member.MemberRole;
 import org.example.knockin.entity.room.Region;
 import org.example.knockin.entity.room.RoomExtraOption;
 import org.example.knockin.entity.room.RoomType;
-import org.example.knockin.global.exception.BusinessException;
-import org.example.knockin.global.exception.RoommateBoardErrorCode;
+import org.example.knockin.repository.auth.AuthenticationRepository;
+import org.example.knockin.repository.board.row.BasicInfoRow;
+import org.example.knockin.repository.life.MemberLifePatternRepository;
+import org.example.knockin.repository.life.PreferenceConditionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +52,21 @@ class RoommateBoardRepositoryTest {
 
     @Autowired
     private RoommateBoardRepository roommateBoardRepository;
+
+    @Autowired
+    private RoommateBoardFileRepository roommateBoardFileRepository;
+
+    @Autowired
+    private RoommateBoardOptionRepository roommateBoardOptionRepository;
+
+    @Autowired
+    private MemberLifePatternRepository memberLifePatternRepository;
+
+    @Autowired
+    private PreferenceConditionRepository preferenceConditionRepository;
+
+    @Autowired
+    private AuthenticationRepository authenticationRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -159,14 +173,16 @@ class RoommateBoardRepositoryTest {
     }
 
     @Test
-    @DisplayName("상세 조회는 게시글 상세 화면에 필요한 정보를 조립한다")
-    void viewDetailReturnsBoardDetail() {
+    @DisplayName("상세 기본 정보 조회는 응답 가공 전 원천 데이터를 반환한다")
+    void getBasicInfoReturnsRawBasicInfoRow() {
         // Given
         Member member = persistMember("provider-detail");
         LocalDate birth = LocalDate.of(1998, 1, 1);
-        BasicInformation basicInformation = persistBasicInformation(member, "상세작성자", Gender.FEMALE, "detail@example.com", birth);
-        File profileFile = persistFile("profile.png");
-        persistBasicInformationFile(basicInformation, profileFile);
+        BasicInformation oldBasicInformation = persistBasicInformation(member, "이전작성자", Gender.MALE, "old-detail@example.com", LocalDate.of(2000, 1, 1));
+        persistBasicInformationFile(oldBasicInformation, persistFile("old-profile.png"));
+        BasicInformation latestBasicInformation = persistBasicInformation(member, "상세작성자", Gender.FEMALE, "detail@example.com", birth);
+        persistBasicInformationFile(latestBasicInformation, persistFile("profile-old.png"));
+        persistBasicInformationFile(latestBasicInformation, persistFile("profile-latest.png"));
 
         Region city = persistRegion("서울", 1, null);
         Region district = persistRegion("강남구", 2, city);
@@ -174,53 +190,155 @@ class RoommateBoardRepositoryTest {
         RoomType roomType = persistRoomType("원룸");
         RoommateBoard board = persistBoard("상세 게시글", member, roomType, dong, LocalDateTime.of(2026, 7, 1, 9, 0));
 
-        for (int i = 1; i <= 11; i++) {
-            persistBoardFile(board, persistFile("room-" + i + ".jpg"), false);
-        }
-        RoommateBoardFile thumbnailBoardFile = persistBoardFile(board, persistFile("thumbnail.jpg"), true);
-
-        RoomExtraOption fullOption = persistRoomExtraOption("풀옵션");
-        persistRoommateBoardOption(board, fullOption);
-
-        LifePattern sleepPattern = persistLifePattern("취침", LifePatternType.SCALE);
-        persistMemberLifePattern(member, persistLifePatternInformation(sleepPattern, "23:00", "일찍 자요"));
-        LifePattern visitorPattern = persistLifePattern("방문객", LifePatternType.SINGLE_CHOICE);
-        persistMemberLifePattern(member, persistLifePatternInformation(visitorPattern, "가끔", "가끔 방문해요"));
-        LifePattern smokingPattern = persistLifePattern("흡연", LifePatternType.BOOLEAN);
-        persistPreferenceCondition(member, persistLifePatternInformation(smokingPattern, "비흡연", "비흡연 선호"));
-
-        persistAuthentication(member, AuthenticationType.STUDENT);
         entityManager.flush();
         entityManager.clear();
 
         // When
-        BoardDetailDto.Response response = roommateBoardRepository.viewDetail(board.getId());
+        BasicInfoRow row = roommateBoardRepository.getBasicInfo(board.getId()).orElseThrow();
 
         // Then
-        assertThat(response.getBoardId()).isEqualTo(board.getId());
-        assertThat(response.getTitle()).isEqualTo("상세 게시글");
-        assertThat(response.getContents()).isEqualTo("테스트 게시글 내용");
-        assertThat(response.getHits()).isZero();
-        assertThat(response.getRoomTypeName()).isEqualTo("원룸");
-        assertThat(response.getRegionFullName()).isEqualTo("서울 강남구 역삼동");
-        assertThat(response.getMemberName()).isEqualTo("상세작성자");
-        assertThat(response.getMemberProfileImageUrl()).isEqualTo("profile.png");
-        assertThat(response.getMemberAge()).isEqualTo(Period.between(birth, LocalDate.now()).getYears());
-        assertThat(response.getGender()).isEqualTo(Gender.FEMALE);
-        assertThat(response.getAuthentications()).containsExactly(AuthenticationType.STUDENT);
-        assertThat(response.getRoomExtraOptionNames()).containsExactly("풀옵션");
-        assertThat(response.getImages()).hasSize(10);
-        assertThat(response.getImages().getFirst().getBoardFileId()).isEqualTo(thumbnailBoardFile.getId());
-        assertThat(response.getImages().getFirst().getUrl()).isEqualTo("thumbnail.jpg");
-        assertThat(response.getPrimaryLifeStyles())
-                .extracting(BoardDetailDto.Response.Lifestyle::getName)
-                .containsExactly("취침");
-        assertThat(response.getAdditionalLifeStyles())
-                .extracting(BoardDetailDto.Response.Lifestyle::getName)
-                .containsExactly("방문객");
-        assertThat(response.getConditions())
-                .extracting(BoardDetailDto.Response.Condition::getName)
+        assertThat(row.boardId()).isEqualTo(board.getId());
+        assertThat(row.title()).isEqualTo("상세 게시글");
+        assertThat(row.contents()).isEqualTo("테스트 게시글 내용");
+        assertThat(row.deposit()).isEqualTo(1_000);
+        assertThat(row.managementCost()).isEqualTo(10);
+        assertThat(row.monthlyRent()).isEqualTo(50);
+        assertThat(row.roomTypeName()).isEqualTo("원룸");
+        assertThat(row.regionName()).isEqualTo("역삼동");
+        assertThat(row.parentRegionName()).isEqualTo("강남구");
+        assertThat(row.grandParentRegionName()).isEqualTo("서울");
+        assertThat(row.hits()).isZero();
+        assertThat(row.memberId()).isEqualTo(member.getId());
+        assertThat(row.memberName()).isEqualTo("상세작성자");
+        assertThat(row.memberProfileImageUrl()).isEqualTo("profile-latest.png");
+        assertThat(row.birth()).isEqualTo(birth);
+        assertThat(row.gender()).isEqualTo(Gender.FEMALE);
+    }
+
+    @Test
+    @DisplayName("상세 기본 정보 조회는 대상 게시글이 없으면 빈 Optional을 반환한다")
+    void getBasicInfoReturnsEmptyWhenBoardDoesNotExist() {
+        // When & Then
+        assertThat(roommateBoardRepository.getBasicInfo(999L)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("이미지 조회는 대표 이미지를 먼저 반환하고 최대 10개까지만 반환한다")
+    void getFileDetailDtoByBoardIdReturnsThumbnailFirstAndLimitsTen() {
+        // Given
+        Member member = persistMember("provider-detail-images");
+        Region region = persistRegion("역삼동", 3, null);
+        RoomType roomType = persistRoomType("원룸");
+        RoommateBoard board = persistBoard("이미지 게시글", member, roomType, region, LocalDateTime.of(2026, 7, 1, 9, 0));
+
+        for (int i = 1; i <= 11; i++) {
+            persistBoardFile(board, persistFile("room-" + i + ".jpg"), false);
+        }
+        RoommateBoardFile thumbnailBoardFile = persistBoardFile(board, persistFile("thumbnail.jpg"), true);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<org.example.knockin.dto.BoardDetailDto.Response.FileDetailDto> images =
+                roommateBoardFileRepository.getFileDetailDtoByBoardId(board.getId());
+
+        // Then
+        assertThat(images).hasSize(10);
+        assertThat(images.getFirst().getBoardFileId()).isEqualTo(thumbnailBoardFile.getId());
+        assertThat(images.getFirst().getUrl()).isEqualTo("thumbnail.jpg");
+    }
+
+    @Test
+    @DisplayName("방 추가 옵션 조회는 삭제되지 않은 옵션명만 반환한다")
+    void getExtraOptionsNameByBoardIdReturnsOnlyActiveOptionNames() {
+        // Given
+        Member member = persistMember("provider-detail-options");
+        Region region = persistRegion("역삼동", 3, null);
+        RoomType roomType = persistRoomType("원룸");
+        RoommateBoard board = persistBoard("옵션 게시글", member, roomType, region, LocalDateTime.of(2026, 7, 1, 9, 0));
+        persistRoommateBoardOption(board, persistRoomExtraOption("풀옵션"));
+        RoomExtraOption deletedOption = persistRoomExtraOption("삭제된 옵션");
+        ReflectionTestUtils.setField(deletedOption, "isDeleted", true);
+        persistRoommateBoardOption(board, deletedOption);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<String> optionNames = roommateBoardOptionRepository.getExtraOptionsNameByBoardId(board.getId());
+
+        // Then
+        assertThat(optionNames).containsExactly("풀옵션");
+    }
+
+    @Test
+    @DisplayName("생활패턴 조회는 회원의 생활패턴 정보를 응답 형태로 반환한다")
+    void getLifeStyleDtoReturnsMemberLifePatterns() {
+        // Given
+        Member member = persistMember("provider-detail-lifestyles");
+        LifePattern sleepPattern = persistLifePattern("취침", LifePatternType.SCALE);
+        persistMemberLifePattern(member, persistLifePatternInformation(sleepPattern, "23:00", "일찍 자요"));
+        LifePattern visitorPattern = persistLifePattern("방문객", LifePatternType.SINGLE_CHOICE);
+        persistMemberLifePattern(member, persistLifePatternInformation(visitorPattern, "가끔", "가끔 방문해요"));
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<org.example.knockin.dto.BoardDetailDto.Response.Lifestyle> lifeStyles =
+                memberLifePatternRepository.getLifeStyleDto(member.getId());
+
+        // Then
+        assertThat(lifeStyles)
+                .extracting(org.example.knockin.dto.BoardDetailDto.Response.Lifestyle::getName)
+                .containsExactlyInAnyOrder("취침", "방문객");
+        assertThat(lifeStyles)
+                .filteredOn(lifeStyle -> lifeStyle.getName().equals("취침"))
+                .singleElement()
+                .satisfies(lifeStyle -> {
+                    assertThat(lifeStyle.getValue()).isEqualTo("23:00");
+                    assertThat(lifeStyle.getDescription()).isEqualTo("일찍 자요");
+                    assertThat(lifeStyle.getType()).isEqualTo(LifePatternType.SCALE);
+                });
+    }
+
+    @Test
+    @DisplayName("선호 룸메이트 조건 조회는 회원의 조건명을 반환한다")
+    void getConditionDtoByMemberIdReturnsPreferenceConditions() {
+        // Given
+        Member member = persistMember("provider-detail-conditions");
+        LifePattern smokingPattern = persistLifePattern("흡연", LifePatternType.BOOLEAN);
+        persistPreferenceCondition(member, persistLifePatternInformation(smokingPattern, "비흡연", "비흡연 선호"));
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<org.example.knockin.dto.BoardDetailDto.Response.Condition> conditions =
+                preferenceConditionRepository.getConditionDtoByMemberId(member.getId());
+
+        // Then
+        assertThat(conditions)
+                .extracting(org.example.knockin.dto.BoardDetailDto.Response.Condition::getName)
                 .containsExactly("흡연");
+    }
+
+    @Test
+    @DisplayName("승인 인증 조회는 승인되고 삭제되지 않은 인증 타입만 반환한다")
+    void getAcceptedAuthenticationTypeByMemberIdReturnsOnlyAcceptedActiveTypes() {
+        // Given
+        Member member = persistMember("provider-detail-auth");
+        persistAuthentication(member, AuthenticationType.STUDENT);
+        Authentication notAccepted = persistAuthentication(member, AuthenticationType.COMPANY);
+        ReflectionTestUtils.setField(notAccepted, "isAccepted", false);
+        Authentication deleted = persistAuthentication(member, AuthenticationType.STUDENT);
+        ReflectionTestUtils.setField(deleted, "isDeleted", true);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<AuthenticationType> authenticationTypes =
+                authenticationRepository.getAcceptedAuthenticationTypeByMemberId(member.getId());
+
+        // Then
+        assertThat(authenticationTypes).containsExactly(AuthenticationType.STUDENT);
     }
 
     @Test
@@ -266,14 +384,6 @@ class RoommateBoardRepositoryTest {
         RoommateBoard foundBoard = entityManager.find(RoommateBoard.class, board.getId());
         assertThat(updatedCount).isZero();
         assertThat(foundBoard.getHits()).isZero();
-    }
-
-    @Test
-    @DisplayName("상세 조회 대상 게시글이 없으면 조회 실패 예외를 던진다")
-    void viewDetailThrowsWhenBoardDoesNotExist() {
-        assertThatThrownBy(() -> roommateBoardRepository.viewDetail(999L))
-                .isInstanceOfSatisfying(BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
     }
 
     private RoommateBoardSearchCondition defaultCondition(LocalDateTime endDate, PageRequest pageRequest) {
