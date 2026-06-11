@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.example.knockin.entity.member.MemberState;
+import org.example.knockin.entity.member.MemberPrivacyType;
 
 import java.time.LocalDateTime;
 
@@ -14,7 +14,7 @@ public class ProfileVisibilityDto {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class Request {
-        private MemberState status;
+        private MemberPrivacyType status;
     }
 
     @Data
