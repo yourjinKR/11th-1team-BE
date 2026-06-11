@@ -32,12 +32,12 @@ import org.example.knockin.global.util.StringUtils;
 import org.example.knockin.repository.auth.AuthenticationRepository;
 import org.example.knockin.repository.board.RoommateBoardFileRepository;
 import org.example.knockin.repository.board.RoommateBoardListRow;
+import org.example.knockin.repository.board.RoommateBoardOptionRepository;
 import org.example.knockin.repository.board.RoommateBoardRepository;
 import org.example.knockin.repository.board.RoommateBoardSearchCondition;
 import org.example.knockin.repository.board.row.BasicInfoRow;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
-import org.example.knockin.repository.room.RoomExtraOptionRepository;
 import org.example.knockin.service.FileService;
 import org.example.knockin.service.RoommateBoardService;
 import org.jspecify.annotations.NullMarked;
@@ -62,9 +62,9 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     private final TransactionTemplate transactionTemplate;
     private final MetaServiceImpl metaService;
     private final PreferenceConditionRepository preferenceConditionRepository;
-    private final RoomExtraOptionRepository roomExtraOptionRepository;
     private final MemberLifePatternRepository memberLifePatternRepository;
     private final AuthenticationRepository authenticationRepository;
+    private final RoommateBoardOptionRepository roommateBoardOptionRepository;
 
     @Override
     public BoardDto.Response save(BoardDto.Request request, Long memberId) {
@@ -197,7 +197,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
 
         List<BoardDetailDto.Response.FileDetailDto> images = roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId);
 
-        List<String> roomExtraOptionNames = roomExtraOptionRepository.getExtraOptionsNameByBoardId(boardId);
+        List<String> roomExtraOptionNames = roommateBoardOptionRepository.getExtraOptionsNameByBoardId(boardId);
 
         Map<Boolean, List<Lifestyle>> lifeStyleMap = divideByIsPrimary(memberLifePatternRepository.getLifeStyleDto(memberId));
         List<Lifestyle> primaryLifeStyle = lifeStyleMap.get(true);
