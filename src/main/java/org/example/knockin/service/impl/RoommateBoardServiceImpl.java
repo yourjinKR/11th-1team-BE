@@ -4,12 +4,11 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.BoardDetailDto;
 import org.example.knockin.dto.BoardDetailDto.Response.Compatibility;
 import org.example.knockin.dto.BoardDetailDto.Response.Condition;
+import org.example.knockin.dto.BoardDetailDto.Response.ConditionWeight;
 import org.example.knockin.dto.BoardDetailDto.Response.Lifestyle;
 import org.example.knockin.dto.BoardDto;
 import org.example.knockin.dto.BoardDto.Request.FileDto;
@@ -38,6 +37,7 @@ import org.example.knockin.repository.board.RoommateBoardSearchCondition;
 import org.example.knockin.repository.board.row.BasicInfoRow;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
+import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
 import org.example.knockin.service.FileService;
 import org.example.knockin.service.RoommateBoardService;
 import org.jspecify.annotations.NullMarked;
@@ -52,9 +52,6 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 public class RoommateBoardServiceImpl implements RoommateBoardService {
-
-    private static final List<String> PRIMARY_TYPE_NAMES = List.of("취침", "청결", "소음", "흡연");
-
     private final RoommateBoardRepository roommateBoardRepository;
     private final RoommateBoardFileRepository roommateBoardFileRepository;
     private final MemberServiceImpl memberService;
@@ -65,6 +62,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     private final MemberLifePatternRepository memberLifePatternRepository;
     private final AuthenticationRepository authenticationRepository;
     private final RoommateBoardOptionRepository roommateBoardOptionRepository;
+    private final PreferenceConditionWeightRepository preferenceConditionWeightRepository;
 
     @Override
     public BoardDto.Response save(BoardDto.Request request, Long memberId) {
@@ -196,27 +194,23 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
         Long memberId = basicInfoRow.memberId();
 
         List<BoardDetailDto.Response.FileDetailDto> images = roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId);
-
         List<String> roomExtraOptionNames = roommateBoardOptionRepository.getExtraOptionsNameByBoardId(boardId);
-
-        Map<Boolean, List<Lifestyle>> lifeStyleMap = divideByIsPrimary(memberLifePatternRepository.getLifeStyleDto(memberId));
-        List<Lifestyle> primaryLifeStyle = lifeStyleMap.get(true);
-        List<Lifestyle> additionalLifeStyle = lifeStyleMap.get(false);
-
+        List<Lifestyle> lifestyles = memberLifePatternRepository.getLifeStyleDto(memberId);
         List<Condition> conditions = preferenceConditionRepository.getConditionDtoByMemberId(memberId);
-
+        List<ConditionWeight> conditionWeights = preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(
+                memberId);
         List<AuthenticationType> authenticationTypes = authenticationRepository.getAcceptedAuthenticationTypeByMemberId(memberId);
 
-        return toResponse(basicInfoRow, images, roomExtraOptionNames, primaryLifeStyle, additionalLifeStyle, conditions, authenticationTypes, new Compatibility());
+        return toResponse(basicInfoRow, images, roomExtraOptionNames, lifestyles, conditions, conditionWeights, authenticationTypes, new Compatibility());
     }
 
     private BoardDetailDto.Response toResponse(
             BasicInfoRow basicInfoRow,
             List<BoardDetailDto.Response.FileDetailDto> images,
             List<String> roomExtraOptionNames,
-            List<Lifestyle> primaryLifeStyles,
-            List<Lifestyle> additionalLifeStyles,
+            List<Lifestyle> lifestyles,
             List<Condition> conditions,
+            List<ConditionWeight> conditionWeights,
             List<AuthenticationType> authentications,
             Compatibility compatibility) {
 
@@ -240,9 +234,9 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
                 .hits(basicInfoRow.hits())
                 .contents(basicInfoRow.contents())
                 .roomExtraOptionNames(roomExtraOptionNames)
-                .primaryLifeStyles(primaryLifeStyles)
-                .additionalLifeStyles(additionalLifeStyles)
+                .lifeStyles(lifestyles)
                 .conditions(conditions)
+                .conditionWeights(conditionWeights)
                 .memberName(basicInfoRow.memberName())
                 .memberProfileImageUrl(basicInfoRow.memberProfileImageUrl())
                 .memberAge(memberAge)
@@ -250,16 +244,6 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
                 .authentications(authentications)
                 .compatibility(compatibility)
                 .build();
-    }
-
-    // TODO: 정책 확정 후 갱신
-    private Map<Boolean, List<BoardDetailDto.Response.Lifestyle>> divideByIsPrimary(List<BoardDetailDto.Response.Lifestyle> lifeStyles) {
-        if (lifeStyles.isEmpty()) return Map.of(true, List.of(), false, List.of());
-
-        return lifeStyles.stream()
-                .collect(Collectors.partitioningBy(
-                        lifestyle -> PRIMARY_TYPE_NAMES.contains(lifestyle.getName())
-                ));
     }
 
     private void increaseHits(Long boardId) {

@@ -23,6 +23,7 @@ import org.example.knockin.entity.life.LifePatternInformation;
 import org.example.knockin.entity.life.LifePatternType;
 import org.example.knockin.entity.life.MemberLifePattern;
 import org.example.knockin.entity.life.PreferenceCondition;
+import org.example.knockin.entity.life.PreferenceConditionWeight;
 import org.example.knockin.entity.member.BasicInformation;
 import org.example.knockin.entity.member.Gender;
 import org.example.knockin.entity.member.Member;
@@ -34,6 +35,7 @@ import org.example.knockin.repository.auth.AuthenticationRepository;
 import org.example.knockin.repository.board.row.BasicInfoRow;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
+import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,6 +66,9 @@ class RoommateBoardRepositoryTest {
 
     @Autowired
     private PreferenceConditionRepository preferenceConditionRepository;
+
+    @Autowired
+    private PreferenceConditionWeightRepository preferenceConditionWeightRepository;
 
     @Autowired
     private AuthenticationRepository authenticationRepository;
@@ -271,13 +276,13 @@ class RoommateBoardRepositoryTest {
     }
 
     @Test
-    @DisplayName("생활패턴 조회는 회원의 생활패턴 정보를 응답 형태로 반환한다")
+    @DisplayName("생활패턴 조회는 회원의 생활패턴 정보를 sort 순서대로 반환한다")
     void getLifeStyleDtoReturnsMemberLifePatterns() {
         // Given
         Member member = persistMember("provider-detail-lifestyles");
-        LifePattern sleepPattern = persistLifePattern("취침", LifePatternType.SCALE);
+        LifePattern sleepPattern = persistLifePattern("취침", LifePatternType.SCALE, 2);
         persistMemberLifePattern(member, persistLifePatternInformation(sleepPattern, "23:00", "일찍 자요"));
-        LifePattern visitorPattern = persistLifePattern("방문객", LifePatternType.SINGLE_CHOICE);
+        LifePattern visitorPattern = persistLifePattern("방문객", LifePatternType.SINGLE_CHOICE, 1);
         persistMemberLifePattern(member, persistLifePatternInformation(visitorPattern, "가끔", "가끔 방문해요"));
         entityManager.flush();
         entityManager.clear();
@@ -289,11 +294,12 @@ class RoommateBoardRepositoryTest {
         // Then
         assertThat(lifeStyles)
                 .extracting(org.example.knockin.dto.BoardDetailDto.Response.Lifestyle::getName)
-                .containsExactlyInAnyOrder("취침", "방문객");
+                .containsExactly("방문객", "취침");
         assertThat(lifeStyles)
                 .filteredOn(lifeStyle -> lifeStyle.getName().equals("취침"))
                 .singleElement()
                 .satisfies(lifeStyle -> {
+                    assertThat(lifeStyle.getLifestyleId()).isNotNull();
                     assertThat(lifeStyle.getValue()).isEqualTo("23:00");
                     assertThat(lifeStyle.getDescription()).isEqualTo("일찍 자요");
                     assertThat(lifeStyle.getType()).isEqualTo(LifePatternType.SCALE);
@@ -301,7 +307,7 @@ class RoommateBoardRepositoryTest {
     }
 
     @Test
-    @DisplayName("선호 룸메이트 조건 조회는 회원의 조건명을 반환한다")
+    @DisplayName("선호 룸메이트 조건 조회는 조건의 이름과 표시 정보를 반환한다")
     void getConditionDtoByMemberIdReturnsPreferenceConditions() {
         // Given
         Member member = persistMember("provider-detail-conditions");
@@ -315,9 +321,39 @@ class RoommateBoardRepositoryTest {
                 preferenceConditionRepository.getConditionDtoByMemberId(member.getId());
 
         // Then
-        assertThat(conditions)
-                .extracting(org.example.knockin.dto.BoardDetailDto.Response.Condition::getName)
-                .containsExactly("흡연");
+        assertThat(conditions).singleElement()
+                .satisfies(condition -> {
+                    assertThat(condition.getConditionId()).isNotNull();
+                    assertThat(condition.getName()).isEqualTo("흡연");
+                    assertThat(condition.getValue()).isEqualTo("비흡연");
+                    assertThat(condition.getDescription()).isEqualTo("비흡연 선호");
+                    assertThat(condition.getType()).isEqualTo(LifePatternType.BOOLEAN);
+                });
+    }
+
+    @Test
+    @DisplayName("중요 조건 조회는 회원이 선택한 중요 조건명을 반환한다")
+    void getConditionWeightDtoByMemberIdReturnsPreferenceConditionWeights() {
+        // Given
+        Member member = persistMember("provider-detail-condition-weights");
+        LifePattern sleepPattern = persistLifePattern("취침", LifePatternType.SCALE, 2);
+        LifePattern noisePattern = persistLifePattern("소음", LifePatternType.SCALE, 1);
+        persistPreferenceConditionWeight(member, sleepPattern);
+        persistPreferenceConditionWeight(member, noisePattern);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<org.example.knockin.dto.BoardDetailDto.Response.ConditionWeight> conditionWeights =
+                preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(member.getId());
+
+        // Then
+        assertThat(conditionWeights)
+                .extracting(org.example.knockin.dto.BoardDetailDto.Response.ConditionWeight::getName)
+                .containsExactlyInAnyOrder("취침", "소음");
+        assertThat(conditionWeights)
+                .extracting(org.example.knockin.dto.BoardDetailDto.Response.ConditionWeight::getWeightConditionId)
+                .doesNotContainNull();
     }
 
     @Test
@@ -526,10 +562,15 @@ class RoommateBoardRepositoryTest {
     }
 
     private LifePattern persistLifePattern(String name, LifePatternType type) {
+        return persistLifePattern(name, type, 0);
+    }
+
+    private LifePattern persistLifePattern(String name, LifePatternType type, Integer sort) {
         LifePattern pattern = newInstance(LifePattern.class);
         ReflectionTestUtils.setField(pattern, "name", name);
         ReflectionTestUtils.setField(pattern, "dtype", type);
         ReflectionTestUtils.setField(pattern, "isDeleted", false);
+        ReflectionTestUtils.setField(pattern, "sort", sort);
         entityManager.persist(pattern);
         return pattern;
     }
@@ -558,6 +599,15 @@ class RoommateBoardRepositoryTest {
         ReflectionTestUtils.setField(preferenceCondition, "lifePatternInformation", information);
         entityManager.persist(preferenceCondition);
         return preferenceCondition;
+    }
+
+    private PreferenceConditionWeight persistPreferenceConditionWeight(Member member, LifePattern pattern) {
+        PreferenceConditionWeight preferenceConditionWeight = PreferenceConditionWeight.builder()
+                .member(member)
+                .lifePattern(pattern)
+                .build();
+        entityManager.persist(preferenceConditionWeight);
+        return preferenceConditionWeight;
     }
 
     private Authentication persistAuthentication(Member member, AuthenticationType type) {

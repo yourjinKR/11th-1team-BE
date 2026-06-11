@@ -44,6 +44,7 @@ import org.example.knockin.repository.board.RoommateBoardRepository;
 import org.example.knockin.repository.board.row.BasicInfoRow;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
+import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
 import org.example.knockin.service.FileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -77,6 +78,9 @@ class RoommateBoardServiceImplTest {
 
     @Mock
     private PreferenceConditionRepository preferenceConditionRepository;
+
+    @Mock
+    private PreferenceConditionWeightRepository preferenceConditionWeightRepository;
 
     @Mock
     private MemberLifePatternRepository memberLifePatternRepository;
@@ -345,7 +349,10 @@ class RoommateBoardServiceImplTest {
         BoardDetailDto.Response.Lifestyle visitor = new BoardDetailDto.Response.Lifestyle(
                 2L, "방문객", "가끔", "가끔 방문해요", LifePatternType.SINGLE_CHOICE);
         List<BoardDetailDto.Response.Condition> conditions = List.of(
-                new BoardDetailDto.Response.Condition(3L, "흡연")
+                new BoardDetailDto.Response.Condition(3L, "흡연", "비흡연", "비흡연 선호", LifePatternType.BOOLEAN)
+        );
+        List<BoardDetailDto.Response.ConditionWeight> conditionWeights = List.of(
+                new BoardDetailDto.Response.ConditionWeight(4L, "청결")
         );
         List<AuthenticationType> authenticationTypes = List.of(AuthenticationType.STUDENT);
 
@@ -355,6 +362,7 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardOptionRepository.getExtraOptionsNameByBoardId(boardId)).thenReturn(roomExtraOptionNames);
         when(memberLifePatternRepository.getLifeStyleDto(memberId)).thenReturn(List.of(visitor, sleep));
         when(preferenceConditionRepository.getConditionDtoByMemberId(memberId)).thenReturn(conditions);
+        when(preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(memberId)).thenReturn(conditionWeights);
         when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(memberId)).thenReturn(authenticationTypes);
 
         // When
@@ -372,9 +380,9 @@ class RoommateBoardServiceImplTest {
         assertThat(response.getHits()).isEqualTo(3L);
         assertThat(response.getContents()).isEqualTo("상세 내용");
         assertThat(response.getRoomExtraOptionNames()).isSameAs(roomExtraOptionNames);
-        assertThat(response.getPrimaryLifeStyles()).containsExactly(sleep);
-        assertThat(response.getAdditionalLifeStyles()).containsExactly(visitor);
+        assertThat(response.getLifeStyles()).containsExactly(visitor, sleep);
         assertThat(response.getConditions()).isSameAs(conditions);
+        assertThat(response.getConditionWeights()).isSameAs(conditionWeights);
         assertThat(response.getMemberName()).isEqualTo("상세작성자");
         assertThat(response.getMemberProfileImageUrl()).isEqualTo("profile.jpg");
         assertThat(response.getMemberAge()).isEqualTo(Period.between(birth, LocalDate.now()).getYears());
@@ -388,12 +396,13 @@ class RoommateBoardServiceImplTest {
         verify(roommateBoardOptionRepository).getExtraOptionsNameByBoardId(boardId);
         verify(memberLifePatternRepository).getLifeStyleDto(memberId);
         verify(preferenceConditionRepository).getConditionDtoByMemberId(memberId);
+        verify(preferenceConditionWeightRepository).getConditionWeightDtoByMemberId(memberId);
         verify(authenticationRepository).getAcceptedAuthenticationTypeByMemberId(memberId);
     }
 
     @Test
-    @DisplayName("상세 조회는 생활패턴이 없으면 빈 목록을 응답한다")
-    void getBoardDetailReturnsEmptyLifeStyleListsWhenMemberHasNoLifeStyles() {
+    @DisplayName("상세 조회는 생활패턴과 중요 조건이 없으면 빈 목록을 응답한다")
+    void getBoardDetailReturnsEmptyListsWhenMemberHasNoLifeStylesAndConditionWeights() {
         // Given
         Long boardId = 1L;
         Long memberId = 7L;
@@ -404,14 +413,15 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardOptionRepository.getExtraOptionsNameByBoardId(boardId)).thenReturn(List.of());
         when(memberLifePatternRepository.getLifeStyleDto(memberId)).thenReturn(List.of());
         when(preferenceConditionRepository.getConditionDtoByMemberId(memberId)).thenReturn(List.of());
+        when(preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(memberId)).thenReturn(List.of());
         when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(memberId)).thenReturn(List.of());
 
         // When
         BoardDetailDto.Response response = roommateBoardService.getBoardDetail(boardId);
 
         // Then
-        assertThat(response.getPrimaryLifeStyles()).isEmpty();
-        assertThat(response.getAdditionalLifeStyles()).isEmpty();
+        assertThat(response.getLifeStyles()).isEmpty();
+        assertThat(response.getConditionWeights()).isEmpty();
     }
 
     @Test
@@ -428,7 +438,8 @@ class RoommateBoardServiceImplTest {
         verify(roommateBoardRepository).increaseHitsById(boardId);
         verify(roommateBoardRepository, never()).getBasicInfo(any());
         verifyNoInteractions(roommateBoardFileRepository, roommateBoardOptionRepository,
-                memberLifePatternRepository, preferenceConditionRepository, authenticationRepository);
+                memberLifePatternRepository, preferenceConditionRepository, preferenceConditionWeightRepository,
+                authenticationRepository);
     }
 
     @Test
@@ -446,7 +457,8 @@ class RoommateBoardServiceImplTest {
         verify(roommateBoardRepository).increaseHitsById(boardId);
         verify(roommateBoardRepository).getBasicInfo(boardId);
         verifyNoInteractions(roommateBoardFileRepository, roommateBoardOptionRepository,
-                memberLifePatternRepository, preferenceConditionRepository, authenticationRepository);
+                memberLifePatternRepository, preferenceConditionRepository, preferenceConditionWeightRepository,
+                authenticationRepository);
     }
 
     private BoardDto.Request createRequest(FileDto... images) {

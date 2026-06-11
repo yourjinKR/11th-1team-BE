@@ -22,7 +22,7 @@ public class MemberLifePatternRepositoryImpl implements MemberLifePatternReposit
         return jpaQueryFactory
                 .select(Projections.constructor(
                         BoardDetailDto.Response.Lifestyle.class,
-                        lifePattern.id,
+                        memberLifePattern.id,
                         lifePattern.name,
                         lifePatternInformation.dvalue,
                         lifePatternInformation.description,
@@ -32,6 +32,7 @@ public class MemberLifePatternRepositoryImpl implements MemberLifePatternReposit
                 .where(memberLifePattern.member.id.eq(memberId))
                 .join(memberLifePattern.lifePatternInformation, lifePatternInformation)
                 .leftJoin(lifePatternInformation.lifePattern, lifePattern)
+                .orderBy(lifePattern.sort.asc())
                 .fetch();
     }
 }

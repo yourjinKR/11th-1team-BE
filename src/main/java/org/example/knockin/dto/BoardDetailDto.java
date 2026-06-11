@@ -60,14 +60,14 @@ public class BoardDetailDto {
         @Schema(description = "방 추가 옵션 목록")
         private List<String> roomExtraOptionNames;
 
-        @Schema(description = "고정 상단 생활패턴")
-        private List<Lifestyle> primaryLifeStyles;
-
-        @Schema(description = "더보기 생활패턴")
-        private List<Lifestyle> additionalLifeStyles;
+        @Schema(description = "생활패턴")
+        private List<Lifestyle> lifeStyles;
 
         @Schema(description = "선호 룸메이트 조건 목록")
         private List<Condition> conditions;
+
+        @Schema(description = "선호 룸메이트 중요 조건 목록")
+        private List<ConditionWeight> conditionWeights;
 
         @Schema(description = "등록자 이름")
         private String memberName;
@@ -119,6 +119,22 @@ public class BoardDetailDto {
         public static class Condition {
             @Schema(description = "고유 식별 ID")
             private Long conditionId;
+            @Schema(description = "이름")
+            private String name;
+            @Schema(description = "값")
+            private String value;
+            @Schema(description = "설명")
+            private String description;
+            @Schema(description = "타입/유형")
+            private LifePatternType type;
+        }
+
+        @Data
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class ConditionWeight {
+            @Schema(description = "고유 식별 ID")
+            private Long weightConditionId;
             @Schema(description = "이름")
             private String name;
         }

@@ -22,8 +22,11 @@ public class PreferenceConditionRepositoryImpl implements PreferenceConditionRep
         return jpaQueryFactory
                 .select(Projections.constructor(
                         BoardDetailDto.Response.Condition.class,
-                        lifePattern.id,
-                        lifePattern.name
+                        preferenceCondition.id,
+                        lifePattern.name,
+                        lifePatternInformation.dvalue,
+                        lifePatternInformation.description,
+                        lifePattern.dtype
                 ))
                 .from(preferenceCondition)
                 .where(preferenceCondition.member.id.eq(memberId))
