@@ -16,11 +16,12 @@ import org.example.knockin.repository.agreement.MemberAgreementRepository;
 import org.example.knockin.repository.life.*;
 import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.MemberPrivacyRepository;
-import org.example.knockin.repository.member.StateRepository;
 import org.example.knockin.repository.room.OfferRoomTypeRepository;
 import org.example.knockin.repository.room.RoomProfileRepository;
 import org.example.knockin.repository.room.RoomSeekerProfileRegionRepository;
 import org.example.knockin.repository.room.SeekerRoomTypeRepository;
+import org.example.knockin.service.RoommateBoardService;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
@@ -50,6 +51,7 @@ public class OnBoardingServiceImpl {
     private final LifePatternRepository lifePatternRepository;
     private final MemberPrivacyRepository memberPrivacyRepository;
     private final MyRoomMateServiceImpl myRoomMateService;
+    private final RoommateBoardService roommateBoardService;
 
     @Transactional
     public BasicInformation saveBasicInfo(SaveProfileBasicDto.Request request, Member member) {
@@ -592,5 +594,11 @@ public class OnBoardingServiceImpl {
         memberPrivacyRepository.findByMember(member).getFirst().changeState(request.getStatus());
 
         return ProfileVisibilityDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    public MyBoardListDto.Response findMyBoardList(Pageable pageable, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+        roommateBoardService.getMyBoardList(pageable,member);
+        return MyBoardListDto.Response.builder().build();
     }
 }

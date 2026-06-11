@@ -13,6 +13,7 @@ import org.example.knockin.dto.BoardDetailDto.Response.Lifestyle;
 import org.example.knockin.dto.BoardDto;
 import org.example.knockin.dto.BoardDto.Request.FileDto;
 import org.example.knockin.dto.BoardListDto;
+import org.example.knockin.dto.MyBoardListDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.board.RoommateBoardFile;
@@ -35,6 +36,7 @@ import org.example.knockin.repository.board.RoommateBoardOptionRepository;
 import org.example.knockin.repository.board.RoommateBoardRepository;
 import org.example.knockin.repository.board.RoommateBoardSearchCondition;
 import org.example.knockin.repository.board.row.BasicInfoRow;
+import org.example.knockin.repository.board.row.MyRoommateBoardRow;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
 import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
@@ -42,6 +44,7 @@ import org.example.knockin.service.FileService;
 import org.example.knockin.service.RoommateBoardService;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -252,4 +255,37 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     }
 
     private record FileWithThumbnail(File file, boolean thumbNail) { }
+
+    @Override
+    public Page<MyBoardListDto.Response> getMyBoardList(Pageable pageable, Member member) {
+        Page<MyRoommateBoardRow> rawPage = roommateBoardRepository.findMyBoardList(pageable, member);
+
+        List<MyBoardListDto.Response.BoardItem> boardItems = rawPage.getContent().stream().map(row -> {
+            String fullRegionName = getFullRegionName(row.getRegionEntity());
+
+            return MyBoardListDto.Response.BoardItem.builder()
+                    .boardId(row.getBoardId())
+                    .title(row.getTitle())
+                    .deposit(row.getDeposit())
+                    .monthlyRent(row.getMonthlyRent())
+                    .createdAt(row.getCreatedAt())
+                    .memberName(row.getMemberName())
+                    .image(row.getImage())
+                    .region(fullRegionName)
+                    .roomTypes(row.getRoomTypeName())
+                    .build();
+        }).toList();
+
+        return new PageImpl<>(List.of(MyBoardListDto.Response.builder().boards(boardItems).build()), pageable, rawPage.getTotalElements());
+    }
+
+    private String getFullRegionName(Region regionEntity) {
+        List<String> regionNames = new ArrayList<>();
+        Region current = regionEntity;
+        while (current != null) {
+            regionNames.addFirst(current.getName());
+            current = current.getParent();
+        }
+        return String.join(" ", regionNames);
+    }
 }
