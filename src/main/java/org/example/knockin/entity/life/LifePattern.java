@@ -34,4 +34,7 @@ public class LifePattern extends CreatedAtEntity {
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted;
+
+    @Column(name = "sort", nullable = false)
+    private Integer sort;
 }
