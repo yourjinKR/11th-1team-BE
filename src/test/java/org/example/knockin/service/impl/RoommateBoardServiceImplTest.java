@@ -20,6 +20,8 @@ import java.util.stream.StreamSupport;
 import org.example.knockin.dto.BoardDetailDto;
 import org.example.knockin.dto.BoardDto;
 import org.example.knockin.dto.BoardDto.Request.FileDto;
+import org.example.knockin.dto.BoardEditDto;
+import org.example.knockin.dto.BoardEditDto.Response.BoardOptionInfo;
 import org.example.knockin.dto.BoardListDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.board.RoommateBoard;
@@ -42,6 +44,7 @@ import org.example.knockin.repository.board.RoommateBoardOptionRepository;
 import org.example.knockin.repository.board.RoommateBoardSearchCondition;
 import org.example.knockin.repository.board.RoommateBoardRepository;
 import org.example.knockin.repository.board.row.BasicInfoRow;
+import org.example.knockin.repository.board.row.EditFormRow;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
 import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
@@ -461,6 +464,77 @@ class RoommateBoardServiceImplTest {
                 authenticationRepository);
     }
 
+    @Test
+    @DisplayName("수정 폼 조회는 게시글 원천 데이터와 회원 설정 정보를 응답 DTO로 조립한다")
+    void getEditFormComposesResponseFromBoardAndMemberSettings() {
+        // Given
+        Long boardId = 1L;
+        Long memberId = 7L;
+        EditFormRow editFormRow = createEditFormRow();
+        List<BoardDetailDto.Response.FileDetailDto> images = List.of(
+                new BoardDetailDto.Response.FileDetailDto(101L, "thumbnail.jpg"),
+                new BoardDetailDto.Response.FileDetailDto(102L, "room.jpg")
+        );
+        List<BoardOptionInfo> roomExtraOptions = List.of(
+                new BoardOptionInfo(201L, "풀옵션"),
+                new BoardOptionInfo(202L, "주차 가능")
+        );
+        BoardDetailDto.Response.Lifestyle lifestyle = new BoardDetailDto.Response.Lifestyle(
+                1L, "취침", "23:00", "일찍 자요", LifePatternType.SCALE);
+        BoardDetailDto.Response.Condition condition = new BoardDetailDto.Response.Condition(
+                2L, "흡연", "비흡연", "비흡연 선호", LifePatternType.BOOLEAN);
+        BoardDetailDto.Response.ConditionWeight conditionWeight = new BoardDetailDto.Response.ConditionWeight(
+                3L, "청결");
+
+        when(roommateBoardRepository.getEditRow(boardId)).thenReturn(Optional.of(editFormRow));
+        when(roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId)).thenReturn(images);
+        when(roommateBoardOptionRepository.getExtraOptionsByBoardId(boardId)).thenReturn(roomExtraOptions);
+        when(memberLifePatternRepository.getLifeStyleDto(memberId)).thenReturn(List.of(lifestyle));
+        when(preferenceConditionRepository.getConditionDtoByMemberId(memberId)).thenReturn(List.of(condition));
+        when(preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(memberId))
+                .thenReturn(List.of(conditionWeight));
+
+        // When
+        BoardEditDto.Response response = roommateBoardService.getEditForm(memberId, boardId);
+
+        // Then
+        assertThat(response.getImages()).isSameAs(images);
+        assertThat(response.getTitle()).isEqualTo("수정 게시글");
+        assertThat(response.getDeposit()).isEqualTo(1_000);
+        assertThat(response.getMonthlyRent()).isEqualTo(50);
+        assertThat(response.getManagementCost()).isEqualTo(10);
+        assertThat(response.getRoomType().getRoomTypeId()).isEqualTo(11L);
+        assertThat(response.getRoomType().getName()).isEqualTo("원룸");
+        assertThat(response.getRegion().getRegionId()).isEqualTo(33L);
+        assertThat(response.getRegion().getFullName()).isEqualTo("서울 강남구 역삼동");
+        assertThat(response.getComeableAt()).isEqualTo(LocalDateTime.of(2026, 7, 1, 9, 0));
+        assertThat(response.getRoomExtraOptions()).isSameAs(roomExtraOptions);
+        assertThat(response.getContents()).isEqualTo("수정 내용");
+        assertThat(response.getLifeStyles()).containsExactly(lifestyle);
+        assertThat(response.getConditions()).containsExactly(condition);
+        assertThat(response.getConditionWeights()).containsExactly(conditionWeight);
+        verify(memberLifePatternRepository).getLifeStyleDto(memberId);
+        verify(preferenceConditionRepository).getConditionDtoByMemberId(memberId);
+        verify(preferenceConditionWeightRepository).getConditionWeightDtoByMemberId(memberId);
+    }
+
+    @Test
+    @DisplayName("수정 폼 조회는 대상 게시글이 없으면 게시글 없음 예외를 던지고 부가 정보를 조회하지 않는다")
+    void getEditFormThrowsWhenBoardDoesNotExist() {
+        // Given
+        Long boardId = 999L;
+        Long memberId = 7L;
+        when(roommateBoardRepository.getEditRow(boardId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.getEditForm(memberId, boardId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
+        verify(roommateBoardRepository).getEditRow(boardId);
+        verifyNoInteractions(roommateBoardFileRepository, roommateBoardOptionRepository,
+                memberLifePatternRepository, preferenceConditionRepository, preferenceConditionWeightRepository);
+    }
+
     private BoardDto.Request createRequest(FileDto... images) {
         BoardDto.Request request = new BoardDto.Request();
         request.setTitle("Looking for a roommate");
@@ -468,8 +542,8 @@ class RoommateBoardServiceImplTest {
         request.setDeposit(10_000);
         request.setMountlyRent(500);
         request.setManagementCost(50);
-        request.setRoomType(1L);
-        request.setRegion(2L);
+        request.setRoomTypeId(1L);
+        request.setRegionId(2L);
         request.setComeableAt(LocalDateTime.of(2026, 7, 1, 9, 0));
         request.setImages(List.of(images));
         return request;
@@ -510,6 +584,23 @@ class RoommateBoardServiceImplTest {
                 "profile.jpg",
                 birth,
                 Gender.FEMALE
+        );
+    }
+
+    private EditFormRow createEditFormRow() {
+        return new EditFormRow(
+                "수정 게시글",
+                1_000,
+                50,
+                10,
+                11L,
+                "원룸",
+                33L,
+                "역삼동",
+                "강남구",
+                "서울",
+                LocalDateTime.of(2026, 7, 1, 9, 0),
+                "수정 내용"
         );
     }
 

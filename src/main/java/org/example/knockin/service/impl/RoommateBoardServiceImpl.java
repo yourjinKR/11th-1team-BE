@@ -9,9 +9,14 @@ import org.example.knockin.dto.BoardDetailDto;
 import org.example.knockin.dto.BoardDetailDto.Response.Compatibility;
 import org.example.knockin.dto.BoardDetailDto.Response.Condition;
 import org.example.knockin.dto.BoardDetailDto.Response.ConditionWeight;
+import org.example.knockin.dto.BoardDetailDto.Response.FileDetailDto;
 import org.example.knockin.dto.BoardDetailDto.Response.Lifestyle;
 import org.example.knockin.dto.BoardDto;
 import org.example.knockin.dto.BoardDto.Request.FileDto;
+import org.example.knockin.dto.BoardEditDto;
+import org.example.knockin.dto.BoardEditDto.Response.BoardOptionInfo;
+import org.example.knockin.dto.BoardEditDto.Response.RegionInfo;
+import org.example.knockin.dto.BoardEditDto.Response.RoomTypeInfo;
 import org.example.knockin.dto.BoardListDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.board.RoommateBoard;
@@ -35,6 +40,7 @@ import org.example.knockin.repository.board.RoommateBoardOptionRepository;
 import org.example.knockin.repository.board.RoommateBoardRepository;
 import org.example.knockin.repository.board.RoommateBoardSearchCondition;
 import org.example.knockin.repository.board.row.BasicInfoRow;
+import org.example.knockin.repository.board.row.EditFormRow;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
 import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
@@ -69,10 +75,10 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
         Member member = memberService.findById(memberId)
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 
-        RoomType roomType = metaService.findByRoomTypeId(request.getRoomType())
+        RoomType roomType = metaService.findByRoomTypeId(request.getRoomTypeId())
                 .orElseThrow(() -> new BusinessException(MetaErrorCode.ROOM_TYPE_NOT_FOUND));
 
-        Region region = metaService.findByRegionId(request.getRegion())
+        Region region = metaService.findByRegionId(request.getRegionId())
                 .orElseThrow(() -> new BusinessException(MetaErrorCode.REGION_NOT_FOUND));
 
         List<FileDto> fileDtos = request.getImages();
@@ -249,6 +255,39 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     private void increaseHits(Long boardId) {
         int counts = roommateBoardRepository.increaseHitsById(boardId);
         if (counts == 0) throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND);
+    }
+
+    @Override
+    public BoardEditDto.Response getEditForm(Long memberId, Long boardId) {
+        EditFormRow row = roommateBoardRepository.getEditRow(boardId)
+                .orElseThrow(() -> new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
+
+        List<FileDetailDto> images = roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId);
+        List<BoardOptionInfo> roomExtraOptions = roommateBoardOptionRepository.getExtraOptionsByBoardId(boardId);
+
+        List<Lifestyle> lifestyles = memberLifePatternRepository.getLifeStyleDto(memberId);
+        List<Condition> conditions = preferenceConditionRepository.getConditionDtoByMemberId(memberId);
+        List<ConditionWeight> conditionWeights = preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(
+                memberId);
+
+        return BoardEditDto.Response.builder()
+                .images(images)
+                .title(row.title())
+                .deposit(row.deposit())
+                .monthlyRent(row.monthlyRent())
+                .managementCost(row.managementCost())
+                .roomType(new RoomTypeInfo(row.roomTypeId(), row.roomTypeName()))
+                .region(new RegionInfo(row.regionId(), StringUtils.parseToRegionFullName(
+                        row.grandParentRegionName(),
+                        row.parentRegionName(),
+                        row.regionName())))
+                .comeableAt(row.comeableDate())
+                .roomExtraOptions(roomExtraOptions)
+                .contents(row.contents())
+                .lifeStyles(lifestyles)
+                .conditions(conditions)
+                .conditionWeights(conditionWeights)
+                .build();
     }
 
     private record FileWithThumbnail(File file, boolean thumbNail) { }

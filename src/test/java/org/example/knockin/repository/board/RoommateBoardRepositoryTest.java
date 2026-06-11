@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import jakarta.persistence.EntityManager;
 import org.example.knockin.config.QueryDslConfig;
+import org.example.knockin.dto.BoardEditDto;
 import org.example.knockin.entity.auth.Authentication;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.auth.LoginProviderType;
@@ -33,6 +34,7 @@ import org.example.knockin.entity.room.RoomExtraOption;
 import org.example.knockin.entity.room.RoomType;
 import org.example.knockin.repository.auth.AuthenticationRepository;
 import org.example.knockin.repository.board.row.BasicInfoRow;
+import org.example.knockin.repository.board.row.EditFormRow;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
 import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
@@ -228,6 +230,53 @@ class RoommateBoardRepositoryTest {
     }
 
     @Test
+    @DisplayName("수정 폼 기본 정보 조회는 게시글과 방 유형 및 지역 계층 원천 데이터를 반환한다")
+    void getEditRowReturnsRawEditFormRow() {
+        // Given
+        Member member = persistMember("provider-edit");
+        Region city = persistRegion("서울", 1, null);
+        Region district = persistRegion("강남구", 2, city);
+        Region dong = persistRegion("역삼동", 3, district);
+        RoomType roomType = persistRoomType("원룸");
+        RoommateBoard board = persistBoard("수정 게시글", member, roomType, dong, LocalDateTime.of(2026, 7, 1, 9, 0));
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        EditFormRow row = roommateBoardRepository.getEditRow(board.getId()).orElseThrow();
+
+        // Then
+        assertThat(row.title()).isEqualTo("수정 게시글");
+        assertThat(row.contents()).isEqualTo("테스트 게시글 내용");
+        assertThat(row.deposit()).isEqualTo(1_000);
+        assertThat(row.managementCost()).isEqualTo(10);
+        assertThat(row.monthlyRent()).isEqualTo(50);
+        assertThat(row.roomTypeId()).isEqualTo(roomType.getId());
+        assertThat(row.roomTypeName()).isEqualTo("원룸");
+        assertThat(row.regionId()).isEqualTo(dong.getId());
+        assertThat(row.regionName()).isEqualTo("역삼동");
+        assertThat(row.parentRegionName()).isEqualTo("강남구");
+        assertThat(row.grandParentRegionName()).isEqualTo("서울");
+        assertThat(row.comeableDate()).isEqualTo(LocalDateTime.of(2026, 7, 1, 9, 0));
+    }
+
+    @Test
+    @DisplayName("수정 폼 기본 정보 조회는 삭제된 게시글이면 빈 Optional을 반환한다")
+    void getEditRowReturnsEmptyWhenBoardIsDeleted() {
+        // Given
+        Member member = persistMember("provider-deleted-edit");
+        Region region = persistRegion("역삼동", 3, null);
+        RoomType roomType = persistRoomType("원룸");
+        RoommateBoard board = persistBoard("삭제된 수정 게시글", member, roomType, region, LocalDateTime.of(2026, 7, 1, 9, 0));
+        ReflectionTestUtils.setField(board, "isDeleted", true);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When & Then
+        assertThat(roommateBoardRepository.getEditRow(board.getId())).isEmpty();
+    }
+
+    @Test
     @DisplayName("이미지 조회는 대표 이미지를 먼저 반환하고 최대 10개까지만 반환한다")
     void getFileDetailDtoByBoardIdReturnsThumbnailFirstAndLimitsTen() {
         // Given
@@ -273,6 +322,33 @@ class RoommateBoardRepositoryTest {
 
         // Then
         assertThat(optionNames).containsExactly("풀옵션");
+    }
+
+    @Test
+    @DisplayName("수정 폼 방 추가 옵션 조회는 삭제되지 않은 옵션의 게시글 옵션 ID와 이름을 반환한다")
+    void getExtraOptionsByBoardIdReturnsOnlyActiveOptionInfos() {
+        // Given
+        Member member = persistMember("provider-edit-options");
+        Region region = persistRegion("역삼동", 3, null);
+        RoomType roomType = persistRoomType("원룸");
+        RoommateBoard board = persistBoard("수정 옵션 게시글", member, roomType, region, LocalDateTime.of(2026, 7, 1, 9, 0));
+        RoommateBoardOption activeOption = persistRoommateBoardOption(board, persistRoomExtraOption("풀옵션"));
+        RoomExtraOption deletedOption = persistRoomExtraOption("삭제된 옵션");
+        ReflectionTestUtils.setField(deletedOption, "isDeleted", true);
+        persistRoommateBoardOption(board, deletedOption);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<BoardEditDto.Response.BoardOptionInfo> optionInfos =
+                roommateBoardOptionRepository.getExtraOptionsByBoardId(board.getId());
+
+        // Then
+        assertThat(optionInfos).singleElement()
+                .satisfies(optionInfo -> {
+                    assertThat(optionInfo.getBoardOptionId()).isEqualTo(activeOption.getId());
+                    assertThat(optionInfo.getName()).isEqualTo("풀옵션");
+                });
     }
 
     @Test

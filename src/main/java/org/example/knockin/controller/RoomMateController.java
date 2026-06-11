@@ -3,9 +3,17 @@ package org.example.knockin.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.example.knockin.dto.*;
+import org.example.knockin.dto.BoardDetailDto;
+import org.example.knockin.dto.BoardDto;
 import org.example.knockin.dto.BoardDto.Response;
+import org.example.knockin.dto.BoardEditDto;
+import org.example.knockin.dto.BoardListDto;
+import org.example.knockin.dto.MatchDetailDto;
+import org.example.knockin.dto.MatchListDto;
+import org.example.knockin.dto.MatchScoreDto;
+import org.example.knockin.dto.ReportDto;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.global.auth.dto.PrincipalDetails;
 import org.example.knockin.service.RoommateBoardService;
@@ -17,9 +25,15 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
@@ -48,6 +62,15 @@ public class RoomMateController {
     @Operation(summary = "게시글 찜하기")
     public CommonResponse<BoardDto.Response> likeBoard(@RequestBody Map<String, Long> request) {
         return CommonResponse.status(HttpStatus.OK).body(new BoardDto.Response());
+    }
+
+    @GetMapping("/boards/{boardId}/edit")
+    @Operation(summary = "게시글 상세 조회")
+    public CommonResponse<BoardEditDto.Response> findEditForm(
+            @AuthenticationPrincipal PrincipalDetails principalDetails, @PathVariable Long boardId) {
+        Long memberId = principalDetails.getMember().getId();
+        BoardEditDto.Response response = roommateBoardService.getEditForm(memberId, boardId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @PostMapping("/boards")

@@ -40,11 +40,11 @@ public class BoardDto {
 
         @NotNull
         @Schema(description = "방 타입 ID")
-        private long roomType;
+        private long roomTypeId;
 
         @NotNull
         @Schema(description = "지역 ID")
-        private long region;
+        private long regionId;
 
         @Schema(description = "입주 가능일")
         private LocalDateTime comeableAt;
