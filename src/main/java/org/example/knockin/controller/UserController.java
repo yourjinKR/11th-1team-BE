@@ -115,14 +115,14 @@ public class UserController {
 
     @GetMapping("/preferences/all")
     @Operation(summary = "선호 전체 조회")
-    public CommonResponse<MyPreferencesAllDto.Response> findPreAll() {
-        return CommonResponse.status(HttpStatus.OK).body(new MyPreferencesAllDto.Response());
+    public CommonResponse<MyPreferencesAllDto.Response> findPreAll(@AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(onBoardingService.findPreAll(principalDetails.getMember().getId()));
     }
 
     @GetMapping("/profile/all")
     @Operation(summary = "내 프로필 전체 조회")
-    public CommonResponse<MyProfileAllDto.Response> findProfileAll() {
-        return CommonResponse.status(HttpStatus.OK).body(new MyProfileAllDto.Response());
+    public CommonResponse<MyProfileAllDto.Response> findProfileAll(@AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(onBoardingService.findProfileAll(principalDetails.getMember().getId()));
     }
 
     @PatchMapping("/visibility")
