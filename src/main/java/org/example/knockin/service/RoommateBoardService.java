@@ -21,5 +21,5 @@ public interface RoommateBoardService {
     BoardEditDto.Response getEditForm(Long memberId, Long boardId);
 
     @Transactional(rollbackFor = IOException.class)
-    BoardModifyDto.Response modify(Long boardId, BoardModifyDto.Request request, @Nullable List<MultipartFile> files);
+    BoardModifyDto.Response modify(Long memberId, Long boardId, BoardModifyDto.Request request, @Nullable List<MultipartFile> files);
 }

@@ -44,10 +44,10 @@ public class BoardModifyDto {
         private LocalDateTime comeableAt;
 
         @Schema(description = "삭제 추가 옵션 ID 목록")
-        private List<Long> deleteExtraOptionId;
+        private List<Long> deleteExtraOptionIds;
 
         @Schema(description = "신규 추가 옵션 ID 목록")
-        private List<Long> newExtraOptionId;
+        private List<Long> newExtraOptionIds;
 
         @NotNull
         @Schema(description = "내용")

@@ -61,6 +61,6 @@ public class MetaServiceImpl {
     }
 
     public List<RoomExtraOption> findRoomExtraOptionsByIdIn(List<Long> ids) {
-        return roomExtraOptionRepository.findByIdIn(ids);
+        return roomExtraOptionRepository.findAllById(ids);
     }
 }

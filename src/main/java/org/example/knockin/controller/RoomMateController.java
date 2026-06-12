@@ -93,8 +93,11 @@ public class RoomMateController {
     public CommonResponse<BoardModifyDto.Response> modifyBoard(
             @PathVariable Long boardId,
             @Valid @RequestPart("request") BoardModifyDto.Request request,
-            @RequestPart(value = "files", required = false) List<MultipartFile> files) {
-        BoardModifyDto.Response response = roommateBoardService.modify(boardId, request, files);
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
+            @AuthenticationPrincipal PrincipalDetails details
+    ) {
+        Long memberId = details.getMember().getId();
+        BoardModifyDto.Response response = roommateBoardService.modify(memberId, boardId, request, files);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 

@@ -56,7 +56,6 @@ import org.example.knockin.repository.file.FileRepository;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
 import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
-import org.example.knockin.repository.room.RoomExtraOptionRepository;
 import org.example.knockin.service.FileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -87,9 +86,6 @@ class RoommateBoardServiceImplTest {
 
     @Mock
     private RoommateBoardOptionRepository roommateBoardOptionRepository;
-
-    @Mock
-    private RoomExtraOptionRepository roomExtraOptionRepository;
 
     @Mock
     private FileRepository fileRepository;
@@ -565,8 +561,8 @@ class RoommateBoardServiceImplTest {
         RoomType newRoomType = org.mockito.Mockito.mock(RoomType.class);
         Region newRegion = org.mockito.Mockito.mock(Region.class);
         BoardModifyDto.Request request = createModifyRequest();
-        request.setDeleteExtraOptionId(List.of(10L));
-        request.setNewExtraOptionId(List.of(20L, 21L));
+        request.setDeleteExtraOptionIds(List.of(10L));
+        request.setNewExtraOptionIds(List.of(20L, 21L));
 
         RoomExtraOption deleteExtraOption = mockExtraOption(10L);
         RoomExtraOption keepExtraOption = mockExtraOption(11L);
@@ -615,7 +611,7 @@ class RoommateBoardServiceImplTest {
         when(metaService.findByRegionId(22L)).thenReturn(Optional.of(newRegion));
         when(roommateBoardOptionRepository.findWithRoomExtraOptionByBoardId(boardId))
                 .thenReturn(List.of(deleteBoardOption, keepBoardOption));
-        when(roomExtraOptionRepository.findAllById(List.of(20L, 21L)))
+        when(metaService.findRoomExtraOptionsByIdIn(List.of(20L, 21L)))
                 .thenReturn(List.of(newExtraOption, anotherNewExtraOption));
         when(roommateBoardFileRepository.findByRoommateBoard(roommateBoard))
                 .thenAnswer(invocation -> new ArrayList<>(persistedBoardFiles));
@@ -632,7 +628,7 @@ class RoommateBoardServiceImplTest {
         });
 
         // When
-        BoardModifyDto.Response response = roommateBoardService.modify(boardId, request, List.of(newMultipartFile));
+        BoardModifyDto.Response response = roommateBoardService.modify(7L, boardId, request, List.of(newMultipartFile));
 
         // Then
         assertThat(response.getUpdatedAt()).isNotNull();
@@ -693,10 +689,52 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardFileRepository.findByRoommateBoard(roommateBoard)).thenReturn(boardFiles);
 
         // When & Then
-        assertThatThrownBy(() -> roommateBoardService.modify(boardId, request, null))
+        assertThatThrownBy(() -> roommateBoardService.modify(7L, boardId, request, null))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode())
                                 .isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_EXCEEDED));
+    }
+
+    @Test
+    @DisplayName("게시글 수정 후 이미지가 없으면 썸네일 없이도 수정에 성공한다")
+    void modifyAllowsEmptyImageResultWithoutThumbnail() {
+        // Given
+        Long boardId = 1L;
+        RoommateBoard roommateBoard = createRoommateBoard();
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+        File deletedFile = createFile("delete.jpg", "saved-delete.jpg", "jpg");
+        RoommateBoardFile deletedImage = RoommateBoardFile.builder()
+                .id(101L)
+                .roommateBoard(roommateBoard)
+                .file(deletedFile)
+                .isThumbnail(true)
+                .build();
+        List<RoommateBoardFile> persistedBoardFiles = new ArrayList<>(List.of(deletedImage));
+        BoardModifyDto.Request request = createModifyRequest();
+        request.setExistingImages(List.of());
+        request.setNewImages(List.of());
+
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(roommateBoard));
+        when(metaService.findByRoomTypeId(11L)).thenReturn(Optional.of(roomType));
+        when(metaService.findByRegionId(22L)).thenReturn(Optional.of(region));
+        when(roommateBoardFileRepository.findByRoommateBoard(roommateBoard))
+                .thenAnswer(invocation -> new ArrayList<>(persistedBoardFiles));
+        org.mockito.Mockito.doAnswer(invocation -> {
+            persistedBoardFiles.remove(invocation.getArgument(0));
+            return null;
+        }).when(roommateBoardFileRepository).delete(any(RoommateBoardFile.class));
+
+        // When
+        BoardModifyDto.Response response = roommateBoardService.modify(7L, boardId, request, null);
+
+        // Then
+        assertThat(response.getUpdatedAt()).isNotNull();
+        assertThat(deletedFile.getIsDeleted()).isTrue();
+        assertThat(persistedBoardFiles).isEmpty();
+        verify(roommateBoardFileRepository).delete(deletedImage);
+        verify(metaService, never()).findRoomExtraOptionsByIdIn(any());
+        verify(fileRepository, never()).save(any(File.class));
     }
 
     @Test
@@ -731,10 +769,83 @@ class RoommateBoardServiceImplTest {
                 .thenReturn(List.of(firstImage, secondImage));
 
         // When & Then
-        assertThatThrownBy(() -> roommateBoardService.modify(boardId, request, null))
+        assertThatThrownBy(() -> roommateBoardService.modify(7L, boardId, request, null))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode())
                                 .isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_THUMBNAIL_EXCEEDED));
+    }
+
+    @Test
+    @DisplayName("다른 회원의 게시글을 수정하면 권한 없음 예외를 던지고 수정 데이터를 조회하지 않는다")
+    void modifyThrowsWhenRequesterIsNotBoardOwner() {
+        // Given
+        Long boardId = 1L;
+        RoommateBoard roommateBoard = createRoommateBoard(7L);
+        BoardModifyDto.Request request = createModifyRequest();
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(roommateBoard));
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.modify(999L, boardId, request, null))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_FORBIDDEN));
+        verifyNoInteractions(metaService, roommateBoardOptionRepository, roommateBoardFileRepository,
+                fileService, fileRepository);
+    }
+
+    @Test
+    @DisplayName("신규 추가 옵션 목록이 null이면 옵션 조회 없이 게시글 수정에 성공한다")
+    void modifyAllowsNullNewExtraOptionIdsWithoutOptionLookup() {
+        // Given
+        Long boardId = 1L;
+        RoommateBoard roommateBoard = createRoommateBoard();
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+        RoommateBoardFile existingThumbnail = RoommateBoardFile.builder()
+                .id(101L)
+                .roommateBoard(roommateBoard)
+                .file(createFile("thumbnail.jpg", "saved-thumbnail.jpg", "jpg"))
+                .isThumbnail(true)
+                .build();
+        BoardModifyDto.Request request = createModifyRequest();
+        request.setNewExtraOptionIds(null);
+        request.setExistingImages(List.of(createExistingFileDto(101L, true)));
+
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(roommateBoard));
+        when(metaService.findByRoomTypeId(11L)).thenReturn(Optional.of(roomType));
+        when(metaService.findByRegionId(22L)).thenReturn(Optional.of(region));
+        when(roommateBoardFileRepository.findByRoommateBoard(roommateBoard)).thenReturn(List.of(existingThumbnail));
+
+        // When
+        BoardModifyDto.Response response = roommateBoardService.modify(7L, boardId, request, null);
+
+        // Then
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(metaService, never()).findRoomExtraOptionsByIdIn(any());
+        verify(roommateBoardOptionRepository, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 신규 추가 옵션이 포함되면 추가 옵션 없음 예외를 던진다")
+    void modifyThrowsWhenNewExtraOptionDoesNotExist() {
+        // Given
+        Long boardId = 1L;
+        RoommateBoard roommateBoard = createRoommateBoard();
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+        BoardModifyDto.Request request = createModifyRequest();
+        request.setNewExtraOptionIds(List.of(20L, 21L));
+
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(roommateBoard));
+        when(metaService.findByRoomTypeId(11L)).thenReturn(Optional.of(roomType));
+        when(metaService.findByRegionId(22L)).thenReturn(Optional.of(region));
+        when(metaService.findRoomExtraOptionsByIdIn(List.of(20L, 21L)))
+                .thenReturn(List.of(org.mockito.Mockito.mock(RoomExtraOption.class)));
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.modify(7L, boardId, request, null))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(MetaErrorCode.EXTRA_OPTION_NOT_FOUND));
+        verifyNoInteractions(roommateBoardFileRepository, fileService, fileRepository);
     }
 
     @Test
@@ -764,7 +875,7 @@ class RoommateBoardServiceImplTest {
                 .thenThrow(new IOException("upload failed"));
 
         // When & Then
-        assertThatThrownBy(() -> roommateBoardService.modify(boardId, request, List.of(failedFile)))
+        assertThatThrownBy(() -> roommateBoardService.modify(7L, boardId, request, List.of(failedFile)))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(FileErrorCode.FILE_UPLOAD_FAILED));
         verify(fileService).deleteAll(List.of());
@@ -781,10 +892,10 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> roommateBoardService.modify(boardId, request, null))
+        assertThatThrownBy(() -> roommateBoardService.modify(7L, boardId, request, null))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
-        verifyNoInteractions(metaService, roomExtraOptionRepository, fileService, fileRepository);
+        verifyNoInteractions(metaService, fileService, fileRepository);
     }
 
     @Test
@@ -811,7 +922,7 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardFileRepository.findByRoommateBoard(roommateBoard)).thenReturn(List.of(existingThumbnail));
 
         // When & Then
-        assertThatThrownBy(() -> roommateBoardService.modify(boardId, request, List.of(emptyMultipartFile())))
+        assertThatThrownBy(() -> roommateBoardService.modify(7L, boardId, request, List.of(emptyMultipartFile())))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.BAD_REQUEST));
         verify(fileService, never()).upload(any(MultipartFile.class), any(FileType.class));
@@ -843,8 +954,8 @@ class RoommateBoardServiceImplTest {
         request.setRoomTypeId(11L);
         request.setRegionId(22L);
         request.setComeableAt(LocalDateTime.of(2026, 8, 1, 10, 0));
-        request.setDeleteExtraOptionId(List.of());
-        request.setNewExtraOptionId(List.of());
+        request.setDeleteExtraOptionIds(List.of());
+        request.setNewExtraOptionIds(List.of());
         request.setExistingImages(List.of());
         request.setNewImages(List.of());
         return request;
@@ -872,7 +983,12 @@ class RoommateBoardServiceImplTest {
     }
 
     private RoommateBoard createRoommateBoard() {
+        return createRoommateBoard(7L);
+    }
+
+    private RoommateBoard createRoommateBoard(Long memberId) {
         return RoommateBoard.builder()
+                .member(Member.builder().id(memberId).build())
                 .title("기존 제목")
                 .contents("기존 내용")
                 .deposit(1_000)

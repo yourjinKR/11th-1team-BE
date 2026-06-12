@@ -57,7 +57,6 @@ import org.example.knockin.repository.file.FileRepository;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
 import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
-import org.example.knockin.repository.room.RoomExtraOptionRepository;
 import org.example.knockin.service.FileService;
 import org.example.knockin.service.RoommateBoardService;
 import org.jspecify.annotations.NullMarked;
@@ -84,7 +83,6 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     private final AuthenticationRepository authenticationRepository;
     private final RoommateBoardOptionRepository roommateBoardOptionRepository;
     private final PreferenceConditionWeightRepository preferenceConditionWeightRepository;
-    private final RoomExtraOptionRepository roomExtraOptionRepository;
     private final FileRepository fileRepository;
 
     @Override
@@ -309,10 +307,13 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
 
     @Override
     @Transactional(rollbackFor = IOException.class)
-    public BoardModifyDto.Response modify(Long boardId, BoardModifyDto.Request request,
+    public BoardModifyDto.Response modify(Long memberId, Long boardId, BoardModifyDto.Request request,
                                           @Nullable List<MultipartFile> files) {
         RoommateBoard roommateBoard = roommateBoardRepository.findById(boardId)
                 .orElseThrow(() -> new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
+
+        checkingIsOwner(roommateBoard, memberId);
+
         RoomType roomType = metaService.findByRoomTypeId(request.getRoomTypeId())
                 .orElseThrow(() -> new BusinessException(MetaErrorCode.ROOM_TYPE_NOT_FOUND));
         Region region = metaService.findByRegionId(request.getRegionId())
@@ -322,8 +323,12 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
         roommateBoard.modifyRoomType(roomType);
         roommateBoard.modifyRegion(region);
 
-        removeOptions(boardId, request.getDeleteExtraOptionId());
-        saveOptions(roommateBoard, request.getNewExtraOptionId());
+        List<RoommateBoardOption> existingBoardOptions =
+                roommateBoardOptionRepository.findWithRoomExtraOptionByBoardId(boardId);
+        removeOptions(existingBoardOptions, request.getDeleteExtraOptionIds());
+
+        List<RoomExtraOption> roomExtraOptions = getRoomExtraOptions(request.getNewExtraOptionIds());
+        saveOptions(roommateBoard, roomExtraOptions);
 
         List<RoommateBoardFile> existingBoardFiles = roommateBoardFileRepository.findByRoommateBoard(roommateBoard);
         Map<Long, ExistingFileDto> existingFileDtoMap = toExistingImageMap(request.getExistingImages());
@@ -331,18 +336,23 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
 
         List<NewFileDto> newFileDtos = request.getNewImages();
         saveNewBoardFiles(roommateBoard, newFileDtos, files);
+
         validateBoardFileResult(roommateBoard);
 
         return new BoardModifyDto.Response(LocalDateTime.now());
     }
 
-    private void removeOptions(Long boardId, List<Long> extraOptionIds) {
+    private void checkingIsOwner(RoommateBoard roommateBoard, Long memberId) {
+        Member member = roommateBoard.getMember();
+        if (!Objects.equals(member.getId(), memberId)) {
+            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FORBIDDEN);
+        }
+    }
+
+    private void removeOptions(List<RoommateBoardOption> roommateBoardOptions, List<Long> extraOptionIds) {
         if (extraOptionIds == null || extraOptionIds.isEmpty()) {
             return;
         }
-
-        List<RoommateBoardOption> roommateBoardOptions = roommateBoardOptionRepository.findWithRoomExtraOptionByBoardId(
-                boardId);
 
         Map<Long, RoommateBoardOption> extraOptionIdMap = roommateBoardOptions.stream()
                 .collect(Collectors.toMap(
@@ -359,12 +369,25 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
         roommateBoardOptionRepository.deleteAll(deleteTargets);
     }
 
-    private void saveOptions(RoommateBoard roommateBoard, List<Long> newExtraOptionIds) {
+    private List<RoomExtraOption> getRoomExtraOptions(List<Long> newExtraOptionIds) {
         if (newExtraOptionIds == null || newExtraOptionIds.isEmpty()) {
-            return;
+            return List.of();
         }
 
-        List<RoomExtraOption> extraOptions = roomExtraOptionRepository.findAllById(newExtraOptionIds);
+        List<Long> uniqueIds = newExtraOptionIds.stream().distinct().toList();
+        List<RoomExtraOption> roomExtraOptions = metaService.findRoomExtraOptionsByIdIn(uniqueIds);
+
+        if (uniqueIds.size() != roomExtraOptions.size()) {
+            throw new BusinessException(MetaErrorCode.EXTRA_OPTION_NOT_FOUND);
+        }
+
+        return roomExtraOptions;
+    }
+
+    private void saveOptions(RoommateBoard roommateBoard, List<RoomExtraOption> extraOptions) {
+        if (extraOptions.isEmpty()) {
+            return;
+        }
 
         List<RoommateBoardOption> newBoardOptions = extraOptions.stream()
                 .map(extraOption ->
@@ -409,10 +432,8 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
         roommateBoardFileRepository.delete(boardFile);
     }
 
-    private void saveNewBoardFiles(
-            RoommateBoard roommateBoard,
-            List<NewFileDto> fileDtos,
-            @Nullable List<MultipartFile> files) {
+    private void saveNewBoardFiles(RoommateBoard roommateBoard, List<NewFileDto> fileDtos,
+                                   @Nullable List<MultipartFile> files) {
         if (fileDtos == null || fileDtos.isEmpty()) {
             return;
         }
@@ -442,10 +463,8 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
         }
     }
 
-    private MultipartFile getNewImageFile(
-            NewFileDto fileDto,
-            @Nullable List<MultipartFile> files,
-            Set<Integer> usedFileIndexes) {
+    private MultipartFile getNewImageFile(NewFileDto fileDto, @Nullable List<MultipartFile> files,
+                                          Set<Integer> usedFileIndexes) {
         Integer fileIndex = fileDto.getFileIndex();
 
         if (fileIndex == null || fileIndex < 0 || files == null || fileIndex >= files.size()) {
@@ -462,13 +481,15 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     private void validateBoardFileResult(RoommateBoard roommateBoard) {
         List<RoommateBoardFile> roommateBoardFiles = roommateBoardFileRepository.findByRoommateBoard(roommateBoard);
 
+        if (roommateBoardFiles.isEmpty()) {
+            return;
+        }
+
         if (roommateBoardFiles.size() > RoommateBoard.IMAGE_MAXIMUM) {
             throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_EXCEEDED);
         }
 
-        long thumbnailCount = roommateBoardFiles.stream()
-                .filter(RoommateBoardFile::getIsThumbnail)
-                .count();
+        long thumbnailCount = roommateBoardFiles.stream().filter(RoommateBoardFile::getIsThumbnail).count();
 
         if (thumbnailCount != RoommateBoard.THUMBNAIL_MAXIMUM) {
             throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_THUMBNAIL_EXCEEDED);
