@@ -133,8 +133,8 @@ public class UserController {
 
     @GetMapping("/boards")
     @Operation(summary = "내가 쓴 게시글 조회")
-    public CommonResponse<MyBoardListDto.Response> findMyBoardList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return CommonResponse.status(HttpStatus.OK).body(new MyBoardListDto.Response());
+    public CommonResponse<MyBoardListDto.Response> findMyBoardList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(onBoardingService.findMyBoardList(pageable, principalDetails.getMember().getId()));
     }
 
     @GetMapping("/verifications")

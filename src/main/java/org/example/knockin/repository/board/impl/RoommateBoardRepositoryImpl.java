@@ -27,9 +27,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.dto.MyBoardListDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.file.QFile;
 import org.example.knockin.entity.member.Gender;
+import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.QBasicInformation;
 import org.example.knockin.entity.room.QRegion;
 import org.example.knockin.global.util.QueryDslUtils;
@@ -37,6 +39,7 @@ import org.example.knockin.repository.board.row.BasicInfoRow;
 import org.example.knockin.repository.board.RoommateBoardListRow;
 import org.example.knockin.repository.board.RoommateBoardRepositoryCustom;
 import org.example.knockin.repository.board.RoommateBoardSearchCondition;
+import org.example.knockin.repository.board.row.MyRoommateBoardRow;
 import org.example.knockin.repository.board.row.EditFormRow;
 import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
@@ -330,6 +333,34 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
     }
 
     @Override
+    public Page<MyRoommateBoardRow> findMyBoardList(Pageable page, Member memberEntity) {
+        List<MyRoommateBoardRow> content = jpaQueryFactory
+                .select(Projections.constructor(MyRoommateBoardRow.class,
+                        roommateBoard.id,
+                        roommateBoard.title,
+                        roommateBoard.deposit,
+                        roommateBoard.monthlyRent,
+                        roommateBoard.createdAt,
+                        basicInformation.name,
+                        file.savedFileName,
+                        roomType.name,
+                        roommateBoard.region
+                ))
+                .from(roommateBoard)
+                .leftJoin(roommateBoardFile).on(roommateBoardFile.roommateBoard.eq(roommateBoard).and(roommateBoardFile.isThumbnail.isTrue()))
+                .leftJoin(roommateBoardFile.file, file)
+                .leftJoin(basicInformation).on(basicInformation.id.eq(JPAExpressions.select(basicInformation.id.max())
+                        .from(basicInformation).where(basicInformation.member.eq(roommateBoard.member))))
+                .leftJoin(roommateBoard.roomType, roomType)
+                .where(roommateBoard.member.eq(memberEntity), roommateBoard.isDeleted.isFalse())
+                .offset(page.getOffset()).limit(page.getPageSize()).orderBy(toBoardOrderSpecifiers(page.getSort())).fetch();
+
+        Long total = jpaQueryFactory.select(roommateBoard.count()).from(roommateBoard)
+                .where(roommateBoard.member.eq(memberEntity), roommateBoard.isDeleted.isFalse()).fetchOne();
+
+        return new PageImpl<>(content, page, total != null ? total : 0L);
+    }
+
     public Optional<EditFormRow> getEditRow(Long boardId) {
         QRegion boardRegion = new QRegion("boardRegion");
         QRegion parentRegion = new QRegion("parentRegion");
