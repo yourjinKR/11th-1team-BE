@@ -33,4 +33,8 @@ public class MemberPrivacy {
     @ColumnDefault("'PUBLIC'")
     @Column(name = "type", nullable = false, length = 20)
     private MemberPrivacyType type;
+
+    public void changeState(MemberPrivacyType type) {
+        this.type = type;
+    }
 }

@@ -17,6 +17,7 @@ public enum OnBoardErrorCode implements ErrorCode{
     ONBOARD_PREFERENCE_STEP1_LOG_SAVE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "선호조건 Step1 기록을 저장하지 못하였습니다."),
     ONBOARD_PREFERENCE_STEP2_SAVE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "선호조건 Step2을 저장하지 못하였습니다."),
     ONBOARD_PREFERENCE_STEP2_LOG_SAVE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "선호조건 Step2 기록을 저장하지 못하였습니다."),
+    ONBOARD_PROFILE_STATE_CHANGE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "현재 매칭된 유저가 있어 프로필 상태 변경에 실패하였습니다."),
     ONBOARD_ROOM_INFO_SAVE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "방정보 저장을 하지 못하였습니다.");
 
     private final HttpStatus httpStatus;

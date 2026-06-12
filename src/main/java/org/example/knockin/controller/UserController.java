@@ -127,14 +127,14 @@ public class UserController {
 
     @PatchMapping("/visibility")
     @Operation(summary = "프로필 공개 여부 변경")
-    public CommonResponse<ProfileVisibilityDto.Response> changeProfileStatus(@RequestBody ProfileVisibilityDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new ProfileVisibilityDto.Response());
+    public CommonResponse<ProfileVisibilityDto.Response> changeProfileStatus(@RequestBody ProfileVisibilityDto.Request request, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(onBoardingService.changeProfileStatus(request, principalDetails.getMember().getId()));
     }
 
     @GetMapping("/boards")
     @Operation(summary = "내가 쓴 게시글 조회")
-    public CommonResponse<MyBoardListDto.Response> findMyBoardList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return CommonResponse.status(HttpStatus.OK).body(new MyBoardListDto.Response());
+    public CommonResponse<MyBoardListDto.Response> findMyBoardList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(onBoardingService.findMyBoardList(pageable, principalDetails.getMember().getId()));
     }
 
     @GetMapping("/verifications")
