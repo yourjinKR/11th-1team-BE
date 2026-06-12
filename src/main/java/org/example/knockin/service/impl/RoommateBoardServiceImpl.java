@@ -20,6 +20,7 @@ import org.example.knockin.dto.BoardDetailDto.Response.FileDetailDto;
 import org.example.knockin.dto.BoardDetailDto.Response.Lifestyle;
 import org.example.knockin.dto.BoardDto;
 import org.example.knockin.dto.BoardDto.Request.FileDto;
+import org.example.knockin.dto.BoardDto.Response;
 import org.example.knockin.dto.BoardEditDto;
 import org.example.knockin.dto.BoardEditDto.Response.BoardOptionInfo;
 import org.example.knockin.dto.BoardEditDto.Response.RegionInfo;
@@ -565,6 +566,22 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
                 .isDeleted(false)
                 .build();
         roommateBoardInterestRepository.save(roommateBoardInterest);
+    }
+
+    @Override
+    public BoardDto.Response deleteBoard(Long boardId, Long memberId) {
+
+        RoommateBoard roommateBoard = roommateBoardRepository.findById(boardId)
+                .orElseThrow(() -> new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
+
+        Member owner = roommateBoard.getMember();
+
+        if (!memberId.equals(owner.getId())) {
+            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FORBIDDEN);
+        }
+
+        roommateBoard.softDelete();
+        return new Response(LocalDateTime.now());
     }
 
     private String getFullRegionName(Region regionEntity) {

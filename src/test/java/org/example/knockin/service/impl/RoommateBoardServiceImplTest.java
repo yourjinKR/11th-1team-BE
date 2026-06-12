@@ -280,6 +280,53 @@ class RoommateBoardServiceImplTest {
     }
 
     @Test
+    @DisplayName("게시글 작성자가 삭제를 요청하면 게시글을 삭제 상태로 변경한다")
+    void deleteBoardSoftDeletesWhenRequesterIsOwner() {
+        // Given
+        Long boardId = 1L;
+        Long memberId = 7L;
+        RoommateBoard board = createRoommateBoard(memberId);
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(board));
+
+        // When
+        BoardDto.Response response = roommateBoardService.deleteBoard(boardId, memberId);
+
+        // Then
+        assertThat(board.getIsDeleted()).isTrue();
+        assertThat(response.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("다른 회원의 게시글을 삭제하면 권한 없음 예외를 던지고 삭제하지 않는다")
+    void deleteBoardThrowsWhenRequesterIsNotOwner() {
+        // Given
+        Long boardId = 1L;
+        Long ownerId = 7L;
+        Long requesterId = 999L;
+        RoommateBoard board = createRoommateBoard(ownerId);
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(board));
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.deleteBoard(boardId, requesterId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_FORBIDDEN));
+        assertThat(board.getIsDeleted()).isFalse();
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 게시글을 삭제하면 게시글 없음 예외를 던진다")
+    void deleteBoardThrowsWhenBoardDoesNotExist() {
+        // Given
+        Long boardId = 999L;
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.deleteBoard(boardId, 7L))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
+    }
+
+    @Test
     @DisplayName("이미지 업로드가 완료되면 트랜잭션 안에서 게시글과 파일 연결 정보를 저장한다")
     void savePersistsBoardAndUploadedImageLinksInTransaction() throws IOException {
         MultipartFile thumbnailImage = emptyMultipartFile();

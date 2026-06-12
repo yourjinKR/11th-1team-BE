@@ -95,4 +95,8 @@ public class RoommateBoard extends BaseEntity {
     public void modifyRegion(Region region) {
         this.region = region;
     }
+
+    public void softDelete() {
+        this.isDeleted = true;
+    }
 }

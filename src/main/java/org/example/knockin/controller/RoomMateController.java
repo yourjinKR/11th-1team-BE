@@ -118,8 +118,13 @@ public class RoomMateController {
 
     @DeleteMapping("/boards/{boardId}")
     @Operation(summary = "게시글 삭제")
-    public CommonResponse<BoardDto.Response> deleteBoard(@PathVariable Long boardId) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoardDto.Response());
+    public CommonResponse<BoardDto.Response> deleteBoard(
+            @PathVariable Long boardId,
+            @AuthenticationPrincipal PrincipalDetails details
+    ) {
+        Long memberId = details.getMember().getId();
+        Response response = roommateBoardService.deleteBoard(boardId, memberId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @GetMapping("/matches")
