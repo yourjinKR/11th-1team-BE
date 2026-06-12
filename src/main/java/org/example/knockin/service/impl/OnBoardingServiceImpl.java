@@ -21,6 +21,7 @@ import org.example.knockin.repository.room.RoomProfileRepository;
 import org.example.knockin.repository.room.RoomSeekerProfileRegionRepository;
 import org.example.knockin.repository.room.SeekerRoomTypeRepository;
 import org.example.knockin.service.RoommateBoardService;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -598,7 +599,7 @@ public class OnBoardingServiceImpl {
 
     public MyBoardListDto.Response findMyBoardList(Pageable pageable, Long memberId) {
         Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
-        roommateBoardService.getMyBoardList(pageable,member);
-        return MyBoardListDto.Response.builder().build();
+        Page<MyBoardListDto.Response.BoardItem> pageResult = roommateBoardService.getMyBoardList(pageable, member);
+        return MyBoardListDto.Response.builder().boards(pageResult.getContent()).build();
     }
 }

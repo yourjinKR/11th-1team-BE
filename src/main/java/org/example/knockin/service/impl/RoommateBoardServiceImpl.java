@@ -257,7 +257,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     private record FileWithThumbnail(File file, boolean thumbNail) { }
 
     @Override
-    public Page<MyBoardListDto.Response> getMyBoardList(Pageable pageable, Member member) {
+    public Page<MyBoardListDto.Response.BoardItem> getMyBoardList(Pageable pageable, Member member) {
         Page<MyRoommateBoardRow> rawPage = roommateBoardRepository.findMyBoardList(pageable, member);
 
         List<MyBoardListDto.Response.BoardItem> boardItems = rawPage.getContent().stream().map(row -> {
@@ -276,7 +276,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
                     .build();
         }).toList();
 
-        return new PageImpl<>(List.of(MyBoardListDto.Response.builder().boards(boardItems).build()), pageable, rawPage.getTotalElements());
+        return new PageImpl<>(boardItems, pageable, rawPage.getTotalElements());
     }
 
     private String getFullRegionName(Region regionEntity) {

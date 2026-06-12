@@ -348,10 +348,11 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                 .from(roommateBoard)
                 .leftJoin(roommateBoardFile).on(roommateBoardFile.roommateBoard.eq(roommateBoard).and(roommateBoardFile.isThumbnail.isTrue()))
                 .leftJoin(roommateBoardFile.file, file)
-                .leftJoin(basicInformation).on(basicInformation.member.eq(roommateBoard.member))
+                .leftJoin(basicInformation).on(basicInformation.id.eq(JPAExpressions.select(basicInformation.id.max())
+                        .from(basicInformation).where(basicInformation.member.eq(roommateBoard.member))))
                 .leftJoin(roommateBoard.roomType, roomType)
                 .where(roommateBoard.member.eq(memberEntity), roommateBoard.isDeleted.isFalse())
-                .offset(page.getOffset()).limit(page.getPageSize()).orderBy(roommateBoard.id.desc()).fetch();
+                .offset(page.getOffset()).limit(page.getPageSize()).orderBy(toBoardOrderSpecifiers(page.getSort())).fetch();
 
         Long total = jpaQueryFactory.select(roommateBoard.count()).from(roommateBoard)
                 .where(roommateBoard.member.eq(memberEntity), roommateBoard.isDeleted.isFalse()).fetchOne();
