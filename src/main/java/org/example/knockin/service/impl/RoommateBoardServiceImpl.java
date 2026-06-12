@@ -24,6 +24,7 @@ import org.example.knockin.dto.BoardEditDto.Response.BoardOptionInfo;
 import org.example.knockin.dto.BoardEditDto.Response.RegionInfo;
 import org.example.knockin.dto.BoardEditDto.Response.RoomTypeInfo;
 import org.example.knockin.dto.BoardListDto;
+import org.example.knockin.dto.MyBoardListDto;
 import org.example.knockin.dto.BoardModifyDto;
 import org.example.knockin.dto.BoardModifyDto.Request.ExistingFileDto;
 import org.example.knockin.dto.BoardModifyDto.Request.NewFileDto;
@@ -52,6 +53,7 @@ import org.example.knockin.repository.board.RoommateBoardOptionRepository;
 import org.example.knockin.repository.board.RoommateBoardRepository;
 import org.example.knockin.repository.board.RoommateBoardSearchCondition;
 import org.example.knockin.repository.board.row.BasicInfoRow;
+import org.example.knockin.repository.board.row.MyRoommateBoardRow;
 import org.example.knockin.repository.board.row.EditFormRow;
 import org.example.knockin.repository.file.FileRepository;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
@@ -62,6 +64,7 @@ import org.example.knockin.service.RoommateBoardService;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -497,4 +500,37 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     }
 
     private record FileWithThumbnail(File file, boolean thumbNail) { }
+
+    @Override
+    public Page<MyBoardListDto.Response.BoardItem> getMyBoardList(Pageable pageable, Member member) {
+        Page<MyRoommateBoardRow> rawPage = roommateBoardRepository.findMyBoardList(pageable, member);
+
+        List<MyBoardListDto.Response.BoardItem> boardItems = rawPage.getContent().stream().map(row -> {
+            String fullRegionName = getFullRegionName(row.getRegionEntity());
+
+            return MyBoardListDto.Response.BoardItem.builder()
+                    .boardId(row.getBoardId())
+                    .title(row.getTitle())
+                    .deposit(row.getDeposit())
+                    .monthlyRent(row.getMonthlyRent())
+                    .createdAt(row.getCreatedAt())
+                    .memberName(row.getMemberName())
+                    .image(row.getImage())
+                    .region(fullRegionName)
+                    .roomTypes(row.getRoomTypeName())
+                    .build();
+        }).toList();
+
+        return new PageImpl<>(boardItems, pageable, rawPage.getTotalElements());
+    }
+
+    private String getFullRegionName(Region regionEntity) {
+        List<String> regionNames = new ArrayList<>();
+        Region current = regionEntity;
+        while (current != null) {
+            regionNames.addFirst(current.getName());
+            current = current.getParent();
+        }
+        return String.join(" ", regionNames);
+    }
 }

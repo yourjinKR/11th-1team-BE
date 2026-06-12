@@ -32,4 +32,8 @@ public class State {
     @Enumerated(EnumType.STRING)
     @Column(name = "state", length = 20)
     private MemberState state;
+
+    public void changeState(MemberState state) {
+        this.state = state;
+    }
 }
