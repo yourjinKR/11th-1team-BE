@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RoomExtraOptionRepository extends JpaRepository<RoomExtraOption, Long> {
     List<RoomExtraOption> findByIdIn(Collection<Long> ids);
+
+    List<RoomExtraOption> findAllByIsDeleted(Boolean isDeleted);
 }
