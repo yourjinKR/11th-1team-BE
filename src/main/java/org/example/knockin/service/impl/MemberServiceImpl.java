@@ -13,7 +13,10 @@ import org.example.knockin.global.auth.dto.OAuth2UserInfo;
 import org.example.knockin.global.auth.exception.AuthErrorCode;
 import org.example.knockin.global.auth.service.Oauth2DeleteFactory;
 import org.example.knockin.global.exception.BusinessException;
+import org.example.knockin.repository.life.MemberLifePatternRepository;
+import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.MemberRepository;
+import org.example.knockin.repository.room.RoomProfileRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +30,9 @@ import java.util.Optional;
 public class MemberServiceImpl {
     private final MemberRepository memberRepository;
     private final Oauth2DeleteFactory oauth2DeleteFactory;
+    private final MemberLifePatternRepository memberLifePatternRepository;
+    private final BasicInformationRepository basicInformationRepository;
+    private final RoomProfileRepository roomProfileRepository;
 
     @Transactional
     public Member getOrSave(OAuth2UserInfo oAuth2UserInfo) {
@@ -145,6 +151,10 @@ public class MemberServiceImpl {
                 .lifestyles(memberRepository.findPreferenceLifeStyle(member))
                 .conditions(memberRepository.findPreferenceCondition(member))
                 .build();
+    }
+
+    public boolean isOnBoarding(Member member) {
+        return roomProfileRepository.isExsitRoomProfile(member) && memberLifePatternRepository.isExsitLifeStyle(member) && basicInformationRepository.isExsitBasicInformation(member);
     }
 
     private String getFullRegionName(Region regionEntity) {

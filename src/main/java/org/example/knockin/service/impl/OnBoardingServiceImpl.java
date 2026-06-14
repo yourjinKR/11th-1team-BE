@@ -7,6 +7,8 @@ import org.example.knockin.entity.agreement.MemberAgreement;
 import org.example.knockin.entity.life.*;
 import org.example.knockin.entity.member.BasicInformation;
 import org.example.knockin.entity.member.Member;
+import org.example.knockin.entity.member.MemberPrivacy;
+import org.example.knockin.entity.member.MemberPrivacyType;
 import org.example.knockin.entity.room.*;
 import org.example.knockin.global.auth.exception.AuthErrorCode;
 import org.example.knockin.global.exception.BusinessException;
@@ -76,6 +78,7 @@ public class OnBoardingServiceImpl {
         Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
         if(ObjectUtils.isEmpty(saveBasicInfo(request, member))) throw new BusinessException(OnBoardErrorCode.ONBOARD_BASIC_SAVE_ERROR);
         if(saveMemberAgreement(request, member).isEmpty()) throw new BusinessException(OnBoardErrorCode.ONBOARD_TERM_SAVE_ERROR);
+        saveOrUpdateState(member);
         return SaveProfileBasicDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 
@@ -98,6 +101,7 @@ public class OnBoardingServiceImpl {
     public SaveProfileLifeStyleDto.Response saveLifeStyleLogic(SaveProfileLifeStyleDto.Request request, Long memberId) {
         Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
         if(saveMemberLifeStyle(request, member).isEmpty()) throw new BusinessException(OnBoardErrorCode.ONBOARD_LIFE_STYLE_SAVE_ERROR);
+        saveOrUpdateState(member);
         return SaveProfileLifeStyleDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 
@@ -157,6 +161,7 @@ public class OnBoardingServiceImpl {
     public SaveProfileRoomInfoDto.Response saveRoomInfoLogic(SaveProfileRoomInfoDto.Request request, Long memberId) {
         Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
         if(ObjectUtils.isEmpty(saveRoomInfo(request,member))) throw new BusinessException(OnBoardErrorCode.ONBOARD_ROOM_INFO_SAVE_ERROR);
+        saveOrUpdateState(member);
         return SaveProfileRoomInfoDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 
@@ -194,6 +199,7 @@ public class OnBoardingServiceImpl {
         if(saveMemberAgreement(basicRequest, member).isEmpty()) throw new BusinessException(OnBoardErrorCode.ONBOARD_TERM_SAVE_ERROR);
         if(saveMemberLifeStyle(lifeStyleRequest, member).isEmpty()) throw new BusinessException(OnBoardErrorCode.ONBOARD_LIFE_STYLE_SAVE_ERROR);
         if(ObjectUtils.isEmpty(saveRoomInfo(roomInfoRequest,member))) throw new BusinessException(OnBoardErrorCode.ONBOARD_ROOM_INFO_SAVE_ERROR);
+        saveOrUpdateState(member);
 
         return SaveProfileAllDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
@@ -601,5 +607,18 @@ public class OnBoardingServiceImpl {
         Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
         Page<MyBoardListDto.Response.BoardItem> pageResult = roommateBoardService.getMyBoardList(pageable, member);
         return MyBoardListDto.Response.builder().boards(pageResult.getContent()).build();
+    }
+
+    @Transactional
+    public void saveOrUpdateState(Member member) {
+        MemberPrivacyType targetType = memberService.isOnBoarding(member) ? MemberPrivacyType.PUBLIC : MemberPrivacyType.PRIVATE;
+
+        List<MemberPrivacy> privacyList = memberPrivacyRepository.findByMember(member);
+        if (!privacyList.isEmpty()) {
+            privacyList.getFirst().changeState(targetType);
+        }
+        else {
+            memberPrivacyRepository.save(MemberPrivacy.builder().member(member).type(targetType).build());
+        }
     }
 }

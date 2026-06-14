@@ -6,6 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface RoomProfileRepository extends JpaRepository<RoomProfile, Long> {
+public interface RoomProfileRepository extends JpaRepository<RoomProfile, Long>, RoomProfileRepositoryCustom {
     List<RoomProfile> findByMember(Member member);
 }
