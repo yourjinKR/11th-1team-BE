@@ -57,7 +57,7 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
     }
 
     public Optional<AuthResponse> findMemberInfo(Member memberEntity) {
-        return Optional.ofNullable(jpaQueryFactory
+        AuthResponse response = jpaQueryFactory
                 .select(Projections.fields(AuthResponse.class,
                         basicInformation.name.as("name"),
                         JPAExpressions.selectOne()
@@ -91,7 +91,15 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                 .leftJoin(basicInformation).on(basicInformation.member.eq(member))
                 .leftJoin(state).on(state.member.eq(member))
                 .where(member.id.eq(memberEntity.getId()))
-                .fetchOne());
+                .fetchOne();
+
+        if (response != null && response.getDeleteInfo() != null) {
+            if (memberEntity.isDelete()) {
+                response.getDeleteInfo().setReason("탈퇴한 회원입니다.");
+            }
+        }
+
+        return Optional.ofNullable(response);
     }
 
     @Override
