@@ -32,4 +32,7 @@ public class AuthenticationApprove extends CreatedAtEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private ApproveType status;
+
+    @Column(length = 500)
+    private String rejectReason;
 }

@@ -17,7 +17,7 @@ public class PointLog extends CreatedAtEntity {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    private Long point;
+    private Long points;
 
     @Column(length = 50)
     private String reason;

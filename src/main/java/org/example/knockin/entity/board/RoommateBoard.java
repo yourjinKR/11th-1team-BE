@@ -79,6 +79,9 @@ public class RoommateBoard extends BaseEntity {
     @Builder.Default
     private Long hits = 0L;
 
+    @Column(length = 500)
+    private String rejectReason;
+
     public void modifyBasicInfo(BoardModifyDto.Request request) {
         title = request.getTitle();
         contents = request.getContents();

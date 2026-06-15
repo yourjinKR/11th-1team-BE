@@ -2,6 +2,7 @@ package org.example.knockin.repository.member.impl;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.example.knockin.dto.MyProfileAllDto;
 import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.life.PreferenceConditionWeight;
 import org.example.knockin.entity.member.Member;
+import org.example.knockin.entity.member.MemberState;
 import org.example.knockin.entity.room.Region;
 import org.example.knockin.entity.room.RoomOfferProfile;
 import org.example.knockin.entity.room.RoomProfile;
@@ -39,6 +41,7 @@ import static org.example.knockin.entity.room.QSeekerRoomType.seekerRoomType;
 import static org.example.knockin.entity.room.QRoomType.roomType;
 import static org.example.knockin.entity.room.QRegion.region;
 import static org.example.knockin.entity.room.QRoomSeekerProfileRegion.roomSeekerProfileRegion;
+import static org.example.knockin.entity.member.QState.state;
 
 @Repository
 @RequiredArgsConstructor
@@ -54,7 +57,7 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
     }
 
     public Optional<AuthResponse> findMemberInfo(Member memberEntity) {
-        return Optional.ofNullable(jpaQueryFactory
+        AuthResponse response = jpaQueryFactory
                 .select(Projections.fields(AuthResponse.class,
                         basicInformation.name.as("name"),
                         JPAExpressions.selectOne()
@@ -79,12 +82,24 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                                                 .where(preferenceConditionWeight.member.eq(member))
                                                 .exists())
                                 .as("preferenceInfo"),
-                        member.isDelete.as("isDelete")
+                        Projections.fields(AuthResponse.DeleteInfo.class,
+                                new CaseBuilder().when(member.isDelete.isTrue().or(state.states.eq(MemberState.INACTIVE)))
+                                        .then(true).otherwise(false).as("isDelete"),
+                                state.rejectReason.as("reason")).as("deleteInfo")
                 ))
                 .from(member)
                 .leftJoin(basicInformation).on(basicInformation.member.eq(member))
+                .leftJoin(state).on(state.member.eq(member))
                 .where(member.id.eq(memberEntity.getId()))
-                .fetchOne());
+                .fetchOne();
+
+        if (response != null && response.getDeleteInfo() != null) {
+            if (memberEntity.isDelete()) {
+                response.getDeleteInfo().setReason("탈퇴한 회원입니다.");
+            }
+        }
+
+        return Optional.ofNullable(response);
     }
 
     @Override
