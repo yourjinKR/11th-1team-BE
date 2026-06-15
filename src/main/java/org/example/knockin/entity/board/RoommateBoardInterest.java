@@ -9,7 +9,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.example.knockin.entity.member.Member;
@@ -18,8 +21,18 @@ import org.hibernate.annotations.ColumnDefault;
 
 @Getter
 @Entity
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "roommate_board_interest")
+@AllArgsConstructor
+@Table(
+        name = "roommate_board_interest",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_roommate_board_member",
+                        columnNames = {"roommate_board_id", "member_id"}
+                )
+        }
+)
 public class RoommateBoardInterest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,5 +49,10 @@ public class RoommateBoardInterest {
 
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted;
+    @Builder.Default
+    private Boolean isDeleted = false;
+
+    public void likeToggle() {
+        isDeleted = !isDeleted;
+    }
 }

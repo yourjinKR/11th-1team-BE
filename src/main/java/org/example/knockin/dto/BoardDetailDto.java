@@ -87,6 +87,9 @@ public class BoardDetailDto {
         @Schema(description = "적합도")
         private Compatibility compatibility;
 
+        @Schema(description = "관심 여부")
+        private boolean interested;
+
         @Data
         @NoArgsConstructor
         @AllArgsConstructor

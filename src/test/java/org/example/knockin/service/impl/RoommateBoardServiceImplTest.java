@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.StreamSupport;
 import org.example.knockin.dto.BoardDetailDto;
 import org.example.knockin.dto.BoardDto;
@@ -30,6 +31,7 @@ import org.example.knockin.dto.BoardModifyDto.Request.NewFileDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.board.RoommateBoardFile;
+import org.example.knockin.entity.board.RoommateBoardInterest;
 import org.example.knockin.entity.board.RoommateBoardOption;
 import org.example.knockin.entity.file.File;
 import org.example.knockin.entity.file.FileType;
@@ -47,6 +49,7 @@ import org.example.knockin.global.exception.MetaErrorCode;
 import org.example.knockin.global.exception.RoommateBoardErrorCode;
 import org.example.knockin.repository.auth.AuthenticationRepository;
 import org.example.knockin.repository.board.RoommateBoardFileRepository;
+import org.example.knockin.repository.board.RoommateBoardInterestRepository;
 import org.example.knockin.repository.board.RoommateBoardOptionRepository;
 import org.example.knockin.repository.board.RoommateBoardSearchCondition;
 import org.example.knockin.repository.board.RoommateBoardRepository;
@@ -86,6 +89,9 @@ class RoommateBoardServiceImplTest {
 
     @Mock
     private RoommateBoardOptionRepository roommateBoardOptionRepository;
+
+    @Mock
+    private RoommateBoardInterestRepository roommateBoardInterestRepository;
 
     @Mock
     private FileRepository fileRepository;
@@ -138,12 +144,139 @@ class RoommateBoardServiceImplTest {
     @Captor
     private ArgumentCaptor<RoommateBoardSearchCondition> searchConditionCaptor;
 
+    @Captor
+    private ArgumentCaptor<RoommateBoardInterest> roommateBoardInterestCaptor;
+
     @BeforeEach
     void setUpTransactionTemplate() {
         lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
             TransactionCallback<?> callback = invocation.getArgument(0);
             return callback.doInTransaction(null);
         });
+    }
+
+    @Test
+    @DisplayName("좋아요 이력이 없으면 관심 게시글을 새로 저장한다")
+    void likeBoardCreatesInterestWhenNotExists() {
+        Long boardId = 1L;
+        Long memberId = 2L;
+        RoommateBoard board = createRoommateBoard(10L);
+        Member member = Member.builder().id(memberId).build();
+
+        when(roommateBoardRepository.findByIdForUpdate(boardId)).thenReturn(Optional.of(board));
+        when(memberService.findById(memberId)).thenReturn(Optional.of(member));
+        when(roommateBoardInterestRepository.findByRoommateBoardAndMember(board, member)).thenReturn(Optional.empty());
+
+        BoardDto.Response response = roommateBoardService.likeBoard(boardId, memberId);
+
+        verify(roommateBoardInterestRepository).save(roommateBoardInterestCaptor.capture());
+        RoommateBoardInterest interest = roommateBoardInterestCaptor.getValue();
+        assertThat(interest.getRoommateBoard()).isSameAs(board);
+        assertThat(interest.getMember()).isSameAs(member);
+        assertThat(interest.getIsDeleted()).isFalse();
+        assertThat(response.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("이미 좋아요한 게시글이면 기존 관심 게시글을 삭제 상태로 토글한다")
+    void likeBoardTogglesExistingActiveInterestToDeleted() {
+        Long boardId = 1L;
+        Long memberId = 2L;
+        RoommateBoard board = createRoommateBoard(10L);
+        Member member = Member.builder().id(memberId).build();
+        RoommateBoardInterest interest = RoommateBoardInterest.builder()
+                .roommateBoard(board)
+                .member(member)
+                .isDeleted(false)
+                .build();
+
+        when(roommateBoardRepository.findByIdForUpdate(boardId)).thenReturn(Optional.of(board));
+        when(memberService.findById(memberId)).thenReturn(Optional.of(member));
+        when(roommateBoardInterestRepository.findByRoommateBoardAndMember(board, member)).thenReturn(Optional.of(interest));
+
+        roommateBoardService.likeBoard(boardId, memberId);
+
+        assertThat(interest.getIsDeleted()).isTrue();
+        verify(roommateBoardInterestRepository, never()).save(any(RoommateBoardInterest.class));
+    }
+
+    @Test
+    @DisplayName("삭제 상태의 관심 게시글이면 다시 좋아요 상태로 토글한다")
+    void likeBoardTogglesExistingDeletedInterestToActive() {
+        Long boardId = 1L;
+        Long memberId = 2L;
+        RoommateBoard board = createRoommateBoard(10L);
+        Member member = Member.builder().id(memberId).build();
+        RoommateBoardInterest interest = RoommateBoardInterest.builder()
+                .roommateBoard(board)
+                .member(member)
+                .isDeleted(true)
+                .build();
+
+        when(roommateBoardRepository.findByIdForUpdate(boardId)).thenReturn(Optional.of(board));
+        when(memberService.findById(memberId)).thenReturn(Optional.of(member));
+        when(roommateBoardInterestRepository.findByRoommateBoardAndMember(board, member)).thenReturn(Optional.of(interest));
+
+        roommateBoardService.likeBoard(boardId, memberId);
+
+        assertThat(interest.getIsDeleted()).isFalse();
+        verify(roommateBoardInterestRepository, never()).save(any(RoommateBoardInterest.class));
+    }
+
+    @Test
+    @DisplayName("같은 좋아요 요청이 두 번 들어오면 토글 구현은 좋아요를 취소한다")
+    void likeBoardCancelsLikeWhenSameRequestIsRetried() {
+        Long boardId = 1L;
+        Long memberId = 2L;
+        RoommateBoard board = createRoommateBoard(10L);
+        Member member = Member.builder().id(memberId).build();
+        AtomicReference<RoommateBoardInterest> savedInterest = new AtomicReference<>();
+
+        when(roommateBoardRepository.findByIdForUpdate(boardId)).thenReturn(Optional.of(board));
+        when(memberService.findById(memberId)).thenReturn(Optional.of(member));
+        when(roommateBoardInterestRepository.findByRoommateBoardAndMember(board, member))
+                .thenAnswer(invocation -> Optional.ofNullable(savedInterest.get()));
+        when(roommateBoardInterestRepository.save(any(RoommateBoardInterest.class))).thenAnswer(invocation -> {
+            RoommateBoardInterest interest = invocation.getArgument(0);
+            savedInterest.set(interest);
+            return interest;
+        });
+
+        roommateBoardService.likeBoard(boardId, memberId);
+        assertThat(savedInterest.get().getIsDeleted()).isFalse();
+
+        roommateBoardService.likeBoard(boardId, memberId);
+
+        assertThat(savedInterest.get().getIsDeleted()).isTrue();
+    }
+
+    @Test
+    @DisplayName("좋아요할 게시글이 없으면 예외를 던진다")
+    void likeBoardThrowsWhenBoardNotFound() {
+        Long boardId = 1L;
+
+        when(roommateBoardRepository.findByIdForUpdate(boardId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> roommateBoardService.likeBoard(boardId, 2L))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
+        verifyNoInteractions(roommateBoardInterestRepository);
+    }
+
+    @Test
+    @DisplayName("좋아요할 회원이 없으면 예외를 던진다")
+    void likeBoardThrowsWhenMemberNotFound() {
+        Long boardId = 1L;
+        Long memberId = 2L;
+        RoommateBoard board = createRoommateBoard(10L);
+
+        when(roommateBoardRepository.findByIdForUpdate(boardId)).thenReturn(Optional.of(board));
+        when(memberService.findById(memberId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> roommateBoardService.likeBoard(boardId, memberId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+        verifyNoInteractions(roommateBoardInterestRepository);
     }
 
     @Test
@@ -404,9 +537,10 @@ class RoommateBoardServiceImplTest {
     void getBoardDetailIncreasesHitsThenComposesResponse() {
         // Given
         Long boardId = 1L;
-        Long memberId = 7L;
+        Long ownerId = 7L;
+        Long viewerId = 42L;
         LocalDate birth = LocalDate.of(1998, 1, 1);
-        BasicInfoRow basicInfoRow = createBasicInfoRow(boardId, memberId, birth);
+        BasicInfoRow basicInfoRow = createBasicInfoRow(boardId, ownerId, birth);
         List<BoardDetailDto.Response.FileDetailDto> images = List.of(
                 new BoardDetailDto.Response.FileDetailDto(101L, "thumbnail.jpg"),
                 new BoardDetailDto.Response.FileDetailDto(102L, "room.jpg")
@@ -428,13 +562,15 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardRepository.getBasicInfo(boardId)).thenReturn(Optional.of(basicInfoRow));
         when(roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId)).thenReturn(images);
         when(roommateBoardOptionRepository.getExtraOptionsNameByBoardId(boardId)).thenReturn(roomExtraOptionNames);
-        when(memberLifePatternRepository.getLifeStyleDto(memberId)).thenReturn(List.of(visitor, sleep));
-        when(preferenceConditionRepository.getConditionDtoByMemberId(memberId)).thenReturn(conditions);
-        when(preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(memberId)).thenReturn(conditionWeights);
-        when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(memberId)).thenReturn(authenticationTypes);
+        when(memberLifePatternRepository.getLifeStyleDto(ownerId)).thenReturn(List.of(visitor, sleep));
+        when(preferenceConditionRepository.getConditionDtoByMemberId(ownerId)).thenReturn(conditions);
+        when(preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(ownerId)).thenReturn(conditionWeights);
+        when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(ownerId)).thenReturn(authenticationTypes);
+        when(roommateBoardInterestRepository.existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, viewerId))
+                .thenReturn(true);
 
         // When
-        BoardDetailDto.Response response = roommateBoardService.getBoardDetail(boardId);
+        BoardDetailDto.Response response = roommateBoardService.getBoardDetail(boardId, viewerId);
 
         // Then
         assertThat(response.getBoardId()).isEqualTo(boardId);
@@ -457,15 +593,17 @@ class RoommateBoardServiceImplTest {
         assertThat(response.getGender()).isEqualTo(Gender.FEMALE);
         assertThat(response.getAuthentications()).isSameAs(authenticationTypes);
         assertThat(response.getCompatibility()).isNotNull();
+        assertThat(response.isInterested()).isTrue();
         InOrder inOrder = inOrder(roommateBoardRepository);
         inOrder.verify(roommateBoardRepository).increaseHitsById(boardId);
         inOrder.verify(roommateBoardRepository).getBasicInfo(boardId);
         verify(roommateBoardFileRepository).getFileDetailDtoByBoardId(boardId);
         verify(roommateBoardOptionRepository).getExtraOptionsNameByBoardId(boardId);
-        verify(memberLifePatternRepository).getLifeStyleDto(memberId);
-        verify(preferenceConditionRepository).getConditionDtoByMemberId(memberId);
-        verify(preferenceConditionWeightRepository).getConditionWeightDtoByMemberId(memberId);
-        verify(authenticationRepository).getAcceptedAuthenticationTypeByMemberId(memberId);
+        verify(memberLifePatternRepository).getLifeStyleDto(ownerId);
+        verify(preferenceConditionRepository).getConditionDtoByMemberId(ownerId);
+        verify(preferenceConditionWeightRepository).getConditionWeightDtoByMemberId(ownerId);
+        verify(authenticationRepository).getAcceptedAuthenticationTypeByMemberId(ownerId);
+        verify(roommateBoardInterestRepository).existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, viewerId);
     }
 
     @Test
@@ -473,23 +611,55 @@ class RoommateBoardServiceImplTest {
     void getBoardDetailReturnsEmptyListsWhenMemberHasNoLifeStylesAndConditionWeights() {
         // Given
         Long boardId = 1L;
-        Long memberId = 7L;
-        BasicInfoRow basicInfoRow = createBasicInfoRow(boardId, memberId, LocalDate.of(1998, 1, 1));
+        Long ownerId = 7L;
+        Long viewerId = 42L;
+        BasicInfoRow basicInfoRow = createBasicInfoRow(boardId, ownerId, LocalDate.of(1998, 1, 1));
         when(roommateBoardRepository.increaseHitsById(boardId)).thenReturn(1);
         when(roommateBoardRepository.getBasicInfo(boardId)).thenReturn(Optional.of(basicInfoRow));
         when(roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId)).thenReturn(List.of());
         when(roommateBoardOptionRepository.getExtraOptionsNameByBoardId(boardId)).thenReturn(List.of());
-        when(memberLifePatternRepository.getLifeStyleDto(memberId)).thenReturn(List.of());
-        when(preferenceConditionRepository.getConditionDtoByMemberId(memberId)).thenReturn(List.of());
-        when(preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(memberId)).thenReturn(List.of());
-        when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(memberId)).thenReturn(List.of());
+        when(memberLifePatternRepository.getLifeStyleDto(ownerId)).thenReturn(List.of());
+        when(preferenceConditionRepository.getConditionDtoByMemberId(ownerId)).thenReturn(List.of());
+        when(preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(ownerId)).thenReturn(List.of());
+        when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(ownerId)).thenReturn(List.of());
+        when(roommateBoardInterestRepository.existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, viewerId))
+                .thenReturn(false);
 
         // When
-        BoardDetailDto.Response response = roommateBoardService.getBoardDetail(boardId);
+        BoardDetailDto.Response response = roommateBoardService.getBoardDetail(boardId, viewerId);
 
         // Then
         assertThat(response.getLifeStyles()).isEmpty();
         assertThat(response.getConditionWeights()).isEmpty();
+        assertThat(response.isInterested()).isFalse();
+        verify(roommateBoardInterestRepository).existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, viewerId);
+    }
+
+    @Test
+    @DisplayName("상세 조회는 로그인 회원이 관심을 누르지 않은 게시글이면 관심 여부를 false로 응답한다")
+    void getBoardDetailReturnsFalseWhenViewerIsNotInterested() {
+        // Given
+        Long boardId = 1L;
+        Long ownerId = 7L;
+        Long viewerId = 42L;
+        BasicInfoRow basicInfoRow = createBasicInfoRow(boardId, ownerId, LocalDate.of(1998, 1, 1));
+        when(roommateBoardRepository.increaseHitsById(boardId)).thenReturn(1);
+        when(roommateBoardRepository.getBasicInfo(boardId)).thenReturn(Optional.of(basicInfoRow));
+        when(roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId)).thenReturn(List.of());
+        when(roommateBoardOptionRepository.getExtraOptionsNameByBoardId(boardId)).thenReturn(List.of());
+        when(memberLifePatternRepository.getLifeStyleDto(ownerId)).thenReturn(List.of());
+        when(preferenceConditionRepository.getConditionDtoByMemberId(ownerId)).thenReturn(List.of());
+        when(preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(ownerId)).thenReturn(List.of());
+        when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(ownerId)).thenReturn(List.of());
+        when(roommateBoardInterestRepository.existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, viewerId))
+                .thenReturn(false);
+
+        // When
+        BoardDetailDto.Response response = roommateBoardService.getBoardDetail(boardId, viewerId);
+
+        // Then
+        assertThat(response.isInterested()).isFalse();
+        verify(roommateBoardInterestRepository).existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, viewerId);
     }
 
     @Test
@@ -497,10 +667,11 @@ class RoommateBoardServiceImplTest {
     void getBoardDetailThrowsWhenHitUpdateDoesNotAffectBoard() {
         // Given
         Long boardId = 999L;
+        Long viewerId = 42L;
         when(roommateBoardRepository.increaseHitsById(boardId)).thenReturn(0);
 
         // When & Then
-        assertThatThrownBy(() -> roommateBoardService.getBoardDetail(boardId))
+        assertThatThrownBy(() -> roommateBoardService.getBoardDetail(boardId, viewerId))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
         verify(roommateBoardRepository).increaseHitsById(boardId);
@@ -515,11 +686,12 @@ class RoommateBoardServiceImplTest {
     void getBoardDetailThrowsWhenBasicInfoDoesNotExistAfterHitUpdate() {
         // Given
         Long boardId = 999L;
+        Long viewerId = 42L;
         when(roommateBoardRepository.increaseHitsById(boardId)).thenReturn(1);
         when(roommateBoardRepository.getBasicInfo(boardId)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> roommateBoardService.getBoardDetail(boardId))
+        assertThatThrownBy(() -> roommateBoardService.getBoardDetail(boardId, viewerId))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
         verify(roommateBoardRepository).increaseHitsById(boardId);
@@ -977,6 +1149,7 @@ class RoommateBoardServiceImplTest {
         verify(fileService).deleteAll(List.of());
         verifyNoInteractions(fileRepository);
     }
+
 
     private BoardDto.Request createRequest(FileDto... images) {
         BoardDto.Request request = new BoardDto.Request();

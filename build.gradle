@@ -47,5 +47,22 @@ dependencies {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'concurrency', 'performance'
+    }
+}
+
+tasks.register('concurrencyTest', Test) {
+    useJUnitPlatform {
+        includeTags 'concurrency'
+    }
+    shouldRunAfter test
+}
+
+tasks.register('performanceTest', Test) {
+    useJUnitPlatform {
+        includeTags 'performance'
+    }
+    environment 'RUN_PERFORMANCE_TESTS', 'true'
+    shouldRunAfter test
 }
