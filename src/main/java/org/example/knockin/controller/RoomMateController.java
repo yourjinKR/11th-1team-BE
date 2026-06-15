@@ -112,8 +112,14 @@ public class RoomMateController {
 
     @PostMapping("/boards/{boardId}/reports")
     @Operation(summary = "게시글 신고")
-    public CommonResponse<ReportDto.Response> reportBoard(@PathVariable Long boardId, @RequestBody ReportDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new ReportDto.Response());
+    public CommonResponse<ReportDto.Response> reportBoard(
+            @PathVariable Long boardId,
+            @Valid @RequestBody ReportDto.Request request,
+            @AuthenticationPrincipal PrincipalDetails details
+    ) {
+        Long memberId = details.getMember().getId();
+        ReportDto.Response response = roommateBoardService.reportBoard(request, boardId, memberId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @DeleteMapping("/boards/{boardId}")

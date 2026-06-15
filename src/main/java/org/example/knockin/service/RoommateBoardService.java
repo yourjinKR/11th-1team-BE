@@ -8,6 +8,7 @@ import org.example.knockin.dto.BoardEditDto;
 import org.example.knockin.dto.BoardListDto;
 import org.example.knockin.dto.BoardListDto.Response;
 import org.example.knockin.dto.BoardModifyDto;
+import org.example.knockin.dto.ReportDto;
 import org.jspecify.annotations.Nullable;
 import org.example.knockin.dto.MyBoardListDto;
 import org.example.knockin.entity.member.Member;
@@ -29,4 +30,6 @@ public interface RoommateBoardService {
     BoardDto.Response likeBoard(Long boardId, Long memberId);
 
     BoardDto.Response deleteBoard(Long boardId, Long memberId);
+
+    ReportDto.Response reportBoard(ReportDto.Request request, Long boardId, Long memberId);
 }

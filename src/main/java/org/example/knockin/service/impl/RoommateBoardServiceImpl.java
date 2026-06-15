@@ -30,8 +30,10 @@ import org.example.knockin.dto.BoardModifyDto;
 import org.example.knockin.dto.BoardModifyDto.Request.ExistingFileDto;
 import org.example.knockin.dto.BoardModifyDto.Request.NewFileDto;
 import org.example.knockin.dto.MyBoardListDto;
+import org.example.knockin.dto.ReportDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.board.RoommateBoard;
+import org.example.knockin.entity.board.RoommateBoardDeclaration;
 import org.example.knockin.entity.board.RoommateBoardFile;
 import org.example.knockin.entity.board.RoommateBoardInterest;
 import org.example.knockin.entity.board.RoommateBoardOption;
@@ -50,6 +52,7 @@ import org.example.knockin.global.exception.RoommateBoardErrorCode;
 import org.example.knockin.global.util.DateUtils;
 import org.example.knockin.global.util.StringUtils;
 import org.example.knockin.repository.auth.AuthenticationRepository;
+import org.example.knockin.repository.board.RoommateBoardDeclarationRepository;
 import org.example.knockin.repository.board.RoommateBoardFileRepository;
 import org.example.knockin.repository.board.RoommateBoardInterestRepository;
 import org.example.knockin.repository.board.RoommateBoardListRow;
@@ -92,6 +95,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     private final PreferenceConditionWeightRepository preferenceConditionWeightRepository;
     private final FileRepository fileRepository;
     private final RoommateBoardInterestRepository roommateBoardInterestRepository;
+    private final RoommateBoardDeclarationRepository roommateBoardDeclarationRepository;
 
     @Override
     public BoardDto.Response save(BoardDto.Request request, Long memberId, @Nullable List<MultipartFile> files) {
@@ -582,6 +586,33 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
 
         roommateBoard.softDelete();
         return new Response(LocalDateTime.now());
+    }
+
+    @Override
+    public ReportDto.Response reportBoard(ReportDto.Request request, Long boardId, Long memberId) {
+
+        RoommateBoard roommateBoard = roommateBoardRepository.findById(boardId)
+                .orElseThrow(() -> new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
+
+        Member member = memberService.findById(memberId)
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        Optional<RoommateBoardDeclaration> declarationOptional =
+                roommateBoardDeclarationRepository.findByRoommateBoardAndMember(roommateBoard, member);
+
+        if (declarationOptional.isPresent()) {
+            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_DECLARATION_DUPLICATE);
+        }
+
+        RoommateBoardDeclaration roommateBoardDeclaration = RoommateBoardDeclaration.builder()
+                .member(member)
+                .roommateBoard(roommateBoard)
+                .reason(request.getContents())
+                .build();
+
+        roommateBoardDeclarationRepository.save(roommateBoardDeclaration);
+
+        return new ReportDto.Response(LocalDateTime.now());
     }
 
     private String getFullRegionName(Region regionEntity) {

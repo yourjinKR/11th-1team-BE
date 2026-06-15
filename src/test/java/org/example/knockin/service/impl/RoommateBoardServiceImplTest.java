@@ -28,8 +28,10 @@ import org.example.knockin.dto.BoardListDto;
 import org.example.knockin.dto.BoardModifyDto;
 import org.example.knockin.dto.BoardModifyDto.Request.ExistingFileDto;
 import org.example.knockin.dto.BoardModifyDto.Request.NewFileDto;
+import org.example.knockin.dto.ReportDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.board.RoommateBoard;
+import org.example.knockin.entity.board.RoommateBoardDeclaration;
 import org.example.knockin.entity.board.RoommateBoardFile;
 import org.example.knockin.entity.board.RoommateBoardInterest;
 import org.example.knockin.entity.board.RoommateBoardOption;
@@ -48,6 +50,7 @@ import org.example.knockin.global.exception.MemberErrorCode;
 import org.example.knockin.global.exception.MetaErrorCode;
 import org.example.knockin.global.exception.RoommateBoardErrorCode;
 import org.example.knockin.repository.auth.AuthenticationRepository;
+import org.example.knockin.repository.board.RoommateBoardDeclarationRepository;
 import org.example.knockin.repository.board.RoommateBoardFileRepository;
 import org.example.knockin.repository.board.RoommateBoardInterestRepository;
 import org.example.knockin.repository.board.RoommateBoardOptionRepository;
@@ -92,6 +95,9 @@ class RoommateBoardServiceImplTest {
 
     @Mock
     private RoommateBoardInterestRepository roommateBoardInterestRepository;
+
+    @Mock
+    private RoommateBoardDeclarationRepository roommateBoardDeclarationRepository;
 
     @Mock
     private FileRepository fileRepository;
@@ -146,6 +152,9 @@ class RoommateBoardServiceImplTest {
 
     @Captor
     private ArgumentCaptor<RoommateBoardInterest> roommateBoardInterestCaptor;
+
+    @Captor
+    private ArgumentCaptor<RoommateBoardDeclaration> roommateBoardDeclarationCaptor;
 
     @BeforeEach
     void setUpTransactionTemplate() {
@@ -324,6 +333,93 @@ class RoommateBoardServiceImplTest {
         assertThatThrownBy(() -> roommateBoardService.deleteBoard(boardId, 7L))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("게시글 신고를 요청하면 신고 회원과 게시글 및 사유를 저장한다")
+    void reportBoardSavesDeclarationWithMemberBoardAndReason() {
+        // Given
+        Long boardId = 1L;
+        Long memberId = 7L;
+        ReportDto.Request request = createReportRequest("부적절한 게시글입니다.");
+        RoommateBoard board = createRoommateBoard(10L);
+        Member member = Member.builder().id(memberId).build();
+
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(board));
+        when(memberService.findById(memberId)).thenReturn(Optional.of(member));
+        when(roommateBoardDeclarationRepository.findByRoommateBoardAndMember(board, member))
+                .thenReturn(Optional.empty());
+
+        // When
+        ReportDto.Response response = roommateBoardService.reportBoard(request, boardId, memberId);
+
+        // Then
+        verify(roommateBoardDeclarationRepository).save(roommateBoardDeclarationCaptor.capture());
+        RoommateBoardDeclaration declaration = roommateBoardDeclarationCaptor.getValue();
+        assertThat(declaration.getRoommateBoard()).isSameAs(board);
+        assertThat(declaration.getMember()).isSameAs(member);
+        assertThat(declaration.getReason()).isEqualTo("부적절한 게시글입니다.");
+        assertThat(response.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("이미 신고한 게시글을 다시 신고하면 중복 신고 예외를 던지고 저장하지 않는다")
+    void reportBoardThrowsWhenDeclarationAlreadyExists() {
+        // Given
+        Long boardId = 1L;
+        Long memberId = 7L;
+        RoommateBoard board = createRoommateBoard(10L);
+        Member member = Member.builder().id(memberId).build();
+        RoommateBoardDeclaration existingDeclaration = RoommateBoardDeclaration.builder()
+                .roommateBoard(board)
+                .member(member)
+                .reason("기존 신고 사유")
+                .build();
+
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(board));
+        when(memberService.findById(memberId)).thenReturn(Optional.of(member));
+        when(roommateBoardDeclarationRepository.findByRoommateBoardAndMember(board, member))
+                .thenReturn(Optional.of(existingDeclaration));
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.reportBoard(createReportRequest("다시 신고합니다."), boardId, memberId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode())
+                                .isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_DECLARATION_DUPLICATE));
+        verify(roommateBoardDeclarationRepository, never()).save(any(RoommateBoardDeclaration.class));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 게시글을 신고하면 게시글 없음 예외를 던지고 회원을 조회하지 않는다")
+    void reportBoardThrowsWhenBoardDoesNotExist() {
+        // Given
+        Long boardId = 999L;
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.reportBoard(createReportRequest("신고 사유"), boardId, 7L))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
+        verifyNoInteractions(roommateBoardDeclarationRepository);
+        verifyNoInteractions(memberService);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 회원이 신고하면 회원 없음 예외를 던지고 신고를 저장하지 않는다")
+    void reportBoardThrowsWhenMemberDoesNotExist() {
+        // Given
+        Long boardId = 1L;
+        Long memberId = 7L;
+        RoommateBoard board = createRoommateBoard(10L);
+
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(board));
+        when(memberService.findById(memberId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.reportBoard(createReportRequest("신고 사유"), boardId, memberId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+        verifyNoInteractions(roommateBoardDeclarationRepository);
     }
 
     @Test
@@ -1248,6 +1344,12 @@ class RoommateBoardServiceImplTest {
         newFileDto.setFileIndex(fileIndex);
         newFileDto.setThumbnail(thumbnail);
         return newFileDto;
+    }
+
+    private ReportDto.Request createReportRequest(String contents) {
+        ReportDto.Request request = new ReportDto.Request();
+        request.setContents(contents);
+        return request;
     }
 
     private RoommateBoard createRoommateBoard() {
