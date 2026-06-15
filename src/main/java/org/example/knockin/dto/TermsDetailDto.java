@@ -1,5 +1,6 @@
 package org.example.knockin.dto;
 
+import lombok.Builder;
 import lombok.Data;
 
 @Data
@@ -9,6 +10,7 @@ public class TermsDetailDto {
     }
 
     @Data
+    @Builder
     public static class Response {
         private Long id;
         private String contents;

@@ -56,10 +56,20 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
     public Optional<AuthResponse> findMemberInfo(Member memberEntity) {
         return Optional.ofNullable(jpaQueryFactory
                 .select(Projections.fields(AuthResponse.class,
+                        basicInformation.name.as("name"),
                         JPAExpressions.selectOne()
                                 .from(memberLifePattern)
                                 .where(memberLifePattern.member.eq(member))
-                                .exists().as("basicInfo"),
+                                .exists()
+                                .and(JPAExpressions.selectOne()
+                                        .from(basicInformation)
+                                        .where(basicInformation.member.eq(member))
+                                        .exists())
+                                .and(JPAExpressions.selectOne()
+                                        .from(roomProfile)
+                                        .where(roomProfile.member.eq(member))
+                                        .exists())
+                                .as("basicInfo"),
                         JPAExpressions.selectOne()
                                 .from(preferenceCondition)
                                 .where(preferenceCondition.member.eq(member))
@@ -72,6 +82,7 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                         member.isDelete.as("isDelete")
                 ))
                 .from(member)
+                .leftJoin(basicInformation).on(basicInformation.member.eq(member))
                 .where(member.id.eq(memberEntity.getId()))
                 .fetchOne());
     }

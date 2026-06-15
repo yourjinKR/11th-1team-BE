@@ -1,5 +1,6 @@
 package org.example.knockin.dto;
 
+import lombok.Builder;
 import lombok.Data;
 import java.util.List;
 
@@ -10,10 +11,12 @@ public class MetaRoomAddOptionsDto {
     }
 
     @Data
+    @Builder
     public static class Response {
         private List<RoomAddOptionItem> roomAddOption;
 
         @Data
+        @Builder
         public static class RoomAddOptionItem {
             private Long id;
             private String name;

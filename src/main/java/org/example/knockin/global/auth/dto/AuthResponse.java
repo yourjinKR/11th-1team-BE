@@ -14,6 +14,7 @@ public class AuthResponse {
     @NotNull(message = "인증 토큰이 누락되었습니다.")
     private String accessToken;
 
+    private String name;
     private boolean basicInfo;
     private boolean preferenceInfo;
     private boolean isDelete;
