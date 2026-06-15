@@ -46,11 +46,11 @@ public class BoardEditDto {
         private int managementCost;
 
         @NotNull
-        @Schema(description = "룸 형태 ID")
+        @Schema(description = "룸 형태")
         private RoomTypeInfo roomType;
 
         @NotNull
-        @Schema(description = "지역 ID")
+        @Schema(description = "지역")
         private RegionInfo region;
 
         @Schema(description = "입주 가능시기")
@@ -99,7 +99,7 @@ public class BoardEditDto {
         @AllArgsConstructor
         public static class BoardOptionInfo {
             @Schema(description = "고유 식별 ID")
-            private Long boardOptionId;
+            private Long extraOptionId;
 
             @Schema(description = "옵션명")
             private String name;

@@ -39,4 +39,8 @@ public class RoommateBoardFile {
 
     @Column(name = "is_thumbnail", nullable = false)
     private Boolean isThumbnail;
+
+    public void modifyIsThumbnail(boolean isThumbnail) {
+        this.isThumbnail = isThumbnail;
+    }
 }

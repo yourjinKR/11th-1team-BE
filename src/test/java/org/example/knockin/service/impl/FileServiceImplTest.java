@@ -14,7 +14,6 @@ import org.example.knockin.entity.file.File;
 import org.example.knockin.entity.file.FileType;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.FileErrorCode;
-import org.example.knockin.repository.file.FileRepository;
 import org.example.knockin.service.FileUploadService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,9 +30,6 @@ class FileServiceImplTest {
     @Mock
     private FileUploadService fileUploadService;
 
-    @Mock
-    private FileRepository fileRepository;
-
     @InjectMocks
     private FileServiceImpl fileService;
 
@@ -49,18 +45,6 @@ class FileServiceImplTest {
         assertThat(file.getOriginalFileName()).isEqualTo("room.JPG");
         assertThat(file.getSavedFileName()).isEqualTo("saved-room.jpg");
         assertThat(file.getFileExt()).isEqualTo("JPG");
-    }
-
-    @Test
-    @DisplayName("파일 엔티티 목록 저장을 파일 저장소에 위임한다")
-    void saveAllDelegatesToFileRepository() {
-        List<File> files = List.of(createFile("first.jpg"), createFile("second.jpg"));
-        when(fileRepository.saveAll(files)).thenReturn(files);
-
-        List<File> savedFiles = fileService.saveAll(files);
-
-        assertThat(savedFiles).isSameAs(files);
-        verify(fileRepository).saveAll(files);
     }
 
     @Test

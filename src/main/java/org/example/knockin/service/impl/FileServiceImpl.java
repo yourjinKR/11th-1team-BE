@@ -7,7 +7,6 @@ import org.example.knockin.entity.file.File;
 import org.example.knockin.entity.file.FileType;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.FileErrorCode;
-import org.example.knockin.repository.file.FileRepository;
 import org.example.knockin.service.FileService;
 import org.example.knockin.service.FileUploadService;
 import org.springframework.stereotype.Service;
@@ -18,7 +17,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileServiceImpl implements FileService {
 
     private final FileUploadService fileUploadService;
-    private final FileRepository fileRepository;
 
     @Override
     public File upload(MultipartFile multipartFile, FileType type) throws IOException {
@@ -32,11 +30,6 @@ public class FileServiceImpl implements FileService {
                 .savedFileName(savedFileName)
                 .fileExt(extension)
                 .build();
-    }
-
-    @Override
-    public List<File> saveAll(List<File> files) {
-        return fileRepository.saveAll(files);
     }
 
     @Override

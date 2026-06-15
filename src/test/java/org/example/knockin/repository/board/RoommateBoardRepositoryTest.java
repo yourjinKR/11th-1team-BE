@@ -346,7 +346,7 @@ class RoommateBoardRepositoryTest {
         // Then
         assertThat(optionInfos).singleElement()
                 .satisfies(optionInfo -> {
-                    assertThat(optionInfo.getBoardOptionId()).isEqualTo(activeOption.getId());
+                    assertThat(optionInfo.getExtraOptionId()).isEqualTo(activeOption.getId());
                     assertThat(optionInfo.getName()).isEqualTo("풀옵션");
                 });
     }

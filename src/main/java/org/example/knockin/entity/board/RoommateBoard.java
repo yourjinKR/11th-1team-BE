@@ -15,6 +15,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.example.knockin.dto.BoardModifyDto;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.Region;
 import org.example.knockin.entity.room.RoomType;
@@ -29,7 +30,9 @@ import org.hibernate.annotations.ColumnDefault;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "roommate_board")
 public class RoommateBoard extends BaseEntity {
-    public static final long COMEABLE_DATE_VISIBLE_GRACE_DAYS = 7;
+    public static final int COMEABLE_DATE_VISIBLE_GRACE_DAYS = 7;
+    public static final int IMAGE_MAXIMUM = 10;
+    public static final int THUMBNAIL_MAXIMUM = 1;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -75,4 +78,21 @@ public class RoommateBoard extends BaseEntity {
     @Column(name = "hits", nullable = false)
     @Builder.Default
     private Long hits = 0L;
+
+    public void modifyBasicInfo(BoardModifyDto.Request request) {
+        title = request.getTitle();
+        contents = request.getContents();
+        deposit = request.getDeposit();
+        monthlyRent = request.getMonthlyRent();
+        managementCost = request.getManagementCost();
+        comeableDate = request.getComeableAt();
+    }
+
+    public void modifyRoomType(RoomType roomType) {
+        this.roomType = roomType;
+    }
+
+    public void modifyRegion(Region region) {
+        this.region = region;
+    }
 }

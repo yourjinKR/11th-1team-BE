@@ -62,6 +62,8 @@ public class BoardDto {
         }
 
         @Data
+        @NoArgsConstructor
+        @AllArgsConstructor
         @Schema(name = "BoardFileRequest")
         public static class FileDto {
             @NotNull

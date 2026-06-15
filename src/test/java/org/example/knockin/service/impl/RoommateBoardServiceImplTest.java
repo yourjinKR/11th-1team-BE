@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
@@ -23,17 +24,23 @@ import org.example.knockin.dto.BoardDto.Request.FileDto;
 import org.example.knockin.dto.BoardEditDto;
 import org.example.knockin.dto.BoardEditDto.Response.BoardOptionInfo;
 import org.example.knockin.dto.BoardListDto;
+import org.example.knockin.dto.BoardModifyDto;
+import org.example.knockin.dto.BoardModifyDto.Request.ExistingFileDto;
+import org.example.knockin.dto.BoardModifyDto.Request.NewFileDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.board.RoommateBoardFile;
+import org.example.knockin.entity.board.RoommateBoardOption;
 import org.example.knockin.entity.file.File;
 import org.example.knockin.entity.file.FileType;
 import org.example.knockin.entity.life.LifePatternType;
 import org.example.knockin.entity.member.Gender;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.Region;
+import org.example.knockin.entity.room.RoomExtraOption;
 import org.example.knockin.entity.room.RoomType;
 import org.example.knockin.global.exception.BusinessException;
+import org.example.knockin.global.exception.CommonErrorCode;
 import org.example.knockin.global.exception.FileErrorCode;
 import org.example.knockin.global.exception.MemberErrorCode;
 import org.example.knockin.global.exception.MetaErrorCode;
@@ -45,6 +52,7 @@ import org.example.knockin.repository.board.RoommateBoardSearchCondition;
 import org.example.knockin.repository.board.RoommateBoardRepository;
 import org.example.knockin.repository.board.row.BasicInfoRow;
 import org.example.knockin.repository.board.row.EditFormRow;
+import org.example.knockin.repository.file.FileRepository;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
 import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
@@ -80,6 +88,9 @@ class RoommateBoardServiceImplTest {
     private RoommateBoardOptionRepository roommateBoardOptionRepository;
 
     @Mock
+    private FileRepository fileRepository;
+
+    @Mock
     private PreferenceConditionRepository preferenceConditionRepository;
 
     @Mock
@@ -110,10 +121,16 @@ class RoommateBoardServiceImplTest {
     private ArgumentCaptor<RoommateBoard> roommateBoardCaptor;
 
     @Captor
-    private ArgumentCaptor<List<File>> filesCaptor;
+    private ArgumentCaptor<Iterable<File>> filesCaptor;
 
     @Captor
     private ArgumentCaptor<Iterable<RoommateBoardFile>> boardFilesCaptor;
+
+    @Captor
+    private ArgumentCaptor<RoommateBoardFile> boardFileCaptor;
+
+    @Captor
+    private ArgumentCaptor<Iterable<RoommateBoardOption>> boardOptionsCaptor;
 
     @Captor
     private ArgumentCaptor<List<File>> uploadedFilesCaptor;
@@ -170,8 +187,8 @@ class RoommateBoardServiceImplTest {
         assertThat(boardToSave.getIsDeleted()).isFalse();
         assertThat(boardToSave.getHits()).isZero();
 
-        verify(fileService).saveAll(filesCaptor.capture());
-        List<File> files = filesCaptor.getValue();
+        verify(fileRepository).saveAll(filesCaptor.capture());
+        List<File> files = toList(filesCaptor.getValue());
         assertThat(files).containsExactly(thumbnailFile, roomFile);
 
         verify(roommateBoardFileRepository).saveAll(boardFilesCaptor.capture());
@@ -535,6 +552,384 @@ class RoommateBoardServiceImplTest {
                 memberLifePatternRepository, preferenceConditionRepository, preferenceConditionWeightRepository);
     }
 
+    @Test
+    @DisplayName("게시글 수정은 기본 정보와 옵션 및 이미지 최종 상태를 반영한다")
+    void modifyUpdatesBoardOptionsAndImageState() throws IOException {
+        // Given
+        Long boardId = 1L;
+        RoommateBoard roommateBoard = createRoommateBoard();
+        RoomType newRoomType = org.mockito.Mockito.mock(RoomType.class);
+        Region newRegion = org.mockito.Mockito.mock(Region.class);
+        BoardModifyDto.Request request = createModifyRequest();
+        request.setDeleteExtraOptionIds(List.of(10L));
+        request.setNewExtraOptionIds(List.of(20L, 21L));
+
+        RoomExtraOption deleteExtraOption = mockExtraOption(10L);
+        RoomExtraOption keepExtraOption = mockExtraOption(11L);
+        RoomExtraOption newExtraOption = org.mockito.Mockito.mock(RoomExtraOption.class);
+        RoomExtraOption anotherNewExtraOption = org.mockito.Mockito.mock(RoomExtraOption.class);
+        RoommateBoardOption deleteBoardOption = RoommateBoardOption.builder()
+                .roommateBoard(roommateBoard)
+                .roomExtraOption(deleteExtraOption)
+                .build();
+        RoommateBoardOption keepBoardOption = RoommateBoardOption.builder()
+                .roommateBoard(roommateBoard)
+                .roomExtraOption(keepExtraOption)
+                .build();
+
+        RoommateBoardFile keptImage = RoommateBoardFile.builder()
+                .id(101L)
+                .roommateBoard(roommateBoard)
+                .file(createFile("keep.jpg", "saved-keep.jpg", "jpg"))
+                .isThumbnail(true)
+                .build();
+        RoommateBoardFile thumbnailImage = RoommateBoardFile.builder()
+                .id(102L)
+                .roommateBoard(roommateBoard)
+                .file(createFile("thumbnail.jpg", "saved-thumbnail.jpg", "jpg"))
+                .isThumbnail(false)
+                .build();
+        File deletedFile = createFile("delete.jpg", "saved-delete.jpg", "jpg");
+        RoommateBoardFile deletedImage = RoommateBoardFile.builder()
+                .id(103L)
+                .roommateBoard(roommateBoard)
+                .file(deletedFile)
+                .isThumbnail(false)
+                .build();
+        List<RoommateBoardFile> persistedBoardFiles = new ArrayList<>(
+                List.of(keptImage, thumbnailImage, deletedImage));
+
+        MultipartFile newMultipartFile = emptyMultipartFile();
+        File newFile = createFile("new.jpg", "saved-new.jpg", "jpg");
+        request.setExistingImages(List.of(
+                createExistingFileDto(101L, false),
+                createExistingFileDto(102L, true)));
+        request.setNewImages(List.of(createNewFileDto(0, false)));
+
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(roommateBoard));
+        when(metaService.findByRoomTypeId(11L)).thenReturn(Optional.of(newRoomType));
+        when(metaService.findByRegionId(22L)).thenReturn(Optional.of(newRegion));
+        when(roommateBoardOptionRepository.findWithRoomExtraOptionByBoardId(boardId))
+                .thenReturn(List.of(deleteBoardOption, keepBoardOption));
+        when(metaService.findRoomExtraOptionsByIdIn(List.of(20L, 21L)))
+                .thenReturn(List.of(newExtraOption, anotherNewExtraOption));
+        when(roommateBoardFileRepository.findByRoommateBoard(roommateBoard))
+                .thenAnswer(invocation -> new ArrayList<>(persistedBoardFiles));
+        org.mockito.Mockito.doAnswer(invocation -> {
+            persistedBoardFiles.remove(invocation.getArgument(0));
+            return null;
+        }).when(roommateBoardFileRepository).delete(any(RoommateBoardFile.class));
+        when(fileService.upload(newMultipartFile, FileType.ROOMMATE_BOARD_IMAGE)).thenReturn(newFile);
+        when(fileRepository.save(newFile)).thenReturn(newFile);
+        when(roommateBoardFileRepository.save(any(RoommateBoardFile.class))).thenAnswer(invocation -> {
+            RoommateBoardFile boardFile = invocation.getArgument(0);
+            persistedBoardFiles.add(boardFile);
+            return boardFile;
+        });
+
+        // When
+        BoardModifyDto.Response response = roommateBoardService.modify(7L, boardId, request, List.of(newMultipartFile));
+
+        // Then
+        assertThat(response.getUpdatedAt()).isNotNull();
+        assertThat(roommateBoard.getTitle()).isEqualTo("수정 제목");
+        assertThat(roommateBoard.getContents()).isEqualTo("수정 내용");
+        assertThat(roommateBoard.getDeposit()).isEqualTo(2_000);
+        assertThat(roommateBoard.getMonthlyRent()).isEqualTo(70);
+        assertThat(roommateBoard.getManagementCost()).isEqualTo(15);
+        assertThat(roommateBoard.getComeableDate()).isEqualTo(LocalDateTime.of(2026, 8, 1, 10, 0));
+        assertThat(roommateBoard.getRoomType()).isSameAs(newRoomType);
+        assertThat(roommateBoard.getRegion()).isSameAs(newRegion);
+
+        verify(roommateBoardOptionRepository).deleteAll(boardOptionsCaptor.capture());
+        assertThat(toList(boardOptionsCaptor.getValue())).containsExactly(deleteBoardOption);
+        verify(roommateBoardOptionRepository).saveAll(boardOptionsCaptor.capture());
+        assertThat(toList(boardOptionsCaptor.getValue()))
+                .extracting(RoommateBoardOption::getRoomExtraOption)
+                .containsExactly(newExtraOption, anotherNewExtraOption);
+
+        assertThat(keptImage.getIsThumbnail()).isFalse();
+        assertThat(thumbnailImage.getIsThumbnail()).isTrue();
+        assertThat(deletedFile.getIsDeleted()).isTrue();
+        verify(roommateBoardFileRepository).delete(deletedImage);
+        verify(fileRepository).save(newFile);
+        verify(roommateBoardFileRepository).save(boardFileCaptor.capture());
+        RoommateBoardFile newBoardFile = boardFileCaptor.getValue();
+        assertThat(newBoardFile.getRoommateBoard()).isSameAs(roommateBoard);
+        assertThat(newBoardFile.getFile()).isSameAs(newFile);
+        assertThat(newBoardFile.getIsThumbnail()).isFalse();
+        assertThat(persistedBoardFiles).containsExactly(keptImage, thumbnailImage, newBoardFile);
+    }
+
+    @Test
+    @DisplayName("게시글 수정 후 이미지가 10장을 초과하면 파일 개수 초과 예외를 던진다")
+    void modifyThrowsWhenBoardImageCountExceedsLimit() {
+        // Given
+        Long boardId = 1L;
+        RoommateBoard roommateBoard = createRoommateBoard();
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+        List<RoommateBoardFile> boardFiles = new ArrayList<>();
+        List<ExistingFileDto> existingImages = new ArrayList<>();
+        for (long id = 1; id <= 11; id++) {
+            boardFiles.add(RoommateBoardFile.builder()
+                    .id(id)
+                    .roommateBoard(roommateBoard)
+                    .file(createFile("room-" + id + ".jpg", "saved-room-" + id + ".jpg", "jpg"))
+                    .isThumbnail(id == 1)
+                    .build());
+            existingImages.add(createExistingFileDto(id, id == 1));
+        }
+        BoardModifyDto.Request request = createModifyRequest();
+        request.setExistingImages(existingImages);
+
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(roommateBoard));
+        when(metaService.findByRoomTypeId(11L)).thenReturn(Optional.of(roomType));
+        when(metaService.findByRegionId(22L)).thenReturn(Optional.of(region));
+        when(roommateBoardFileRepository.findByRoommateBoard(roommateBoard)).thenReturn(boardFiles);
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.modify(7L, boardId, request, null))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode())
+                                .isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_EXCEEDED));
+    }
+
+    @Test
+    @DisplayName("게시글 수정 후 이미지가 없으면 썸네일 없이도 수정에 성공한다")
+    void modifyAllowsEmptyImageResultWithoutThumbnail() {
+        // Given
+        Long boardId = 1L;
+        RoommateBoard roommateBoard = createRoommateBoard();
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+        File deletedFile = createFile("delete.jpg", "saved-delete.jpg", "jpg");
+        RoommateBoardFile deletedImage = RoommateBoardFile.builder()
+                .id(101L)
+                .roommateBoard(roommateBoard)
+                .file(deletedFile)
+                .isThumbnail(true)
+                .build();
+        List<RoommateBoardFile> persistedBoardFiles = new ArrayList<>(List.of(deletedImage));
+        BoardModifyDto.Request request = createModifyRequest();
+        request.setExistingImages(List.of());
+        request.setNewImages(List.of());
+
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(roommateBoard));
+        when(metaService.findByRoomTypeId(11L)).thenReturn(Optional.of(roomType));
+        when(metaService.findByRegionId(22L)).thenReturn(Optional.of(region));
+        when(roommateBoardFileRepository.findByRoommateBoard(roommateBoard))
+                .thenAnswer(invocation -> new ArrayList<>(persistedBoardFiles));
+        org.mockito.Mockito.doAnswer(invocation -> {
+            persistedBoardFiles.remove(invocation.getArgument(0));
+            return null;
+        }).when(roommateBoardFileRepository).delete(any(RoommateBoardFile.class));
+
+        // When
+        BoardModifyDto.Response response = roommateBoardService.modify(7L, boardId, request, null);
+
+        // Then
+        assertThat(response.getUpdatedAt()).isNotNull();
+        assertThat(deletedFile.getIsDeleted()).isTrue();
+        assertThat(persistedBoardFiles).isEmpty();
+        verify(roommateBoardFileRepository).delete(deletedImage);
+        verify(metaService, never()).findRoomExtraOptionsByIdIn(any());
+        verify(fileRepository, never()).save(any(File.class));
+    }
+
+    @Test
+    @DisplayName("게시글 수정 후 썸네일이 정확히 1장이 아니면 썸네일 개수 예외를 던진다")
+    void modifyThrowsWhenThumbnailCountIsNotOne() {
+        // Given
+        Long boardId = 1L;
+        RoommateBoard roommateBoard = createRoommateBoard();
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+        RoommateBoardFile firstImage = RoommateBoardFile.builder()
+                .id(101L)
+                .roommateBoard(roommateBoard)
+                .file(createFile("first.jpg", "saved-first.jpg", "jpg"))
+                .isThumbnail(true)
+                .build();
+        RoommateBoardFile secondImage = RoommateBoardFile.builder()
+                .id(102L)
+                .roommateBoard(roommateBoard)
+                .file(createFile("second.jpg", "saved-second.jpg", "jpg"))
+                .isThumbnail(false)
+                .build();
+        BoardModifyDto.Request request = createModifyRequest();
+        request.setExistingImages(List.of(
+                createExistingFileDto(101L, false),
+                createExistingFileDto(102L, false)));
+
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(roommateBoard));
+        when(metaService.findByRoomTypeId(11L)).thenReturn(Optional.of(roomType));
+        when(metaService.findByRegionId(22L)).thenReturn(Optional.of(region));
+        when(roommateBoardFileRepository.findByRoommateBoard(roommateBoard))
+                .thenReturn(List.of(firstImage, secondImage));
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.modify(7L, boardId, request, null))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode())
+                                .isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_THUMBNAIL_EXCEEDED));
+    }
+
+    @Test
+    @DisplayName("다른 회원의 게시글을 수정하면 권한 없음 예외를 던지고 수정 데이터를 조회하지 않는다")
+    void modifyThrowsWhenRequesterIsNotBoardOwner() {
+        // Given
+        Long boardId = 1L;
+        RoommateBoard roommateBoard = createRoommateBoard(7L);
+        BoardModifyDto.Request request = createModifyRequest();
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(roommateBoard));
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.modify(999L, boardId, request, null))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_FORBIDDEN));
+        verifyNoInteractions(metaService, roommateBoardOptionRepository, roommateBoardFileRepository,
+                fileService, fileRepository);
+    }
+
+    @Test
+    @DisplayName("신규 추가 옵션 목록이 null이면 옵션 조회 없이 게시글 수정에 성공한다")
+    void modifyAllowsNullNewExtraOptionIdsWithoutOptionLookup() {
+        // Given
+        Long boardId = 1L;
+        RoommateBoard roommateBoard = createRoommateBoard();
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+        RoommateBoardFile existingThumbnail = RoommateBoardFile.builder()
+                .id(101L)
+                .roommateBoard(roommateBoard)
+                .file(createFile("thumbnail.jpg", "saved-thumbnail.jpg", "jpg"))
+                .isThumbnail(true)
+                .build();
+        BoardModifyDto.Request request = createModifyRequest();
+        request.setNewExtraOptionIds(null);
+        request.setExistingImages(List.of(createExistingFileDto(101L, true)));
+
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(roommateBoard));
+        when(metaService.findByRoomTypeId(11L)).thenReturn(Optional.of(roomType));
+        when(metaService.findByRegionId(22L)).thenReturn(Optional.of(region));
+        when(roommateBoardFileRepository.findByRoommateBoard(roommateBoard)).thenReturn(List.of(existingThumbnail));
+
+        // When
+        BoardModifyDto.Response response = roommateBoardService.modify(7L, boardId, request, null);
+
+        // Then
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(metaService, never()).findRoomExtraOptionsByIdIn(any());
+        verify(roommateBoardOptionRepository, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 신규 추가 옵션이 포함되면 추가 옵션 없음 예외를 던진다")
+    void modifyThrowsWhenNewExtraOptionDoesNotExist() {
+        // Given
+        Long boardId = 1L;
+        RoommateBoard roommateBoard = createRoommateBoard();
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+        BoardModifyDto.Request request = createModifyRequest();
+        request.setNewExtraOptionIds(List.of(20L, 21L));
+
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(roommateBoard));
+        when(metaService.findByRoomTypeId(11L)).thenReturn(Optional.of(roomType));
+        when(metaService.findByRegionId(22L)).thenReturn(Optional.of(region));
+        when(metaService.findRoomExtraOptionsByIdIn(List.of(20L, 21L)))
+                .thenReturn(List.of(org.mockito.Mockito.mock(RoomExtraOption.class)));
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.modify(7L, boardId, request, null))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(MetaErrorCode.EXTRA_OPTION_NOT_FOUND));
+        verifyNoInteractions(roommateBoardFileRepository, fileService, fileRepository);
+    }
+
+    @Test
+    @DisplayName("게시글 수정 중 신규 이미지 업로드가 실패하면 업로드 실패 예외를 던지고 신규 파일 연결을 저장하지 않는다")
+    void modifyThrowsWhenNewImageUploadFails() throws IOException {
+        // Given
+        Long boardId = 1L;
+        RoommateBoard roommateBoard = createRoommateBoard();
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+        RoommateBoardFile existingThumbnail = RoommateBoardFile.builder()
+                .id(101L)
+                .roommateBoard(roommateBoard)
+                .file(createFile("thumbnail.jpg", "saved-thumbnail.jpg", "jpg"))
+                .isThumbnail(true)
+                .build();
+        MultipartFile failedFile = emptyMultipartFile();
+        BoardModifyDto.Request request = createModifyRequest();
+        request.setExistingImages(List.of(createExistingFileDto(101L, true)));
+        request.setNewImages(List.of(createNewFileDto(0, false)));
+
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(roommateBoard));
+        when(metaService.findByRoomTypeId(11L)).thenReturn(Optional.of(roomType));
+        when(metaService.findByRegionId(22L)).thenReturn(Optional.of(region));
+        when(roommateBoardFileRepository.findByRoommateBoard(roommateBoard)).thenReturn(List.of(existingThumbnail));
+        when(fileService.upload(failedFile, FileType.ROOMMATE_BOARD_IMAGE))
+                .thenThrow(new IOException("upload failed"));
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.modify(7L, boardId, request, List.of(failedFile)))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(FileErrorCode.FILE_UPLOAD_FAILED));
+        verify(fileService).deleteAll(List.of());
+        verify(fileRepository, never()).save(any(File.class));
+        verify(roommateBoardFileRepository, never()).save(any(RoommateBoardFile.class));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 게시글을 수정하면 게시글 없음 예외를 던지고 부가 정보를 조회하지 않는다")
+    void modifyThrowsWhenBoardDoesNotExist() {
+        // Given
+        Long boardId = 999L;
+        BoardModifyDto.Request request = createModifyRequest();
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.modify(7L, boardId, request, null))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
+        verifyNoInteractions(metaService, fileService, fileRepository);
+    }
+
+    @Test
+    @DisplayName("게시글 수정 중 신규 이미지 메타데이터가 파일 파트와 매칭되지 않으면 잘못된 요청 예외를 던진다")
+    void modifyThrowsWhenNewImageFileIndexDoesNotMatchFilesPart() throws IOException {
+        // Given
+        Long boardId = 1L;
+        RoommateBoard roommateBoard = createRoommateBoard();
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+        RoommateBoardFile existingThumbnail = RoommateBoardFile.builder()
+                .id(101L)
+                .roommateBoard(roommateBoard)
+                .file(createFile("thumbnail.jpg", "saved-thumbnail.jpg", "jpg"))
+                .isThumbnail(true)
+                .build();
+        BoardModifyDto.Request request = createModifyRequest();
+        request.setExistingImages(List.of(createExistingFileDto(101L, true)));
+        request.setNewImages(List.of(createNewFileDto(1, false)));
+
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(roommateBoard));
+        when(metaService.findByRoomTypeId(11L)).thenReturn(Optional.of(roomType));
+        when(metaService.findByRegionId(22L)).thenReturn(Optional.of(region));
+        when(roommateBoardFileRepository.findByRoommateBoard(roommateBoard)).thenReturn(List.of(existingThumbnail));
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.modify(7L, boardId, request, List.of(emptyMultipartFile())))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.BAD_REQUEST));
+        verify(fileService, never()).upload(any(MultipartFile.class), any(FileType.class));
+        verify(fileService).deleteAll(List.of());
+        verifyNoInteractions(fileRepository);
+    }
+
     private BoardDto.Request createRequest(FileDto... images) {
         BoardDto.Request request = new BoardDto.Request();
         request.setTitle("Looking for a roommate");
@@ -549,11 +944,66 @@ class RoommateBoardServiceImplTest {
         return request;
     }
 
+    private BoardModifyDto.Request createModifyRequest() {
+        BoardModifyDto.Request request = new BoardModifyDto.Request();
+        request.setTitle("수정 제목");
+        request.setContents("수정 내용");
+        request.setDeposit(2_000);
+        request.setMonthlyRent(70);
+        request.setManagementCost(15);
+        request.setRoomTypeId(11L);
+        request.setRegionId(22L);
+        request.setComeableAt(LocalDateTime.of(2026, 8, 1, 10, 0));
+        request.setDeleteExtraOptionIds(List.of());
+        request.setNewExtraOptionIds(List.of());
+        request.setExistingImages(List.of());
+        request.setNewImages(List.of());
+        return request;
+    }
+
     private FileDto createFileDto(MultipartFile file, boolean thumbnail) {
         FileDto fileDto = new FileDto();
         fileDto.setFile(file);
         fileDto.setThumbnail(thumbnail);
         return fileDto;
+    }
+
+    private ExistingFileDto createExistingFileDto(Long boardFileId, boolean thumbnail) {
+        ExistingFileDto existingFileDto = new ExistingFileDto();
+        existingFileDto.setBoardFileId(boardFileId);
+        existingFileDto.setThumbnail(thumbnail);
+        return existingFileDto;
+    }
+
+    private NewFileDto createNewFileDto(Integer fileIndex, boolean thumbnail) {
+        NewFileDto newFileDto = new NewFileDto();
+        newFileDto.setFileIndex(fileIndex);
+        newFileDto.setThumbnail(thumbnail);
+        return newFileDto;
+    }
+
+    private RoommateBoard createRoommateBoard() {
+        return createRoommateBoard(7L);
+    }
+
+    private RoommateBoard createRoommateBoard(Long memberId) {
+        return RoommateBoard.builder()
+                .member(Member.builder().id(memberId).build())
+                .title("기존 제목")
+                .contents("기존 내용")
+                .deposit(1_000)
+                .monthlyRent(50)
+                .managementCost(10)
+                .roomType(org.mockito.Mockito.mock(RoomType.class))
+                .region(org.mockito.Mockito.mock(Region.class))
+                .comeableDate(LocalDateTime.of(2026, 7, 1, 9, 0))
+                .build();
+    }
+
+    private RoomExtraOption mockExtraOption(Long id) {
+        RoomExtraOption extraOption = org.mockito.Mockito.mock(RoomExtraOption.class);
+        when(extraOption.getId()).thenReturn(id);
+        return extraOption;
     }
 
     private File createFile(String originalFileName, String savedFileName, String extension) {

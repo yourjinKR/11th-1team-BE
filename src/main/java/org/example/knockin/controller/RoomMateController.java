@@ -3,6 +3,7 @@ package org.example.knockin.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.BoardDetailDto;
@@ -10,6 +11,7 @@ import org.example.knockin.dto.BoardDto;
 import org.example.knockin.dto.BoardDto.Response;
 import org.example.knockin.dto.BoardEditDto;
 import org.example.knockin.dto.BoardListDto;
+import org.example.knockin.dto.BoardModifyDto;
 import org.example.knockin.dto.MatchDetailDto;
 import org.example.knockin.dto.MatchListDto;
 import org.example.knockin.dto.MatchScoreDto;
@@ -23,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -33,7 +36,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequiredArgsConstructor
@@ -65,7 +70,7 @@ public class RoomMateController {
     }
 
     @GetMapping("/boards/{boardId}/edit")
-    @Operation(summary = "게시글 상세 조회")
+    @Operation(summary = "게시글 편집 form")
     public CommonResponse<BoardEditDto.Response> findEditForm(
             @AuthenticationPrincipal PrincipalDetails principalDetails, @PathVariable Long boardId) {
         Long memberId = principalDetails.getMember().getId();
@@ -83,10 +88,17 @@ public class RoomMateController {
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
-    @PutMapping("/boards/{boardId}")
+    @PutMapping(value = "/boards/{boardId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "게시글 수정")
-    public CommonResponse<BoardDto.Response> modifyBoard(@PathVariable Long boardId, @RequestBody BoardDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoardDto.Response());
+    public CommonResponse<BoardModifyDto.Response> modifyBoard(
+            @PathVariable Long boardId,
+            @Valid @RequestPart("request") BoardModifyDto.Request request,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
+            @AuthenticationPrincipal PrincipalDetails details
+    ) {
+        Long memberId = details.getMember().getId();
+        BoardModifyDto.Response response = roommateBoardService.modify(memberId, boardId, request, files);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @PostMapping("/boards/{boardId}/reports")

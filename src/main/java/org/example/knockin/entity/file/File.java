@@ -45,4 +45,8 @@ public class File extends CreatedAtEntity {
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;
+
+    public void softDelete() {
+        this.isDeleted = true;
+    }
 }
