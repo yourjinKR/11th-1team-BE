@@ -89,7 +89,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     private final FileRepository fileRepository;
 
     @Override
-    public BoardDto.Response save(BoardDto.Request request, Long memberId) {
+    public BoardDto.Response save(BoardDto.Request request, Long memberId, @Nullable List<MultipartFile> files) {
         Member member = memberService.findById(memberId)
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 
@@ -103,14 +103,17 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
 
         List<FileWithThumbnail> fileWithThumbnails = new ArrayList<>();
         List<File> uploadedFiles = new ArrayList<>();
+        Set<Integer> usedFileIndexes = new HashSet<>();
 
         try {
-            for (FileDto fileDto : fileDtos) {
-                MultipartFile rawFile = fileDto.getFile();
+            if (fileDtos != null) {
+                for (FileDto fileDto : fileDtos) {
+                    MultipartFile rawFile = getImageFile(fileDto.getFileIndex(), files, usedFileIndexes);
 
-                File file = fileService.upload(rawFile, FileType.ROOMMATE_BOARD_IMAGE);
-                uploadedFiles.add(file);
-                fileWithThumbnails.add(new FileWithThumbnail(file, fileDto.isThumbnail()));
+                    File file = fileService.upload(rawFile, FileType.ROOMMATE_BOARD_IMAGE);
+                    uploadedFiles.add(file);
+                    fileWithThumbnails.add(new FileWithThumbnail(file, fileDto.isThumbnail()));
+                }
             }
         } catch (IOException e) {
             fileService.deleteAll(uploadedFiles);
@@ -445,7 +448,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
         Set<Integer> usedFileIndexes = new HashSet<>();
         try {
             for (NewFileDto fileDto : fileDtos) {
-                MultipartFile multipartFile = getNewImageFile(fileDto, files, usedFileIndexes);
+                MultipartFile multipartFile = getImageFile(fileDto.getFileIndex(), files, usedFileIndexes);
                 File file = fileService.upload(multipartFile, FileType.ROOMMATE_BOARD_IMAGE);
                 savedFiles.add(file);
                 fileRepository.save(file);
@@ -466,10 +469,8 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
         }
     }
 
-    private MultipartFile getNewImageFile(NewFileDto fileDto, @Nullable List<MultipartFile> files,
-                                          Set<Integer> usedFileIndexes) {
-        Integer fileIndex = fileDto.getFileIndex();
-
+    private MultipartFile getImageFile(Integer fileIndex, @Nullable List<MultipartFile> files,
+                                       Set<Integer> usedFileIndexes) {
         if (fileIndex == null || fileIndex < 0 || files == null || fileIndex >= files.size()) {
             throw new BusinessException(CommonErrorCode.BAD_REQUEST);
         }

@@ -78,13 +78,14 @@ public class RoomMateController {
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
-    @PostMapping("/boards")
+    @PostMapping(value = "/boards", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "게시글 저장")
     public CommonResponse<BoardDto.Response> saveBoard(
-            @Valid @ModelAttribute BoardDto.Request request,
+            @Valid @RequestPart("request") BoardDto.Request request,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
             @AuthenticationPrincipal PrincipalDetails details) {
         Long memberId = details.getMember().getId();
-        Response response = roommateBoardService.save(request, memberId);
+        Response response = roommateBoardService.save(request, memberId, files);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 

@@ -11,7 +11,6 @@ import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.NoArgsConstructor;
-import org.springframework.web.multipart.MultipartFile;
 
 @Data
 public class BoardDto {
@@ -54,11 +53,18 @@ public class BoardDto {
         @Schema(description = "이미지 목록")
         private List<FileDto> images;
 
-        @AssertTrue(message = "썸네일 이미지는 최소 1개 이상 포함되어야 합니다.")
+        @AssertTrue(message = "이미지를 등록하는 경우 썸네일 이미지는 1개여야 합니다.")
         @Schema(hidden = true)
-        public boolean isThumbnailIncluded() {
-            return images != null &&
-                    images.stream().anyMatch(FileDto::isThumbnail);
+        public boolean isThumbnailValid() {
+            if (images == null || images.isEmpty()) {
+                return true;
+            }
+
+            long thumbnailCount = images.stream()
+                    .filter(FileDto::isThumbnail)
+                    .count();
+
+            return thumbnailCount == 1;
         }
 
         @Data
@@ -67,10 +73,9 @@ public class BoardDto {
         @Schema(name = "BoardFileRequest")
         public static class FileDto {
             @NotNull
-            @Schema(description = "이미지 URL")
-            private MultipartFile file;
+            @Schema(description = "files 파트에서 매칭할 파일 인덱스")
+            private Integer fileIndex;
 
-            @NotNull
             @Schema(description = "썸네일 여부")
             private boolean thumbnail;
         }

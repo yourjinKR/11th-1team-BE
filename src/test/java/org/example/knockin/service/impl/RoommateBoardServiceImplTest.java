@@ -152,8 +152,8 @@ class RoommateBoardServiceImplTest {
         MultipartFile thumbnailImage = emptyMultipartFile();
         MultipartFile roomImage = emptyMultipartFile();
         BoardDto.Request request = createRequest(
-                createFileDto(thumbnailImage, true),
-                createFileDto(roomImage, false));
+                createFileDto(0, true),
+                createFileDto(1, false));
         Long memberId = 42L;
         Member member = org.mockito.Mockito.mock(Member.class);
         RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
@@ -171,7 +171,7 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardRepository.save(any(RoommateBoard.class))).thenReturn(savedRoommateBoard);
         when(savedRoommateBoard.getUpdatedAt()).thenReturn(updatedAt);
 
-        BoardDto.Response response = roommateBoardService.save(request, memberId);
+        BoardDto.Response response = roommateBoardService.save(request, memberId, List.of(thumbnailImage, roomImage));
 
         verify(roommateBoardRepository).save(roommateBoardCaptor.capture());
         RoommateBoard boardToSave = roommateBoardCaptor.getValue();
@@ -210,11 +210,11 @@ class RoommateBoardServiceImplTest {
     @Test
     @DisplayName("존재하지 않는 회원으로 저장을 요청하면 이미지 업로드와 트랜잭션 저장을 수행하지 않는다")
     void saveThrowsWhenMemberDoesNotExist() {
-        BoardDto.Request request = createRequest(createFileDto(emptyMultipartFile(), true));
+        BoardDto.Request request = createRequest(createFileDto(0, true));
         Long memberId = 42L;
         when(memberService.findById(memberId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> roommateBoardService.save(request, memberId))
+        assertThatThrownBy(() -> roommateBoardService.save(request, memberId, List.of(emptyMultipartFile())))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
 
@@ -224,13 +224,13 @@ class RoommateBoardServiceImplTest {
     @Test
     @DisplayName("존재하지 않는 방 유형으로 저장을 요청하면 이미지 업로드와 트랜잭션 저장을 수행하지 않는다")
     void saveThrowsWhenRoomTypeDoesNotExist() {
-        BoardDto.Request request = createRequest(createFileDto(emptyMultipartFile(), true));
+        BoardDto.Request request = createRequest(createFileDto(0, true));
         Long memberId = 42L;
         Member member = org.mockito.Mockito.mock(Member.class);
         when(memberService.findById(memberId)).thenReturn(Optional.of(member));
         when(metaService.findByRoomTypeId(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> roommateBoardService.save(request, memberId))
+        assertThatThrownBy(() -> roommateBoardService.save(request, memberId, List.of(emptyMultipartFile())))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MetaErrorCode.ROOM_TYPE_NOT_FOUND));
 
@@ -240,7 +240,7 @@ class RoommateBoardServiceImplTest {
     @Test
     @DisplayName("존재하지 않는 지역으로 저장을 요청하면 이미지 업로드와 트랜잭션 저장을 수행하지 않는다")
     void saveThrowsWhenRegionDoesNotExist() {
-        BoardDto.Request request = createRequest(createFileDto(emptyMultipartFile(), true));
+        BoardDto.Request request = createRequest(createFileDto(0, true));
         Long memberId = 42L;
         Member member = org.mockito.Mockito.mock(Member.class);
         RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
@@ -248,7 +248,7 @@ class RoommateBoardServiceImplTest {
         when(metaService.findByRoomTypeId(1L)).thenReturn(Optional.of(roomType));
         when(metaService.findByRegionId(2L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> roommateBoardService.save(request, memberId))
+        assertThatThrownBy(() -> roommateBoardService.save(request, memberId, List.of(emptyMultipartFile())))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MetaErrorCode.REGION_NOT_FOUND));
 
@@ -259,7 +259,7 @@ class RoommateBoardServiceImplTest {
     @DisplayName("이미지 업로드가 실패하면 트랜잭션 저장을 수행하지 않고 업로드 실패 예외를 던진다")
     void saveThrowsWhenFileUploadFails() throws IOException {
         MultipartFile thumbnailImage = emptyMultipartFile();
-        BoardDto.Request request = createRequest(createFileDto(thumbnailImage, true));
+        BoardDto.Request request = createRequest(createFileDto(0, true));
         Long memberId = 42L;
         Member member = org.mockito.Mockito.mock(Member.class);
         RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
@@ -270,7 +270,7 @@ class RoommateBoardServiceImplTest {
         when(fileService.upload(thumbnailImage, FileType.ROOMMATE_BOARD_IMAGE))
                 .thenThrow(new IOException("upload failed"));
 
-        assertThatThrownBy(() -> roommateBoardService.save(request, memberId))
+        assertThatThrownBy(() -> roommateBoardService.save(request, memberId, List.of(thumbnailImage)))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(FileErrorCode.FILE_UPLOAD_FAILED));
 
@@ -283,8 +283,8 @@ class RoommateBoardServiceImplTest {
         MultipartFile thumbnailImage = emptyMultipartFile();
         MultipartFile roomImage = emptyMultipartFile();
         BoardDto.Request request = createRequest(
-                createFileDto(thumbnailImage, true),
-                createFileDto(roomImage, false));
+                createFileDto(0, true),
+                createFileDto(1, false));
         Long memberId = 42L;
         Member member = org.mockito.Mockito.mock(Member.class);
         RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
@@ -297,7 +297,7 @@ class RoommateBoardServiceImplTest {
         when(fileService.upload(roomImage, FileType.ROOMMATE_BOARD_IMAGE))
                 .thenThrow(new IOException("upload failed"));
 
-        assertThatThrownBy(() -> roommateBoardService.save(request, memberId))
+        assertThatThrownBy(() -> roommateBoardService.save(request, memberId, List.of(thumbnailImage, roomImage)))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(FileErrorCode.FILE_UPLOAD_FAILED));
 
@@ -310,7 +310,7 @@ class RoommateBoardServiceImplTest {
     @DisplayName("트랜잭션 저장이 실패하면 업로드된 이미지를 삭제 요청하고 예외를 다시 던진다")
     void saveDeletesUploadedImagesWhenTransactionalSaveFails() throws IOException {
         MultipartFile thumbnailImage = emptyMultipartFile();
-        BoardDto.Request request = createRequest(createFileDto(thumbnailImage, true));
+        BoardDto.Request request = createRequest(createFileDto(0, true));
         Long memberId = 42L;
         Member member = org.mockito.Mockito.mock(Member.class);
         RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
@@ -322,13 +322,61 @@ class RoommateBoardServiceImplTest {
         when(fileService.upload(thumbnailImage, FileType.ROOMMATE_BOARD_IMAGE)).thenReturn(thumbnailFile);
         when(roommateBoardRepository.save(any(RoommateBoard.class))).thenThrow(new IllegalStateException("db failed"));
 
-        assertThatThrownBy(() -> roommateBoardService.save(request, memberId))
+        assertThatThrownBy(() -> roommateBoardService.save(request, memberId, List.of(thumbnailImage)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("db failed");
 
         verify(fileService).deleteAll(uploadedFilesCaptor.capture());
         assertThat(uploadedFilesCaptor.getValue()).containsExactly(thumbnailFile);
         verifyNoInteractions(roommateBoardFileRepository);
+    }
+
+    @Test
+    @DisplayName("이미지 없이 저장을 요청하면 게시글만 저장하고 파일 업로드를 수행하지 않는다")
+    void saveAllowsRequestWithoutImages() {
+        BoardDto.Request request = createRequest();
+        Long memberId = 42L;
+        Member member = org.mockito.Mockito.mock(Member.class);
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+        RoommateBoard savedRoommateBoard = org.mockito.Mockito.mock(RoommateBoard.class);
+        LocalDateTime updatedAt = LocalDateTime.of(2026, 6, 4, 16, 30);
+
+        when(memberService.findById(memberId)).thenReturn(Optional.of(member));
+        when(metaService.findByRoomTypeId(1L)).thenReturn(Optional.of(roomType));
+        when(metaService.findByRegionId(2L)).thenReturn(Optional.of(region));
+        when(roommateBoardRepository.save(any(RoommateBoard.class))).thenReturn(savedRoommateBoard);
+        when(savedRoommateBoard.getUpdatedAt()).thenReturn(updatedAt);
+
+        BoardDto.Response response = roommateBoardService.save(request, memberId, null);
+
+        assertThat(response.getUpdatedAt()).isEqualTo(updatedAt);
+        verifyNoInteractions(fileService);
+        verify(fileRepository).saveAll(filesCaptor.capture());
+        assertThat(toList(filesCaptor.getValue())).isEmpty();
+        verify(roommateBoardFileRepository).saveAll(boardFilesCaptor.capture());
+        assertThat(toList(boardFilesCaptor.getValue())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("게시글 저장 중 이미지 메타데이터가 파일 파트와 매칭되지 않으면 잘못된 요청 예외를 던진다")
+    void saveThrowsWhenImageFileIndexDoesNotMatchFilesPart() throws IOException {
+        BoardDto.Request request = createRequest(createFileDto(1, true));
+        Long memberId = 42L;
+        Member member = org.mockito.Mockito.mock(Member.class);
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+
+        when(memberService.findById(memberId)).thenReturn(Optional.of(member));
+        when(metaService.findByRoomTypeId(1L)).thenReturn(Optional.of(roomType));
+        when(metaService.findByRegionId(2L)).thenReturn(Optional.of(region));
+
+        assertThatThrownBy(() -> roommateBoardService.save(request, memberId, List.of(emptyMultipartFile())))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.BAD_REQUEST));
+        verify(fileService, never()).upload(any(MultipartFile.class), any(FileType.class));
+        verify(fileService).deleteAll(List.of());
+        verifyNoInteractions(roommateBoardRepository, fileRepository, roommateBoardFileRepository);
     }
 
     @Test
@@ -961,9 +1009,9 @@ class RoommateBoardServiceImplTest {
         return request;
     }
 
-    private FileDto createFileDto(MultipartFile file, boolean thumbnail) {
+    private FileDto createFileDto(Integer fileIndex, boolean thumbnail) {
         FileDto fileDto = new FileDto();
-        fileDto.setFile(file);
+        fileDto.setFileIndex(fileIndex);
         fileDto.setThumbnail(thumbnail);
         return fileDto;
     }
