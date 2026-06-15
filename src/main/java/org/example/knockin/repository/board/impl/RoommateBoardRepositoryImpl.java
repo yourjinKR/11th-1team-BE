@@ -440,7 +440,9 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
     }
 
     private BooleanExpression comeableDateNotExpired(LocalDateTime endDate) {
-        return roommateBoard.comeableDate.goe(endDate);
+        if (endDate == null) return null;
+        return roommateBoard.comeableDateNegotiable.isTrue()
+                .or(roommateBoard.comeableDate.goe(endDate));
     }
 
     public record BoardBaseRow(

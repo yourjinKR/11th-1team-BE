@@ -106,6 +106,32 @@ class RoommateBoardRepositoryTest {
     }
 
     @Test
+    @DisplayName("입주 시기 협의 가능 게시글은 입주 가능일이 없어도 목록에 포함한다")
+    void searchIncludesNegotiableBoardWithoutComeableDate() {
+        // Given
+        LocalDateTime visibleEndDate = LocalDateTime.of(2026, 6, 1, 12, 0);
+        Member member = persistMember("provider-negotiable");
+        RoomType roomType = persistRoomType("원룸");
+        Region region = persistRegion("서초동", 3, null);
+        persistBoard("협의 가능 게시글", member, roomType, region, null, true);
+        persistBoard("입주일 없음 게시글", member, roomType, region, null, false);
+        persistBoard("지난 입주일 게시글", member, roomType, region, visibleEndDate.minusSeconds(1), false);
+        entityManager.flush();
+        entityManager.clear();
+
+        RoommateBoardSearchCondition condition = defaultCondition(visibleEndDate, PageRequest.of(0, 20));
+
+        // When
+        Page<RoommateBoardListRow> result = roommateBoardRepository.search(condition);
+
+        // Then
+        assertThat(result.getContent())
+                .extracting(RoommateBoardListRow::title)
+                .containsExactly("협의 가능 게시글");
+        assertThat(result.getTotalElements()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("조회 페이지에 게시글이 없어도 전체 게시글 수는 유지한다")
     void searchKeepsTotalElementsWhenRequestedPageIsEmpty() {
         // Given
@@ -195,7 +221,8 @@ class RoommateBoardRepositoryTest {
         Region district = persistRegion("강남구", 2, city);
         Region dong = persistRegion("역삼동", 3, district);
         RoomType roomType = persistRoomType("원룸");
-        RoommateBoard board = persistBoard("상세 게시글", member, roomType, dong, LocalDateTime.of(2026, 7, 1, 9, 0));
+        RoommateBoard board = persistBoard("상세 게시글", member, roomType, dong,
+                LocalDateTime.of(2026, 7, 1, 9, 0), true);
 
         entityManager.flush();
         entityManager.clear();
@@ -240,7 +267,8 @@ class RoommateBoardRepositoryTest {
         Region district = persistRegion("강남구", 2, city);
         Region dong = persistRegion("역삼동", 3, district);
         RoomType roomType = persistRoomType("원룸");
-        RoommateBoard board = persistBoard("수정 게시글", member, roomType, dong, LocalDateTime.of(2026, 7, 1, 9, 0));
+        RoommateBoard board = persistBoard("수정 게시글", member, roomType, dong,
+                LocalDateTime.of(2026, 7, 1, 9, 0), true);
         entityManager.flush();
         entityManager.clear();
 
@@ -580,6 +608,17 @@ class RoommateBoardRepositoryTest {
             Region region,
             LocalDateTime comeableDate
     ) {
+        return persistBoard(title, member, roomType, region, comeableDate, false);
+    }
+
+    private RoommateBoard persistBoard(
+            String title,
+            Member member,
+            RoomType roomType,
+            Region region,
+            LocalDateTime comeableDate,
+            Boolean comeableDateNegotiable
+    ) {
         RoommateBoard board = RoommateBoard.builder()
                 .member(member)
                 .title(title)
@@ -589,7 +628,7 @@ class RoommateBoardRepositoryTest {
                 .managementCost(10)
                 .roomType(roomType)
                 .region(region)
-                .comeableDateNegotiable(true)
+                .comeableDateNegotiable(comeableDateNegotiable)
                 .comeableDate(comeableDate)
                 .build();
         entityManager.persist(board);
