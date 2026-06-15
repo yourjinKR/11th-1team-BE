@@ -7,4 +7,8 @@ public interface ErrorCode {
     String name();
     HttpStatus getHttpStatus();
     String getMessage();
+
+    default String format(Object... args) {
+        return getMessage().formatted(args);
+    }
 }

@@ -22,7 +22,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public CommonResponse<?> handleBusinessException(BusinessException e) {
         log.warn("BusinessException: {}", e.getMessage());
-        return handleExceptionInternal(e.getErrorCode());
+        return handleExceptionInternal(e.getErrorCode(), e.getMessage());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -67,5 +67,9 @@ public class GlobalExceptionHandler {
 
     private CommonResponse<?> handleExceptionInternal(ErrorCode errorCode) {
         return CommonResponse.status(errorCode.getHttpStatus()).error(ErrorResponse.of(errorCode));
+    }
+
+    private CommonResponse<?> handleExceptionInternal(ErrorCode errorCode, String message) {
+        return CommonResponse.status(errorCode.getHttpStatus()).error(ErrorResponse.of(errorCode, message));
     }
 }

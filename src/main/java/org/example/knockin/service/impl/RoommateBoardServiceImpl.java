@@ -505,13 +505,13 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
         }
 
         if (roommateBoardFiles.size() > RoommateBoard.IMAGE_MAXIMUM) {
-            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_EXCEEDED);
+            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_EXCEEDED, RoommateBoard.IMAGE_MAXIMUM);
         }
 
         long thumbnailCount = roommateBoardFiles.stream().filter(RoommateBoardFile::getIsThumbnail).count();
 
         if (thumbnailCount != RoommateBoard.THUMBNAIL_MAXIMUM) {
-            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_THUMBNAIL_EXCEEDED);
+            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_THUMBNAIL_EXCEEDED, RoommateBoard.THUMBNAIL_MAXIMUM);
         }
     }
 
