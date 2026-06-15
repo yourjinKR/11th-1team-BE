@@ -104,7 +104,7 @@ public class MetaServiceImpl {
     public MetaRegionsDto.Response findRegions() {
         return MetaRegionsDto.Response.builder()
                 .region(regionRepository.findAll().stream().map(item ->
-                        MetaRegionsDto.Response.RegionItem.builder().id(item.getId()).name(item.getName()).parentId(item.getParent().getId()).build()).toList())
+                        MetaRegionsDto.Response.RegionItem.builder().id(item.getId()).name(item.getName()).parentId(item.getParent() != null ? item.getParent().getId() : null).build()).toList())
                 .build();
     }
 
