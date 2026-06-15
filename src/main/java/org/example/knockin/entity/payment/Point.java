@@ -15,7 +15,7 @@ public class Point {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    private Long point;
+    private Long points;
 
     @ManyToOne
     @JoinColumn(name = "member_id", nullable = false)

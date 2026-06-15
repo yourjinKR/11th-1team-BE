@@ -17,6 +17,12 @@ public class AuthResponse {
     private String name;
     private boolean basicInfo;
     private boolean preferenceInfo;
-    private boolean isDelete;
+    private DeleteInfo deleteInfo;
+
+    @Data
+    public static class DeleteInfo {
+        private boolean isDelete;
+        private String reason;
+    }
 }
 

@@ -31,9 +31,12 @@ public class State {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "state", length = 20)
-    private MemberState state;
+    private MemberState states;
+
+    @Column(length = 500)
+    private String rejectReason;
 
     public void changeState(MemberState state) {
-        this.state = state;
+        this.states = state;
     }
 }
