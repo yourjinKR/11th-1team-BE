@@ -9,9 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.jpa.CreatedAtEntity;
 import org.hibernate.annotations.ColumnDefault;
@@ -19,6 +17,8 @@ import org.hibernate.annotations.ColumnDefault;
 
 @Getter
 @Entity
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "inquiry")
 public class Inquiry extends CreatedAtEntity {
