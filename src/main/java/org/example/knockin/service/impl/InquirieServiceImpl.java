@@ -1,6 +1,7 @@
 package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.dto.InquiryCategoryListDto;
 import org.example.knockin.dto.InquiryDto;
 import org.example.knockin.entity.inquiry.Inquiry;
 import org.example.knockin.entity.inquiry.InquiryCategory;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -33,5 +35,10 @@ public class InquirieServiceImpl {
         Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
         saveInquiry(request, member);
         return InquiryDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    public InquiryCategoryListDto.Response findInquirieCategoryList() {
+        List<InquiryCategoryListDto.Response.Category> categoryList = inquiryCategoryRepository.findAllByIsDeleted(false).stream().map(item -> InquiryCategoryListDto.Response.Category.builder().id(item.getId()).name(item.getTitle()).build()).toList();
+        return InquiryCategoryListDto.Response.builder().inquirieCategorys(categoryList).build();
     }
 }

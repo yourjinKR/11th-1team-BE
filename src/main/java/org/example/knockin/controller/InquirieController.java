@@ -39,7 +39,7 @@ public class InquirieController {
     @GetMapping("/categorys")
     @Operation(summary = "문의 카테고리 목록 조회")
     public CommonResponse<InquiryCategoryListDto.Response> findInquirieCategoryList() {
-        return CommonResponse.status(HttpStatus.OK).body(new InquiryCategoryListDto.Response());
+        return CommonResponse.status(HttpStatus.OK).body(inquirieService.findInquirieCategoryList());
     }
 
     @PostMapping("")
