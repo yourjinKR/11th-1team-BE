@@ -26,8 +26,8 @@ public class InquirieController {
 
     @GetMapping("")
     @Operation(summary = "문의 목록 조회")
-    public CommonResponse<InquiryListDto.Response> findInquirieList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return CommonResponse.status(HttpStatus.OK).body(new InquiryListDto.Response());
+    public CommonResponse<InquiryListDto.Response> findInquirieList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(inquirieService.findInquirieList(pageable, principalDetails.getMember().getId()));
     }
 
     @GetMapping("/{inquiryId}")
