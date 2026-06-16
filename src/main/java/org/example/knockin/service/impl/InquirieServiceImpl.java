@@ -2,6 +2,7 @@ package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.InquiryCategoryListDto;
+import org.example.knockin.dto.InquiryDetailDto;
 import org.example.knockin.dto.InquiryDto;
 import org.example.knockin.dto.InquiryListDto;
 import org.example.knockin.entity.inquiry.Inquiry;
@@ -46,7 +47,12 @@ public class InquirieServiceImpl {
 
     public InquiryListDto.Response findInquirieList(Pageable pageable, Long memberId) {
         Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
-        List<InquiryListDto.Response.InquiryItem> inquiryItemList = inquiryRepository.findMyInquiry(false, member, pageable);
+        List<InquiryListDto.Response.InquiryItem> inquiryItemList = inquiryRepository.findMyInquiryList(false, member, pageable);
         return InquiryListDto.Response.builder().inquiries(inquiryItemList).build();
+    }
+
+    public InquiryDetailDto.Response findInquirie(Long inquiryId, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+        return InquiryDetailDto.Response.builder().inquirie(inquiryRepository.findMyInquiry(false, member, inquiryId)).build();
     }
 }

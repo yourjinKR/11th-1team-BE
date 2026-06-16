@@ -1,6 +1,7 @@
 package org.example.knockin.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -12,11 +13,13 @@ public class InquiryDetailDto {
     }
 
     @Data
+    @Builder
     public static class Response {
         @Schema(description = "문의 상세 정보")
         private InquiryDetail inquirie;
 
         @Data
+        @Builder
         public static class InquiryDetail {
             @Schema(description = "고유 식별 ID")
             private Long id;
@@ -36,6 +39,7 @@ public class InquiryDetailDto {
             private List<Reply> reply;
 
             @Data
+            @Builder
             public static class Reply {
                 @Schema(description = "고유 식별 ID")
                 private Long id;

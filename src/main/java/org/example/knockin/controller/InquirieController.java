@@ -32,8 +32,8 @@ public class InquirieController {
 
     @GetMapping("/{inquiryId}")
     @Operation(summary = "문의 상세 조회")
-    public CommonResponse<InquiryDetailDto.Response> findInquirie(@PathVariable Long inquiryId) {
-        return CommonResponse.status(HttpStatus.OK).body(new InquiryDetailDto.Response());
+    public CommonResponse<InquiryDetailDto.Response> findInquirie(@PathVariable Long inquiryId, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(inquirieService.findInquirie(inquiryId, principalDetails.getMember().getId()));
     }
 
     @GetMapping("/categorys")
