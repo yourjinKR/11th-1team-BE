@@ -7,6 +7,8 @@ import org.example.knockin.dto.MyProfileAllDto;
 import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.MemberRole;
+import org.example.knockin.entity.member.MemberState;
+import org.example.knockin.entity.member.State;
 import org.example.knockin.entity.room.*;
 import org.example.knockin.global.auth.dto.AuthResponse;
 import org.example.knockin.global.auth.dto.OAuth2UserInfo;
@@ -16,6 +18,7 @@ import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.MemberRepository;
+import org.example.knockin.repository.member.StateRepository;
 import org.example.knockin.repository.room.RoomProfileRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +36,7 @@ public class MemberServiceImpl {
     private final MemberLifePatternRepository memberLifePatternRepository;
     private final BasicInformationRepository basicInformationRepository;
     private final RoomProfileRepository roomProfileRepository;
+    private final StateRepository stateRepository;
 
     @Transactional
     public Member getOrSave(OAuth2UserInfo oAuth2UserInfo) {
@@ -45,6 +49,8 @@ public class MemberServiceImpl {
                             .role(MemberRole.USER)
                             .isDelete(false)
                             .build();
+
+                    stateRepository.save(State.builder().states(MemberState.ACTIVE).member(newMember).build());
                     return memberRepository.save(newMember);
                 });
     }
