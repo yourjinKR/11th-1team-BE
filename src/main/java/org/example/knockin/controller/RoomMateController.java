@@ -12,6 +12,7 @@ import org.example.knockin.dto.BoardEditDto;
 import org.example.knockin.dto.BoardListDto;
 import org.example.knockin.dto.BoardModifyDto;
 import org.example.knockin.dto.MatchDetailDto;
+import org.example.knockin.dto.MatchDto;
 import org.example.knockin.dto.MatchListDto;
 import org.example.knockin.dto.MatchScoreDto;
 import org.example.knockin.dto.ReportDto;
@@ -162,6 +163,17 @@ public class RoomMateController {
     @Operation(summary = "매칭 점수 조회")
     public CommonResponse<MatchScoreDto.Response> findMatchScore() {
         return CommonResponse.status(HttpStatus.OK).body(new MatchScoreDto.Response());
+    }
+
+    @PostMapping("/matches/{memberId}/likes")
+    @Operation(summary = "게시글 찜하기")
+    public CommonResponse<MatchDto.Response> likeBoard(
+            @AuthenticationPrincipal PrincipalDetails details,
+            @PathVariable Long memberId
+    ) {
+        Long senderId = details.getMember().getId();
+        MatchDto.Response response = roommateMatchingService.likeMatching(senderId, memberId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 }
 

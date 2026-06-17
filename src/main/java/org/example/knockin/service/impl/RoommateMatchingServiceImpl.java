@@ -1,14 +1,19 @@
 package org.example.knockin.service.impl;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.MatchDetailDto;
+import org.example.knockin.dto.MatchDto;
 import org.example.knockin.dto.MatchListDto;
 import org.example.knockin.entity.auth.AuthenticationType;
+import org.example.knockin.entity.member.Member;
+import org.example.knockin.entity.member.MemberInterest;
 import org.example.knockin.entity.room.RoomProfileType;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.MemberErrorCode;
@@ -321,6 +326,34 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
                 // TODO: 계산식 확정 후 변경
                 .compatibility(null)
                 .build();
+    }
+
+    @Override
+    public MatchDto.Response likeMatching(Long senderId, Long receiverId) {
+        Member sender = memberRepository.findById(senderId)
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        Member receiver = memberRepository.findById(receiverId)
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        Optional<MemberInterest> optionalMemberInterest =
+                memberInterestRepository.findBySenderIdAndReceiverIdForUpdate(senderId, receiverId);
+
+        if (optionalMemberInterest.isPresent()) {
+            optionalMemberInterest.get().toggle();
+        } else {
+            saveMemberInterest(sender, receiver);
+        }
+
+        return new MatchDto.Response(LocalDateTime.now());
+    }
+
+    public void saveMemberInterest(Member sender, Member receiver) {
+        MemberInterest memberInterest = MemberInterest.builder()
+                .sender(sender)
+                .receiver(receiver)
+                .build();
+        memberInterestRepository.save(memberInterest);
     }
 
 }
