@@ -6,11 +6,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.dto.MatchDetailDto;
 import org.example.knockin.dto.MatchListDto;
+import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.room.RoomProfileType;
+import org.example.knockin.global.exception.BusinessException;
+import org.example.knockin.global.exception.MemberErrorCode;
 import org.example.knockin.global.util.DateUtils;
 import org.example.knockin.global.util.HasMemberId;
 import org.example.knockin.global.util.StringUtils;
+import org.example.knockin.repository.auth.AuthenticationRepository;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
 import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
@@ -19,7 +24,7 @@ import org.example.knockin.repository.life.row.MatchingPreferenceConditionRow;
 import org.example.knockin.repository.life.row.MatchingPreferenceConditionWeightRow;
 import org.example.knockin.repository.member.MemberInterestRepository;
 import org.example.knockin.repository.member.MemberRepository;
-import org.example.knockin.repository.member.row.MatchingListBasicInfoRow;
+import org.example.knockin.repository.member.row.MatchingBasicInfoRow;
 import org.example.knockin.repository.room.RoomOfferProfileRepository;
 import org.example.knockin.repository.room.RoomSeekerProfileRepository;
 import org.example.knockin.repository.room.row.MatchingOfferProfileRow;
@@ -42,16 +47,17 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
     private final MemberLifePatternRepository memberLifePatternRepository;
     private final PreferenceConditionRepository preferenceConditionRepository;
     private final PreferenceConditionWeightRepository preferenceConditionWeightRepository;
+    private final AuthenticationRepository authenticationRepository;
 
     @Override
     public Slice<MatchListDto.Response> findMatchingList(Long memberId, MatchListDto.Request request) {
         int size = request.getSize();
         List<Long> excludeMemberIds = resolveExcludeMemberIds(memberId, request);
 
-        List<MatchingListBasicInfoRow> rawRows = memberRepository.findMatchingListBasicRow(excludeMemberIds, size + 1);
+        List<MatchingBasicInfoRow> rawRows = memberRepository.findMatchingBasicRow(excludeMemberIds, size + 1);
         boolean hasNext = rawRows.size() > size;
-        List<MatchingListBasicInfoRow> matchingListBasicRow = rawRows.stream().limit(size).toList();
-        List<Long> memberIds = matchingListBasicRow.stream().map(MatchingListBasicInfoRow::memberId).toList();
+        List<MatchingBasicInfoRow> matchingListBasicRow = rawRows.stream().limit(size).toList();
+        List<Long> memberIds = matchingListBasicRow.stream().map(MatchingBasicInfoRow::memberId).toList();
 
         if (memberIds.isEmpty()) {
             return new SliceImpl<>(List.of(), PageRequest.of(0, size), false);
@@ -175,7 +181,7 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
     }
 
     private MatchListDto.Response toResponse(
-            MatchingListBasicInfoRow row,
+            MatchingBasicInfoRow row,
             Map<Long, MatchingOfferProfileRow> offerMap,
             Map<Long, MatchingSeekerProfileRow> seekerMap,
             Map<Long, List<String>> seekerRegionMap,
@@ -191,11 +197,15 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
         MatchListDto.SeekerProfile seekerProfile = null;
 
         if (row.roomProfileType() == RoomProfileType.OFFER) {
-            offerProfile = toOfferProfile(candidateId, offerMap);
+            MatchingOfferProfileRow offerProfileRow = offerMap.get(candidateId);
+            offerProfile = toOfferProfile(offerProfileRow);
         }
 
         if (row.roomProfileType() == RoomProfileType.SEEKER) {
-            seekerProfile = toSeekerProfile(candidateId, seekerMap, seekerRegionMap, seekerRoomTypeMap);
+            MatchingSeekerProfileRow matchingSeekerProfileRow = seekerMap.get(candidateId);
+            List<String> regionFullNames = seekerRegionMap.get(candidateId);
+            List<String> roomTypeNames = seekerRoomTypeMap.get(candidateId);
+            seekerProfile = toSeekerProfile(matchingSeekerProfileRow, regionFullNames, roomTypeNames);
         }
 
         return MatchListDto.Response.builder()
@@ -216,13 +226,7 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
                 .build();
     }
 
-    private MatchListDto.OfferProfile toOfferProfile(Long memberId, Map<Long, MatchingOfferProfileRow> offerMap) {
-        MatchingOfferProfileRow row = offerMap.get(memberId);
-
-        if (row == null) {
-            return null;
-        }
-
+    private MatchListDto.OfferProfile toOfferProfile(MatchingOfferProfileRow row) {
         String regionFullName = StringUtils.parseToRegionFullName(
                 row.grandParentRegionName(),
                 row.parentRegionName(),
@@ -237,24 +241,61 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
                 .build();
     }
 
-    private MatchListDto.SeekerProfile toSeekerProfile(
-            Long memberId,
-            Map<Long, MatchingSeekerProfileRow> seekerMap,
-            Map<Long, List<String>> seekerRegionMap,
-            Map<Long, List<String>> seekerRoomTypeMap
-    ) {
-        MatchingSeekerProfileRow row = seekerMap.get(memberId);
-        if (row == null) {
-            return null;
-        }
-
+    private MatchListDto.SeekerProfile toSeekerProfile(MatchingSeekerProfileRow row, List<String> roomTypeNames, List<String> regionFullNames) {
         return MatchListDto.SeekerProfile.builder()
                 .minDeposit(row.minDeposit())
                 .maxDeposit(row.maxDeposit())
                 .minMonthlyRent(row.minMonthlyRent())
                 .maxMonthlyRent(row.maxMonthlyRent())
-                .roomTypeNames(seekerRoomTypeMap.getOrDefault(memberId, List.of()))
-                .regionFullNames(seekerRegionMap.getOrDefault(memberId, List.of()))
+                .roomTypeNames(roomTypeNames)
+                .regionFullNames(regionFullNames)
+                .build();
+    }
+
+    @Override
+    public MatchDetailDto.Response findMatchingDetail(Long targetMemberId, Long requesterId) {
+        MatchingBasicInfoRow basicInfoRow = memberRepository.findMatchingBasicRowById(targetMemberId)
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        List<AuthenticationType> authenticationTypes = authenticationRepository.getAcceptedAuthenticationTypeByMemberId(targetMemberId);
+
+        MatchingOfferProfileRow offerProfileRow = roomOfferProfileRepository.findAllOfferProfileByMemberIdIn(List.of(targetMemberId)).getFirst();
+        MatchingSeekerProfileRow seekerProfileRow = roomSeekerProfileRepository.findAllSeekerProfileByMemberIdIn(List.of(targetMemberId)).getFirst();
+        List<MatchingSeekerRegionRow> seekerRegionRows = roomSeekerProfileRepository.findAllSeekerRegionByMemberIdIn(List.of(targetMemberId));
+        List<MatchingSeekerRoomTypeRow> seekerRoomTypeRows = roomSeekerProfileRepository.findAllSeekerRoomTypeByMemberIdIn(List.of(targetMemberId));
+
+        List<MatchingLifestyleRow> lifestyleRows = memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(targetMemberId));
+        List<MatchingPreferenceConditionRow> preferenceConditionRows = preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(List.of(targetMemberId));
+        List<MatchingPreferenceConditionWeightRow> preferenceConditionWeightRows = preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(List.of(targetMemberId));
+
+        boolean isLike = memberInterestRepository.existsBySenderIdAndReceiverId(requesterId, targetMemberId);
+        RoomProfileType roomProfileType = basicInfoRow.roomProfileType();
+
+        List<String> roomTypeNames = seekerRoomTypeRows.stream().map(MatchingSeekerRoomTypeRow::roomTypeName).toList();
+        List<String> regionFullNames = seekerRegionRows.stream()
+                .map(row -> StringUtils.parseToRegionFullName(
+                        row.grandParentRegionName(),
+                        row.parentRegionName(),
+                        row.regionName()
+                ))
+                .toList();
+
+        return MatchDetailDto.Response.builder()
+                .memberId(basicInfoRow.memberId())
+                .memberProfileImageUrl(basicInfoRow.memberProfileImageUrl())
+                .memberName(basicInfoRow.memberName())
+                .memberAge(DateUtils.calculateAge(basicInfoRow.birth()))
+                .gender(basicInfoRow.gender())
+                .isLike(isLike)
+                .roomProfileType(roomProfileType)
+                .offerProfile(roomProfileType == RoomProfileType.OFFER ? toOfferProfile(offerProfileRow) : null)
+                .seekerProfile(roomProfileType == RoomProfileType.SEEKER ? toSeekerProfile(seekerProfileRow, roomTypeNames, regionFullNames) : null)
+                .lifeStyles(lifestyleRows.stream().map(this::toLifestyle).toList())
+                .conditions(preferenceConditionRows.stream().map(this::toCondition).toList())
+                .conditionWeights(preferenceConditionWeightRows.stream().map(this::toConditionWeight).toList())
+                .authentications(authenticationTypes)
+                // TODO: 계산식 확정 후 변경
+                .compatibility(null)
                 .build();
     }
 

@@ -147,10 +147,15 @@ public class RoomMateController {
         return CommonResponse.status(HttpStatus.OK).body(responses);
     }
 
-    @GetMapping("/matches/{userId}")
+    @GetMapping("/matches/{memberId}")
     @Operation(summary = "매칭 상세 조회")
-    public CommonResponse<MatchDetailDto.Response> findMatch(@PathVariable Long userId) {
-        return CommonResponse.status(HttpStatus.OK).body(new MatchDetailDto.Response());
+    public CommonResponse<MatchDetailDto.Response> findMatch(
+            @AuthenticationPrincipal PrincipalDetails details,
+            @PathVariable Long memberId
+    ) {
+        Long requesterId = details == null ? null : details.getMember().getId();
+        MatchDetailDto.Response response = roommateMatchingService.findMatchingDetail(memberId, requesterId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @GetMapping("/matches/score")

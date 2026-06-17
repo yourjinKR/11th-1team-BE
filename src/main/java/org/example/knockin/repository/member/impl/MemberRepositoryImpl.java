@@ -21,7 +21,8 @@ import org.example.knockin.entity.room.RoomProfile;
 import org.example.knockin.entity.room.RoomSeekerProfile;
 import org.example.knockin.global.auth.dto.AuthResponse;
 import org.example.knockin.repository.member.MemberRepositoryCustom;
-import org.example.knockin.repository.member.row.MatchingListBasicInfoRow;
+import org.example.knockin.repository.member.row.MatchingBasicInfoRow;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
@@ -212,14 +213,14 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
     }
 
     @Override
-    public List<MatchingListBasicInfoRow> findMatchingListBasicRow(List<Long> excludeMemberIds, Integer size) {
+    public List<MatchingBasicInfoRow> findMatchingBasicRow(List<Long> excludeMemberIds, Integer size) {
         if (size <= 0) return List.of();
 
         NumberExpression<Double> randomOrder = Expressions.numberTemplate(Double.class, "function('random')");
 
         return jpaQueryFactory
                 .select(Projections.constructor(
-                        MatchingListBasicInfoRow.class,
+                        MatchingBasicInfoRow.class,
                         member.id,
                         file.savedFileName,
                         basicInformation.name,
@@ -262,6 +263,53 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                 .orderBy(randomOrder.asc())
                 .limit(size)
                 .fetch();
+    }
+
+    @Override
+    public Optional<MatchingBasicInfoRow> findMatchingBasicRowById(Long memberId) {
+        return Optional.ofNullable(jpaQueryFactory
+                .select(Projections.constructor(
+                        MatchingBasicInfoRow.class,
+                        member.id,
+                        file.savedFileName,
+                        basicInformation.name,
+                        basicInformation.birth,
+                        basicInformation.gender,
+                        roomProfile.id,
+                        roomProfile.type
+                ))
+                .from(member)
+                .where(
+                        member.id.eq(memberId),
+                        member.isDelete.isFalse(),
+                        memberPrivacy.type.eq(MemberPrivacyType.PUBLIC),
+                        notBlocked()
+                )
+                .join(member.memberPrivacy, memberPrivacy)
+                .leftJoin(basicInformation)
+                .on(basicInformation.id.eq(
+                        JPAExpressions
+                                .select(basicInformation.id.max())
+                                .from(basicInformation)
+                                .where(basicInformation.member.id.eq(member.id))
+                ))
+                .join(roomProfile)
+                .on(roomProfile.id.eq(
+                        JPAExpressions
+                                .select(roomProfile.id.max())
+                                .from(roomProfile)
+                                .where(roomProfile.member.id.eq(member.id))
+                ))
+                .leftJoin(basicInformationFile)
+                .on(basicInformationFile.id.eq(
+                        JPAExpressions
+                                .select(basicInformationFile.id.max())
+                                .from(basicInformationFile)
+                                .where(basicInformationFile.basicInformation.id.eq(basicInformation.id))
+                ))
+                .leftJoin(basicInformationFile.file, file)
+                .on(file.isDeleted.isFalse())
+                .fetchOne());
     }
 
     private BooleanExpression providerIdEq(String providerId) {

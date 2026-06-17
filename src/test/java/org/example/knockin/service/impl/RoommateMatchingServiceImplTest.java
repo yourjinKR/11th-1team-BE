@@ -24,7 +24,7 @@ import org.example.knockin.repository.life.row.MatchingPreferenceConditionRow;
 import org.example.knockin.repository.life.row.MatchingPreferenceConditionWeightRow;
 import org.example.knockin.repository.member.MemberInterestRepository;
 import org.example.knockin.repository.member.MemberRepository;
-import org.example.knockin.repository.member.row.MatchingListBasicInfoRow;
+import org.example.knockin.repository.member.row.MatchingBasicInfoRow;
 import org.example.knockin.repository.room.RoomOfferProfileRepository;
 import org.example.knockin.repository.room.RoomSeekerProfileRepository;
 import org.example.knockin.repository.room.row.MatchingOfferProfileRow;
@@ -34,7 +34,6 @@ import org.example.knockin.repository.room.row.MatchingSeekerRoomTypeRow;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -80,11 +79,11 @@ class RoommateMatchingServiceImplTest {
         LocalDate offerBirth = LocalDate.of(2000, 1, 1);
         LocalDate seekerBirth = LocalDate.of(1999, 5, 10);
 
-        when(memberRepository.findMatchingListBasicRow(List.of(99L, viewerId), 3))
+        when(memberRepository.findMatchingBasicRow(List.of(99L, viewerId), 3))
                 .thenReturn(List.of(
-                        new MatchingListBasicInfoRow(1L, "offer-profile.png", "오퍼", offerBirth, Gender.MALE, 101L, RoomProfileType.OFFER),
-                        new MatchingListBasicInfoRow(2L, "seeker-profile.png", "시커", seekerBirth, Gender.FEMALE, 102L, RoomProfileType.SEEKER),
-                        new MatchingListBasicInfoRow(3L, "next-profile.png", "다음", LocalDate.of(2001, 3, 3), Gender.MALE, 103L, RoomProfileType.OFFER)
+                        new MatchingBasicInfoRow(1L, "offer-profile.png", "오퍼", offerBirth, Gender.MALE, 101L, RoomProfileType.OFFER),
+                        new MatchingBasicInfoRow(2L, "seeker-profile.png", "시커", seekerBirth, Gender.FEMALE, 102L, RoomProfileType.SEEKER),
+                        new MatchingBasicInfoRow(3L, "next-profile.png", "다음", LocalDate.of(2001, 3, 3), Gender.MALE, 103L, RoomProfileType.OFFER)
                 ));
         when(roomOfferProfileRepository.findAllOfferProfileByMemberIdIn(List.of(1L, 2L)))
                 .thenReturn(List.of(new MatchingOfferProfileRow(1L, 500, 45, "역삼동", "강남구", "서울특별시", "원룸")));
@@ -139,7 +138,7 @@ class RoommateMatchingServiceImplTest {
         assertThat(seeker.getConditions()).extracting(MatchListDto.Condition::getName).containsExactly("소음");
         assertThat(seeker.getConditionWeights()).extracting(MatchListDto.ConditionWeight::getName).containsExactly("흡연");
 
-        verify(memberRepository).findMatchingListBasicRow(List.of(99L, viewerId), 3);
+        verify(memberRepository).findMatchingBasicRow(List.of(99L, viewerId), 3);
         verify(roomOfferProfileRepository).findAllOfferProfileByMemberIdIn(List.of(1L, 2L));
         verify(roomSeekerProfileRepository).findAllSeekerProfileByMemberIdIn(List.of(1L, 2L));
     }
@@ -151,7 +150,7 @@ class RoommateMatchingServiceImplTest {
         Long viewerId = 10L;
         MatchListDto.Request request = new MatchListDto.Request();
         request.setSize(20);
-        when(memberRepository.findMatchingListBasicRow(List.of(viewerId), 21)).thenReturn(List.of());
+        when(memberRepository.findMatchingBasicRow(List.of(viewerId), 21)).thenReturn(List.of());
 
         // When
         Slice<MatchListDto.Response> response = roommateMatchingService.findMatchingList(viewerId, request);
@@ -159,7 +158,7 @@ class RoommateMatchingServiceImplTest {
         // Then
         assertThat(response.getContent()).isEmpty();
         assertThat(response.hasNext()).isFalse();
-        verify(memberRepository).findMatchingListBasicRow(List.of(viewerId), 21);
+        verify(memberRepository).findMatchingBasicRow(List.of(viewerId), 21);
         verifyNoInteractions(
                 roomOfferProfileRepository,
                 roomSeekerProfileRepository,
@@ -177,8 +176,8 @@ class RoommateMatchingServiceImplTest {
         MatchListDto.Request request = new MatchListDto.Request();
         request.setSize(1);
 
-        when(memberRepository.findMatchingListBasicRow(List.of(), 2))
-                .thenReturn(List.of(new MatchingListBasicInfoRow(
+        when(memberRepository.findMatchingBasicRow(List.of(), 2))
+                .thenReturn(List.of(new MatchingBasicInfoRow(
                         1L,
                         "offer-profile.png",
                         "오퍼",

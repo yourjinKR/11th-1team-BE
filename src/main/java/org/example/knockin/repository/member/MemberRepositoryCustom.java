@@ -11,15 +11,7 @@ import org.example.knockin.entity.room.Region;
 import org.example.knockin.entity.room.RoomProfile;
 import org.example.knockin.entity.room.RoomSeekerProfile;
 import org.example.knockin.global.auth.dto.AuthResponse;
-import org.example.knockin.repository.member.row.MatchingListBasicInfoRow;
-
-import static org.example.knockin.entity.file.QBasicInformationFile.basicInformationFile;
-import static org.example.knockin.entity.file.QFile.file;
-import static org.example.knockin.entity.life.QLifePattern.lifePattern;
-import static org.example.knockin.entity.life.QLifePatternInformation.lifePatternInformation;
-import static org.example.knockin.entity.life.QMemberLifePattern.memberLifePattern;
-import static org.example.knockin.entity.member.QBasicInformation.basicInformation;
-import static org.example.knockin.entity.member.QMember.member;
+import org.example.knockin.repository.member.row.MatchingBasicInfoRow;
 
 public interface MemberRepositoryCustom {
     Optional<Member> findMemberByProvider(String providerId, LoginProviderType providerType);
@@ -33,5 +25,6 @@ public interface MemberRepositoryCustom {
     List<Region> findSeekerRegionEntities(RoomSeekerProfile seeker);
     List<MyPreferencesAllDto.Response.Lifestyle> findPreferenceLifeStyle(Member member);
     List<MyPreferencesAllDto.Response.Condition> findPreferenceCondition(Member member);
-    List<MatchingListBasicInfoRow> findMatchingListBasicRow(List<Long> excludeMemberIds, Integer size);
+    List<MatchingBasicInfoRow> findMatchingBasicRow(List<Long> excludeMemberIds, Integer size);
+    Optional<MatchingBasicInfoRow> findMatchingBasicRowById(Long memberId);
 }
