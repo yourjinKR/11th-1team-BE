@@ -5,7 +5,7 @@ import org.example.knockin.entity.member.Gender;
 import org.example.knockin.entity.room.RoomProfileType;
 import org.example.knockin.global.util.HasMemberId;
 
-public record MatchingListBasicInfoRow(
+public record MatchingBasicInfoRow(
         Long memberId,
         String memberProfileImageUrl,
         String memberName,

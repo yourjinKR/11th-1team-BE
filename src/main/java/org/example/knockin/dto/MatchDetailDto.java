@@ -1,11 +1,14 @@
 package org.example.knockin.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
-import org.example.knockin.entity.life.LifePatternType;
-import org.example.knockin.entity.room.RoomProfileType;
-import java.time.LocalDateTime;
 import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.example.knockin.entity.auth.AuthenticationType;
+import org.example.knockin.entity.member.Gender;
+import org.example.knockin.entity.room.RoomProfileType;
 
 @Data
 public class MatchDetailDto {
@@ -14,77 +17,51 @@ public class MatchDetailDto {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Response {
-        @Schema(description = "최소 보증금")
-        private Integer minDeposit;
-        @Schema(description = "최대 보증금")
-        private Integer maxDeposit;
-        @Schema(description = "보증금")
-        private Integer deposit;
-        @Schema(description = "최소 월세")
-        private Integer minMounthRent;
-        @Schema(description = "최대 월세")
-        private Integer maxMounthRent;
-        @Schema(description = "월세")
-        private Integer mounthRent;
+        @Schema(description = "고유 식별 ID")
+        private Long memberId;
+
+        @Schema(description = "프로필 사진 URL")
+        private String memberProfileImageUrl;
+
+        @Schema(description = "이름")
+        private String memberName;
+
+        @Schema(description = "나이")
+        private Integer memberAge;
+
+        @Schema(description = "성별")
+        private Gender gender;
+
+        @Schema(description = "좋아요 여부")
+        private Boolean isLike;
+
         @Schema(description = "방 프로필 타입")
         private RoomProfileType roomProfileType;
-        @Schema(description = "지역 ID")
-        private Long region;
-        @Schema(description = "방 옵션 목록")
-        private List<Long> roomOption;
-        @Schema(description = "입주 가능일")
-        private LocalDateTime comeableAt;
+
+        @Schema(description = "방 없어요 프로필 (SEEKER)")
+        private MatchListDto.SeekerProfile seekerProfile;
+
+        @Schema(description = "방 있어요 프로필 (OFFER)")
+        private MatchListDto.OfferProfile offerProfile;
+
         @Schema(description = "라이프스타일 목록")
-        private List<Lifestyle> lifeStyles;
-        @Schema(description = "선호도 목록")
-        private List<Preference> preferences;
+        private List<MatchListDto.Lifestyle> lifeStyles;
+
         @Schema(description = "조건 목록")
-        private List<Condition> conditions;
-        @Schema(description = "이름")
-        private String name;
-        @Schema(description = "학생 인증 여부")
-        private Boolean isAuthStudent;
-        @Schema(description = "직장인 인증 여부")
-        private Boolean isAuthEmployee;
-        @Schema(description = "적합도")
+        private List<MatchListDto.Condition> conditions;
+
+        @Schema(description = "중요 조건 목록")
+        private List<MatchListDto.ConditionWeight> conditionWeights;
+
+        @Schema(description = "승인된 신원 인증")
+        private List<AuthenticationType> authentications;
+
+        @Schema(description = "적합도 (TBD)")
         private Compatibility compatibility;
-
-        @Data
-        public static class Lifestyle {
-            @Schema(description = "고유 식별 ID")
-            private Long lifestyleId;
-            @Schema(description = "이름")
-            private String name;
-            @Schema(description = "값")
-            private String value;
-            @Schema(description = "설명")
-            private String description;
-            @Schema(description = "타입/유형")
-            private LifePatternType type;
-        }
-
-        @Data
-        public static class Preference {
-            @Schema(description = "고유 식별 ID")
-            private Long preferencesId;
-            @Schema(description = "이름")
-            private String name;
-            @Schema(description = "값")
-            private String value;
-            @Schema(description = "설명")
-            private String description;
-            @Schema(description = "타입/유형")
-            private LifePatternType type;
-        }
-
-        @Data
-        public static class Condition {
-            @Schema(description = "고유 식별 ID")
-            private Long conditionsId;
-            @Schema(description = "이름")
-            private String name;
-        }
 
         @Data
         public static class Compatibility {
