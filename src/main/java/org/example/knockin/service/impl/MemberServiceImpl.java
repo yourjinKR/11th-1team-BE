@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.DeleteUserDto;
 import org.example.knockin.dto.MyPreferencesAllDto;
 import org.example.knockin.dto.MyProfileAllDto;
+import org.example.knockin.entity.alarm.AlarmSetting;
+import org.example.knockin.entity.alarm.AlarmType;
 import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.MemberRole;
@@ -15,6 +17,7 @@ import org.example.knockin.global.auth.dto.OAuth2UserInfo;
 import org.example.knockin.global.auth.exception.AuthErrorCode;
 import org.example.knockin.global.auth.service.Oauth2DeleteFactory;
 import org.example.knockin.global.exception.BusinessException;
+import org.example.knockin.repository.alarm.AlarmSettingRepository;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.MemberRepository;
@@ -25,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,6 +41,7 @@ public class MemberServiceImpl {
     private final BasicInformationRepository basicInformationRepository;
     private final RoomProfileRepository roomProfileRepository;
     private final StateRepository stateRepository;
+    private final AlarmSettingRepository alarmSettingRepository;
 
     @Transactional
     public Member getOrSave(OAuth2UserInfo oAuth2UserInfo) {
@@ -50,8 +55,11 @@ public class MemberServiceImpl {
                             .isDelete(false)
                             .build();
 
-                    stateRepository.save(State.builder().states(MemberState.ACTIVE).member(newMember).build());
-                    return memberRepository.save(newMember);
+                    Member resultMember = memberRepository.save(newMember);
+                    List<AlarmSetting> alarmSettingList = Arrays.stream(AlarmType.values()).map(item -> AlarmSetting.builder().member(resultMember).isEnabled(true).alarmType(item).build()).toList();
+                    alarmSettingRepository.saveAll(alarmSettingList);
+                    stateRepository.save(State.builder().states(MemberState.ACTIVE).member(resultMember).build());
+                    return resultMember;
                 });
     }
 

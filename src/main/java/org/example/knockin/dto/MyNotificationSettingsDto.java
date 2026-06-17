@@ -1,5 +1,6 @@
 package org.example.knockin.dto;
 
+import lombok.Builder;
 import lombok.Data;
 import java.util.List;
 
@@ -10,10 +11,12 @@ public class MyNotificationSettingsDto {
     }
 
     @Data
+    @Builder
     public static class Response {
         private List<AlarmSettingItem> alarmsSettings;
 
         @Data
+        @Builder
         public static class AlarmSettingItem {
             private Long id;
             private String name;

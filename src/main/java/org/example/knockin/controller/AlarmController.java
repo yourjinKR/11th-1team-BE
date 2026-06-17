@@ -24,13 +24,13 @@ public class AlarmController {
     @PatchMapping("/{id}/read")
     @Operation(summary = "알림 읽음 처리")
     public CommonResponse<AlarmSettingDto.Response> modifyAlarmRead(@PathVariable Long id) {
-        return CommonResponse.status(HttpStatus.OK).body(new AlarmSettingDto.Response());
+        return CommonResponse.status(HttpStatus.OK).body(AlarmSettingDto.Response.builder().build());
     }
 
     @PatchMapping("/read-all")
     @Operation(summary = "알림 전체 읽음 처리")
     public CommonResponse<AlarmSettingDto.Response> modifyAllAlarmRead() {
-        return CommonResponse.status(HttpStatus.OK).body(new AlarmSettingDto.Response());
+        return CommonResponse.status(HttpStatus.OK).body(AlarmSettingDto.Response.builder().build());
     }
 }
 

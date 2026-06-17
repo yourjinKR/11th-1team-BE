@@ -7,6 +7,7 @@ import org.example.knockin.dto.*;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.global.auth.dto.PrincipalDetails;
 import org.example.knockin.service.impl.MemberServiceImpl;
+import org.example.knockin.service.impl.NotificationSettingServiceImpl;
 import org.example.knockin.service.impl.OnBoardingServiceImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final MemberServiceImpl memberService;
     private final OnBoardingServiceImpl onBoardingService;
+    private final NotificationSettingServiceImpl notificationSettingService;
 
     @DeleteMapping("")
     @Operation(summary = "회원 탈퇴")
@@ -145,14 +147,13 @@ public class UserController {
 
     @GetMapping("/notification-settings")
     @Operation(summary = "알림 설정 조회")
-    public CommonResponse<MyNotificationSettingsDto.Response> findAlaramSettingList() {
-        return CommonResponse.status(HttpStatus.OK).body(new MyNotificationSettingsDto.Response());
+    public CommonResponse<MyNotificationSettingsDto.Response> findAlaramSettingList(@AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(notificationSettingService.findAlaramSettingList(principalDetails.getMember().getId()));
     }
-
 
     @PatchMapping("/notification-settings")
     @Operation(summary = "알림 설정 수정")
-    public CommonResponse<AlarmSettingDto.Response> modifyAlaramSetting(@RequestBody AlarmSettingDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new AlarmSettingDto.Response());
+    public CommonResponse<AlarmSettingDto.Response> modifyAlaramSetting(@RequestBody AlarmSettingDto.Request request, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(notificationSettingService.modifyAlaramSetting(request, principalDetails.getMember().getId()));
     }
 }
