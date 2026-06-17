@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface AlarmSettingRepository extends JpaRepository<AlarmSetting, Long> {
     List<AlarmSetting> findByMember(Member member);
+
+    AlarmSetting findByIdAndMember(Long id, Member member);
 }

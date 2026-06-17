@@ -151,10 +151,9 @@ public class UserController {
         return CommonResponse.status(HttpStatus.OK).body(notificationSettingService.findAlaramSettingList(principalDetails.getMember().getId()));
     }
 
-
     @PatchMapping("/notification-settings")
     @Operation(summary = "알림 설정 수정")
-    public CommonResponse<AlarmSettingDto.Response> modifyAlaramSetting(@RequestBody AlarmSettingDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new AlarmSettingDto.Response());
+    public CommonResponse<AlarmSettingDto.Response> modifyAlaramSetting(@RequestBody AlarmSettingDto.Request request, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(notificationSettingService.modifyAlaramSetting(request, principalDetails.getMember().getId()));
     }
 }

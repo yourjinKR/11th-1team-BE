@@ -28,4 +28,8 @@ public class AlarmSetting {
 
     @Enumerated(EnumType.STRING)
     private AlarmType alarmType;
+
+    public void updateEnable(Boolean isEnabled) {
+        this.isEnabled = isEnabled;
+    }
 }
