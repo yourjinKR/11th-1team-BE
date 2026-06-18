@@ -9,6 +9,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.example.knockin.entity.member.Member;
@@ -17,6 +19,8 @@ import org.hibernate.annotations.ColumnDefault;
 
 @Getter
 @Entity
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "chat_room_member")
 public class ChatRoomMember {
@@ -36,4 +40,12 @@ public class ChatRoomMember {
     @ColumnDefault("false")
     @Column(name = "is_left", nullable = false)
     private Boolean isLeft;
+
+    public static ChatRoomMember of(ChattingRoom chattingRoom, Member member) {
+        return ChatRoomMember.builder()
+                .chattingRoom(chattingRoom)
+                .member(member)
+                .isLeft(false)
+                .build();
+    }
 }
