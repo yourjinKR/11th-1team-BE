@@ -3,9 +3,7 @@ package org.example.knockin.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.example.knockin.dto.AlarmListDto;
-import org.example.knockin.dto.AlarmSettingDto;
-import org.example.knockin.dto.AlarmSubscribeDto;
+import org.example.knockin.dto.*;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.global.auth.dto.PrincipalDetails;
 import org.example.knockin.service.impl.AlarmServiceImpl;
@@ -31,14 +29,14 @@ public class AlarmController {
 
     @PatchMapping("/{id}/read")
     @Operation(summary = "알림 읽음 처리")
-    public CommonResponse<AlarmSettingDto.Response> modifyAlarmRead(@PathVariable Long id) {
-        return CommonResponse.status(HttpStatus.OK).body(AlarmSettingDto.Response.builder().build());
+    public CommonResponse<AlarmReadDto.Response> modifyAlarmRead(@PathVariable Long id, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(alarmService.modifyAlarmRead(id, principalDetails.getMember().getId()));
     }
 
     @PatchMapping("/read-all")
     @Operation(summary = "알림 전체 읽음 처리")
-    public CommonResponse<AlarmSettingDto.Response> modifyAllAlarmRead() {
-        return CommonResponse.status(HttpStatus.OK).body(AlarmSettingDto.Response.builder().build());
+    public CommonResponse<AlarmReadAllDto.Response> modifyAllAlarmRead(@AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(alarmService.modifyAllAlarmRead(principalDetails.getMember().getId()));
     }
 
     @GetMapping("/subscribe")

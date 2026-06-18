@@ -2,6 +2,8 @@ package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.AlarmListDto;
+import org.example.knockin.dto.AlarmReadAllDto;
+import org.example.knockin.dto.AlarmReadDto;
 import org.example.knockin.dto.AlarmSendDto;
 import org.example.knockin.entity.alarm.Alarm;
 import org.example.knockin.entity.member.Member;
@@ -62,5 +64,21 @@ public class AlarmServiceImpl {
         List<AlarmListDto.Response.Alarm> alarmList = alarmRepository.findByMember(member, pageable).stream().map(item ->
                 AlarmListDto.Response.Alarm.builder().id(item.getId()).title(item.getTitle()).contents(item.getContents()).isRead(item.getIsRead()).expiredAt(item.getExpiredAt()).createAt(item.getCreatedAt()).build()).toList();
         return AlarmListDto.Response.builder().alarms(alarmList).build();
+    }
+
+    @Transactional
+    public AlarmReadDto.Response modifyAlarmRead(Long id, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+        Alarm alarm = alarmRepository.findByIdAndMember(id, member).orElseThrow(() -> new BusinessException(AlarmErrorCode.ALARM_NOT_FOUND));;
+        alarm.readAlarm();
+        return AlarmReadDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public AlarmReadAllDto.Response modifyAllAlarmRead(Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+        List<Alarm> alarmList = alarmRepository.findByMemberAndIsRead(member, false);
+        alarmList.forEach(Alarm::readAlarm);
+        return AlarmReadAllDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 }
