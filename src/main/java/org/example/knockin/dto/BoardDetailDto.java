@@ -75,6 +75,9 @@ public class BoardDetailDto {
         @Schema(description = "선호 룸메이트 중요 조건 목록")
         private List<ConditionWeight> conditionWeights;
 
+        @Schema(description = "등록자 고유 식별 ID")
+        private Long memberId;
+
         @Schema(description = "등록자 이름")
         private String memberName;
 

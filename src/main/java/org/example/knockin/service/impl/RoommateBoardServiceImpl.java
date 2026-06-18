@@ -279,6 +279,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
                 .lifeStyles(lifestyles)
                 .conditions(conditions)
                 .conditionWeights(conditionWeights)
+                .memberId(basicInfoRow.memberId())
                 .memberName(basicInfoRow.memberName())
                 .memberProfileImageUrl(basicInfoRow.memberProfileImageUrl())
                 .memberAge(memberAge)

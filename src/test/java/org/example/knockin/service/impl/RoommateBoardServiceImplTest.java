@@ -764,6 +764,7 @@ class RoommateBoardServiceImplTest {
         assertThat(response.getLifeStyles()).containsExactly(visitor, sleep);
         assertThat(response.getConditions()).isSameAs(conditions);
         assertThat(response.getConditionWeights()).isSameAs(conditionWeights);
+        assertThat(response.getMemberId()).isEqualTo(ownerId);
         assertThat(response.getMemberName()).isEqualTo("상세작성자");
         assertThat(response.getMemberProfileImageUrl()).isEqualTo("profile.jpg");
         assertThat(response.getMemberAge()).isEqualTo(Period.between(birth, LocalDate.now()).getYears());
