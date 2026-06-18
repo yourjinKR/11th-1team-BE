@@ -46,4 +46,8 @@ public class Alarm extends CreatedAtEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "type", length = 20, insertable = false, updatable = false)
     private AlarmType type;
+
+    public void readAlarm() {
+        this.isRead = true;
+    }
 }
