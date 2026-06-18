@@ -1,18 +1,12 @@
 package org.example.knockin.entity.alarm;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.jpa.CreatedAtEntity;
 import org.hibernate.annotations.ColumnDefault;
@@ -20,7 +14,11 @@ import org.hibernate.annotations.ColumnDefault;
 
 @Getter
 @Entity
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Inheritance(strategy = InheritanceType.JOINED)
+@DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.STRING)
+@DiscriminatorValue(AlarmType.Values.DEFUALT)
 @Table(name = "alarm")
 public class Alarm extends CreatedAtEntity {
     @Id
@@ -44,4 +42,8 @@ public class Alarm extends CreatedAtEntity {
 
     @Column(name = "expired_at", nullable = false)
     private LocalDateTime expiredAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", length = 20, insertable = false, updatable = false)
+    private AlarmType type;
 }
