@@ -2,20 +2,29 @@ package org.example.knockin.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.ChatRequestDetailDto;
 import org.example.knockin.dto.ChatRequestDto;
+import org.example.knockin.dto.ChatRequestDto.Response;
 import org.example.knockin.dto.ChatRequestListDto;
 import org.example.knockin.global.api.CommonResponse;
+import org.example.knockin.global.auth.dto.PrincipalDetails;
+import org.example.knockin.service.impl.ChatRequestServiceImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/chat-requests")
 @Tag(name = "5. 채팅 요청")
 public class ChatRequestController {
+    private final ChatRequestServiceImpl chatRequestService;
+
     @GetMapping("")
     @Operation(summary = "채팅 요청 목록 조회")
     public CommonResponse<ChatRequestListDto.Response> findChatRequestList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -30,8 +39,13 @@ public class ChatRequestController {
 
     @PostMapping("")
     @Operation(summary = "채팅 요청 저장")
-    public CommonResponse<ChatRequestDto.Response> saveChatRequest(@RequestBody ChatRequestDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new ChatRequestDto.Response());
+    public CommonResponse<ChatRequestDto.Response> saveChatRequest(
+            @AuthenticationPrincipal PrincipalDetails details,
+            @Valid @RequestBody ChatRequestDto.Request request
+    ) {
+        Long requesterId = details.getMember().getId();
+        Response response = chatRequestService.saveChatRequest(requesterId, request);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
 
