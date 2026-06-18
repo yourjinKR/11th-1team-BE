@@ -12,6 +12,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.ChatRoomListDto;
+import org.example.knockin.entity.chat.ChattingRequiredStatus;
 import org.example.knockin.entity.chat.QChatRoomMember;
 import org.example.knockin.entity.file.QBasicInformationFile;
 import org.example.knockin.entity.member.QBasicInformation;
@@ -37,7 +38,7 @@ public class ChattingRoomRepositoryImpl implements ChattingRoomRepositoryCustom 
                         basicInformation.name,
                         basicInformationFile.file.savedFileName,
                         chattingRoom.createdAt,
-                        chattingRoom.chattingRequired.isAgree
+                        chattingRoom.chattingRequired.status.eq(ChattingRequiredStatus.ACCEPTED)
                 ))
                 .from(chattingRoom)
                 .join(chattingRoom.chattingRequired, chattingRequired)

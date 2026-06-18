@@ -15,6 +15,7 @@ import org.example.knockin.dto.ChatRequestDto;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.chat.ChatRoomMember;
 import org.example.knockin.entity.chat.ChattingRequired;
+import org.example.knockin.entity.chat.ChattingRequiredStatus;
 import org.example.knockin.entity.chat.ChattingRoom;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.exception.BusinessException;
@@ -88,7 +89,7 @@ class ChatRequestServiceImplTest {
         assertThat(chattingRequired.getRequester()).isSameAs(requester);
         assertThat(chattingRequired.getRequestee()).isSameAs(requestee);
         assertThat(chattingRequired.getRoommateBoard()).isSameAs(roommateBoard);
-        assertThat(chattingRequired.getIsAgree()).isTrue();
+        assertThat(chattingRequired.getStatus()).isEqualTo(ChattingRequiredStatus.ACCEPTED);
 
         ArgumentCaptor<ChattingRoom> roomCaptor = ArgumentCaptor.forClass(ChattingRoom.class);
         verify(chattingRoomRepository).save(roomCaptor.capture());
@@ -138,7 +139,7 @@ class ChatRequestServiceImplTest {
         assertThat(chattingRequired.getRequester()).isSameAs(requester);
         assertThat(chattingRequired.getRequestee()).isSameAs(requestee);
         assertThat(chattingRequired.getRoommateBoard()).isNull();
-        assertThat(chattingRequired.getIsAgree()).isTrue();
+        assertThat(chattingRequired.getStatus()).isEqualTo(ChattingRequiredStatus.ACCEPTED);
         verifyNoInteractions(roommateBoardRepository);
         verify(chattingRoomRepository).save(any(ChattingRoom.class));
         verify(chatRoomMemberRepository).saveAll(any());
