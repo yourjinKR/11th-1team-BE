@@ -43,6 +43,7 @@ public class ChatRoomMember {
 
     public static ChatRoomMember of(ChattingRoom chattingRoom, Member member) {
         return ChatRoomMember.builder()
+                .id(new ChatRoomMemberId(chattingRoom.getId(), member.getId()))
                 .chattingRoom(chattingRoom)
                 .member(member)
                 .isLeft(false)
