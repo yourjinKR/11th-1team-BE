@@ -15,6 +15,7 @@ import org.example.knockin.dto.MatchDetailDto;
 import org.example.knockin.dto.MatchDto;
 import org.example.knockin.dto.MatchListDto;
 import org.example.knockin.dto.MatchScoreDto;
+import org.example.knockin.dto.MemberReportDto;
 import org.example.knockin.dto.ReportDto;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.global.auth.dto.PrincipalDetails;
@@ -166,13 +167,25 @@ public class RoomMateController {
     }
 
     @PostMapping("/matches/{memberId}/likes")
-    @Operation(summary = "게시글 찜하기")
+    @Operation(summary = "매칭 사용자 찜하기")
     public CommonResponse<MatchDto.Response> likeBoard(
             @AuthenticationPrincipal PrincipalDetails details,
             @PathVariable Long memberId
     ) {
         Long senderId = details.getMember().getId();
         MatchDto.Response response = roommateMatchingService.likeMatching(senderId, memberId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
+    }
+
+    @PostMapping("/matches/{memberId}/reports")
+    @Operation(summary = "매칭 사용자 신고")
+    public CommonResponse<MemberReportDto.Response> reportBoard(
+            @PathVariable Long memberId,
+            @Valid @RequestBody MemberReportDto.Request request,
+            @AuthenticationPrincipal PrincipalDetails details
+    ) {
+        Long reporterId = details.getMember().getId();
+        MemberReportDto.Response response = roommateMatchingService.reportMatching(reporterId, memberId, request);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 }

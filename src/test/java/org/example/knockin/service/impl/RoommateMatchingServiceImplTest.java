@@ -16,10 +16,12 @@ import java.util.Optional;
 import org.example.knockin.dto.MatchDetailDto;
 import org.example.knockin.dto.MatchDto;
 import org.example.knockin.dto.MatchListDto;
+import org.example.knockin.dto.MemberReportDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.life.LifePatternType;
 import org.example.knockin.entity.member.Gender;
 import org.example.knockin.entity.member.Member;
+import org.example.knockin.entity.member.MemberDeclaration;
 import org.example.knockin.entity.member.MemberInterest;
 import org.example.knockin.entity.room.RoomProfileType;
 import org.example.knockin.global.exception.BusinessException;
@@ -32,6 +34,7 @@ import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
 import org.example.knockin.repository.life.row.MatchingLifestyleRow;
 import org.example.knockin.repository.life.row.MatchingPreferenceConditionRow;
 import org.example.knockin.repository.life.row.MatchingPreferenceConditionWeightRow;
+import org.example.knockin.repository.member.MemberDeclarationRepository;
 import org.example.knockin.repository.member.MemberInterestRepository;
 import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.row.MatchingBasicInfoRow;
@@ -59,6 +62,9 @@ class RoommateMatchingServiceImplTest {
 
     @Mock
     private MemberInterestRepository memberInterestRepository;
+
+    @Mock
+    private MemberDeclarationRepository memberDeclarationRepository;
 
     @Mock
     private RoomSeekerProfileRepository roomSeekerProfileRepository;
@@ -195,6 +201,94 @@ class RoommateMatchingServiceImplTest {
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
         verifyNoInteractions(memberInterestRepository);
+    }
+
+    @Test
+    @DisplayName("신고 이력이 없으면 매칭 대상 회원 신고 사유를 저장한다")
+    void reportMatchingSavesDeclarationWhenNotExists() {
+        // Given
+        Long reporterId = 1L;
+        Long reportedId = 2L;
+        Member reporter = Member.builder().id(reporterId).build();
+        Member reported = Member.builder().id(reportedId).build();
+        MemberReportDto.Request request = new MemberReportDto.Request();
+        request.setContents("불쾌한 메시지를 반복해서 보냈습니다.");
+
+        when(memberRepository.findById(reporterId)).thenReturn(Optional.of(reporter));
+        when(memberRepository.findById(reportedId)).thenReturn(Optional.of(reported));
+        when(memberDeclarationRepository.existsByReporterAndReported(reporter, reported)).thenReturn(false);
+
+        // When
+        MemberReportDto.Response response = roommateMatchingService.reportMatching(reporterId, reportedId, request);
+
+        // Then
+        ArgumentCaptor<MemberDeclaration> declarationCaptor = ArgumentCaptor.forClass(MemberDeclaration.class);
+        verify(memberDeclarationRepository).save(declarationCaptor.capture());
+        MemberDeclaration declaration = declarationCaptor.getValue();
+        assertThat(declaration.getReporter()).isSameAs(reporter);
+        assertThat(declaration.getReported()).isSameAs(reported);
+        assertThat(declaration.getReason()).isEqualTo("불쾌한 메시지를 반복해서 보냈습니다.");
+        assertThat(response.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("이미 신고한 매칭 대상이면 중복 신고 예외를 던지고 신고를 저장하지 않는다")
+    void reportMatchingThrowsWhenDeclarationAlreadyExists() {
+        // Given
+        Long reporterId = 1L;
+        Long reportedId = 2L;
+        Member reporter = Member.builder().id(reporterId).build();
+        Member reported = Member.builder().id(reportedId).build();
+        MemberReportDto.Request request = new MemberReportDto.Request();
+        request.setContents("이미 신고한 회원입니다.");
+
+        when(memberRepository.findById(reporterId)).thenReturn(Optional.of(reporter));
+        when(memberRepository.findById(reportedId)).thenReturn(Optional.of(reported));
+        when(memberDeclarationRepository.existsByReporterAndReported(reporter, reported)).thenReturn(true);
+
+        // When & Then
+        assertThatThrownBy(() -> roommateMatchingService.reportMatching(reporterId, reportedId, request))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.DECLARATION_DUPLICATE));
+        verify(memberDeclarationRepository, never()).save(any(MemberDeclaration.class));
+    }
+
+    @Test
+    @DisplayName("신고하는 회원이 없으면 회원 없음 예외를 던지고 신고 대상과 신고 이력을 조회하지 않는다")
+    void reportMatchingThrowsWhenReporterDoesNotExist() {
+        // Given
+        Long reporterId = 1L;
+        Long reportedId = 2L;
+        MemberReportDto.Request request = new MemberReportDto.Request();
+        request.setContents("신고 사유입니다.");
+        when(memberRepository.findById(reporterId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> roommateMatchingService.reportMatching(reporterId, reportedId, request))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+        verify(memberRepository, never()).findById(reportedId);
+        verifyNoInteractions(memberDeclarationRepository);
+    }
+
+    @Test
+    @DisplayName("신고 대상 회원이 없으면 회원 없음 예외를 던지고 신고 이력을 조회하지 않는다")
+    void reportMatchingThrowsWhenReportedDoesNotExist() {
+        // Given
+        Long reporterId = 1L;
+        Long reportedId = 2L;
+        Member reporter = Member.builder().id(reporterId).build();
+        MemberReportDto.Request request = new MemberReportDto.Request();
+        request.setContents("신고 사유입니다.");
+
+        when(memberRepository.findById(reporterId)).thenReturn(Optional.of(reporter));
+        when(memberRepository.findById(reportedId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> roommateMatchingService.reportMatching(reporterId, reportedId, request))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+        verifyNoInteractions(memberDeclarationRepository);
     }
 
     @Test
