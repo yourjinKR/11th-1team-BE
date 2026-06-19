@@ -70,7 +70,8 @@ public class SecurityConfig {
                         "/v3/api-docs/**",
                         "/swagger-resources/**",
                         "/webjars/**",
-                        "/ws-chat/**"
+                        "/ws-chat/**",
+                        "/auth/verify/webhook"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET,
                                 "/terms",

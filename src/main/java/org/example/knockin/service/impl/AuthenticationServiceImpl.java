@@ -1,0 +1,115 @@
+package org.example.knockin.service.impl;
+
+import lombok.RequiredArgsConstructor;
+import org.example.knockin.dto.EmailConfirmDto;
+import org.example.knockin.dto.EmailSendDto;
+import org.example.knockin.entity.auth.Authentication;
+import org.example.knockin.entity.auth.AuthenticationType;
+import org.example.knockin.entity.member.Member;
+import org.example.knockin.global.exception.BusinessException;
+import org.example.knockin.global.exception.EmailErrorCode;
+import org.example.knockin.global.exception.MemberErrorCode;
+import org.example.knockin.repository.auth.AuthenticationRepository;
+import org.example.knockin.service.MailSendService;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.ObjectUtils;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+public class AuthenticationServiceImpl {
+    private final AuthenticationRepository authenticationRepository;
+    private final MemberServiceImpl memberService;
+    private final MailSendService mailSendService;
+    private final ResourceLoader resourceLoader;
+
+    private final String mailSubject = "[노크인] 신원 인증을 완료해 주세요.";
+    private final int validTime = 3;
+
+    public String mailWebHook(String payload, Map<String, String> headers) {
+        mailSendService.mailWebHook(payload, headers);
+        return "webhook success";
+    }
+
+    @Transactional
+    public EmailSendDto.Response sendAuthNumStudent(EmailSendDto.Request request, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+        String code = generateAuthCode();
+        String mailContent = loadMailTemplate(code);
+        Object result = mailSendService.mailSend(request.getEmail(), mailSubject, mailContent);
+        if(ObjectUtils.isEmpty(result)) throw new BusinessException(EmailErrorCode.EMAIL_SEND_ERROR);
+        authenticationRepository.findByMemberAndIsDeletedAndIsAcceptedAndType(member, false, false, AuthenticationType.STUDENT).forEach(Authentication::deleteAuthentication);
+        authenticationRepository.save(Authentication.builder().member(member).type(AuthenticationType.STUDENT).email(request.getEmail()).code(code).isAccepted(false).isDeleted(false).build());
+        return EmailSendDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public EmailSendDto.Response sendAuthNumCompany(EmailSendDto.Request request, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+        String code = generateAuthCode();
+        String mailContent = loadMailTemplate(code);
+        Object result = mailSendService.mailSend(request.getEmail(), mailSubject, mailContent);
+        if(ObjectUtils.isEmpty(result)) throw new BusinessException(EmailErrorCode.EMAIL_SEND_ERROR);
+        authenticationRepository.findByMemberAndIsDeletedAndIsAcceptedAndType(member, false, false, AuthenticationType.COMPANY).forEach(Authentication::deleteAuthentication);
+        authenticationRepository.save(Authentication.builder().member(member).type(AuthenticationType.COMPANY).email(request.getEmail()).code(code).isAccepted(false).isDeleted(false).build());
+        return EmailSendDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public EmailConfirmDto.Response confirmAuthNumStudent(EmailConfirmDto.Request request, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+        Authentication authentication = authenticationRepository.findFirstByMemberAndIsDeletedAndIsAcceptedAndTypeOrderByCreatedAtDesc(member, false, false, AuthenticationType.STUDENT).orElseThrow(() -> new BusinessException(EmailErrorCode.EMAIL_VALID_ERROR));
+
+        if (authentication.getCreatedAt().plusMinutes(validTime).isBefore(LocalDateTime.now())) {
+            throw new BusinessException(EmailErrorCode.EMAIL_VALID_ERROR);
+        }
+
+        if(authentication.getCode().equals(request.getAuthNo()) && authentication.getEmail().equals(request.getEmail())) {
+            authentication.acceptAuthentication();
+        } else {
+            throw new BusinessException(EmailErrorCode.EMAIL_VALID_ERROR);
+        }
+
+        return EmailConfirmDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public EmailConfirmDto.Response confirmAuthNumCompany(EmailConfirmDto.Request request, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+        Authentication authentication = authenticationRepository.findFirstByMemberAndIsDeletedAndIsAcceptedAndTypeOrderByCreatedAtDesc(member, false, false, AuthenticationType.COMPANY).orElseThrow(() -> new BusinessException(EmailErrorCode.EMAIL_VALID_ERROR));
+
+        if (authentication.getCreatedAt().plusMinutes(validTime).isBefore(LocalDateTime.now())) {
+            throw new BusinessException(EmailErrorCode.EMAIL_VALID_ERROR);
+        }
+
+        if(authentication.getCode().equals(request.getAuthNo()) && authentication.getEmail().equals(request.getEmail())) {
+            authentication.acceptAuthentication();
+        } else {
+            throw new BusinessException(EmailErrorCode.EMAIL_VALID_ERROR);
+        }
+
+        return EmailConfirmDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    private String generateAuthCode() {
+        return UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private String loadMailTemplate(String authToken) {
+        try {
+            Resource resource = resourceLoader.getResource("classpath:templates/mail/auth_template.html");
+            String template = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            return template.replace("${authToken}", authToken);
+        } catch (IOException e) {
+            throw new BusinessException(EmailErrorCode.EMAIL_TEMPLATE_LOAD_ERROR);
+        }
+    }
+}

@@ -11,9 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.jpa.CreatedAtEntity;
 import org.hibernate.annotations.ColumnDefault;
@@ -21,6 +19,8 @@ import org.hibernate.annotations.ColumnDefault;
 
 @Getter
 @Entity
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "authentication")
 public class Authentication extends CreatedAtEntity {
@@ -50,4 +50,12 @@ public class Authentication extends CreatedAtEntity {
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted;
+
+    public void deleteAuthentication() {
+        this.isDeleted = true;
+    }
+
+    public void acceptAuthentication() {
+        this.isAccepted = true;
+    }
 }
