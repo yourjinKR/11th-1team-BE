@@ -7,6 +7,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.ChatMessageDto;
 import org.example.knockin.dto.ChatRoomDto;
+import org.example.knockin.dto.ChatRoomImageDto;
 import org.example.knockin.dto.ChatRoomListDto;
 import org.example.knockin.dto.ChatRoomListDto.Response;
 import org.example.knockin.global.api.CommonResponse;
@@ -14,6 +15,7 @@ import org.example.knockin.global.auth.dto.PrincipalDetails;
 import org.example.knockin.global.auth.util.PrincipalMemberResolver;
 import org.example.knockin.service.impl.ChatServiceImpl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -22,7 +24,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/chats")
@@ -50,6 +54,18 @@ public class ChatController {
     ) {
         Long memberId = details.getMember().getId();
         ChatRoomDto.Response response = chatService.leaveChatRoom(memberId, chatId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
+    }
+
+    @PostMapping(value = "/{chatId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "채팅방 이미지 업로드")
+    public CommonResponse<ChatRoomImageDto.Response> uploadChatImage(
+            @PathVariable Long chatId,
+            @AuthenticationPrincipal PrincipalDetails details,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files
+    ) {
+        Long memberId = details.getMember().getId();
+        ChatRoomImageDto.Response response = chatService.uploadImageMessage(memberId, chatId, files);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
