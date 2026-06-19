@@ -49,4 +49,8 @@ public class ChatRoomMember {
                 .isLeft(false)
                 .build();
     }
+
+    public void left() {
+        isLeft = true;
+    }
 }

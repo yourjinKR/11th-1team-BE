@@ -6,6 +6,7 @@ import java.security.Principal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.ChatMessageDto;
+import org.example.knockin.dto.ChatRoomDto;
 import org.example.knockin.dto.ChatRoomListDto;
 import org.example.knockin.dto.ChatRoomListDto.Response;
 import org.example.knockin.global.api.CommonResponse;
@@ -17,6 +18,8 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,6 +40,17 @@ public class ChatController {
         return CommonResponse.status(HttpStatus.OK).body(responses);
     }
 
+    @PostMapping("/{chatId}/leave")
+    @Operation(summary = "채팅방 나가기")
+    public CommonResponse<ChatRoomDto.Response> leaveChatRoom(
+            @PathVariable Long chatId,
+            @AuthenticationPrincipal PrincipalDetails details
+    ) {
+        Long memberId = details.getMember().getId();
+        ChatRoomDto.Response response = chatService.leaveChatRoom(memberId, chatId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
+    }
+
 
     @MessageMapping("/chats/{chatId}/messages")
     @Operation(summary = "메시지 전송")
@@ -46,12 +60,6 @@ public class ChatController {
             Principal principal
     ) {
         chatService.sendMessage(chatId, request, principal);
-    }
-
-    @MessageMapping("/chats/{chatId}/leave")
-    @Operation(summary = "채팅방 나가기")
-    public void leaveChat(@DestinationVariable("chatId") Long chatId, Principal principal) {
-        chatService.leaveChat(chatId, principal);
     }
 }
 

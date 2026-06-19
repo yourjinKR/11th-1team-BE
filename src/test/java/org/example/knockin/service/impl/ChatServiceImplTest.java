@@ -9,11 +9,15 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.example.knockin.dto.ChatMessageDto;
+import org.example.knockin.dto.ChatRoomDto;
+import org.example.knockin.dto.ChatRoomLeftEvent;
 import org.example.knockin.dto.ChatRoomListDto;
 import org.example.knockin.dto.EventType;
 import org.example.knockin.dto.MessageType;
 import org.example.knockin.entity.auth.LoginProviderType;
+import org.example.knockin.entity.chat.ChatRoomMember;
 import org.example.knockin.entity.chat.ChattingRequiredStatus;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.MemberRole;
@@ -29,6 +33,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
@@ -44,6 +49,9 @@ class ChatServiceImplTest {
 
     @Mock
     private SimpMessageSendingOperations messagingTemplate;
+
+    @Mock
+    private ApplicationEventPublisher publisher;
 
     @InjectMocks
     private ChatServiceImpl chatService;
@@ -160,6 +168,73 @@ class ChatServiceImplTest {
         assertThatThrownBy(() -> chatService.sendMessage(10L, request, authentication(1L)))
                 .isInstanceOf(BusinessException.class);
         verifyNoInteractions(messagingTemplate);
+    }
+
+    @Test
+    @DisplayName("활성 채팅방 멤버가 채팅방을 나가면 나간 상태로 변경하고 퇴장 이벤트를 발행 요청한다")
+    void leaveChatRoomMarksMemberAsLeftAndPublishesUserLeftEvent() {
+        // Given
+        Long chatRoomId = 10L;
+        Long memberId = 1L;
+        ChatRoomMember roomMember = ChatRoomMember.builder()
+                .isLeft(false)
+                .build();
+        when(chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatRoomId, memberId))
+                .thenReturn(Optional.of(roomMember));
+
+        // When
+        ChatRoomDto.Response result = chatService.leaveChatRoom(memberId, chatRoomId);
+
+        // Then
+        assertThat(roomMember.getIsLeft()).isTrue();
+        assertThat(result.getUpdatedAt()).isNotNull();
+
+        ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(publisher).publishEvent(eventCaptor.capture());
+        verifyNoInteractions(messagingTemplate);
+
+        ChatRoomLeftEvent event = (ChatRoomLeftEvent) eventCaptor.getValue();
+        assertThat(event.memberId()).isEqualTo(memberId);
+        assertThat(event.chatRoomId()).isEqualTo(chatRoomId);
+        assertThat(event.leftAt()).isEqualTo(result.getUpdatedAt());
+    }
+
+    @Test
+    @DisplayName("채팅방 나가기 이벤트가 커밋된 후 퇴장 이벤트를 구독 채널로 발행한다")
+    void handleChatRoomLeftPublishesUserLeftEventToRoomDestination() {
+        // Given
+        Long chatRoomId = 10L;
+        Long memberId = 1L;
+        LocalDateTime leftAt = LocalDateTime.of(2026, 6, 19, 21, 50);
+        ChatRoomLeftEvent event = new ChatRoomLeftEvent(memberId, chatRoomId, leftAt);
+
+        // When
+        chatService.handleChatRoomLeft(event);
+
+        // Then
+        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(messagingTemplate).convertAndSend(eq("/sub/chats/10"), payloadCaptor.capture());
+
+        ChatMessageDto.Response response = (ChatMessageDto.Response) payloadCaptor.getValue();
+        assertThat(response.getEventType()).isEqualTo(EventType.USER_LEFT);
+        assertThat(response.getSenderId()).isEqualTo(memberId);
+        assertThat(response.getCreatedAt()).isEqualTo(leftAt);
+    }
+
+    @Test
+    @DisplayName("활성 채팅방 멤버가 아니면 채팅방 나가기를 거부하고 퇴장 이벤트를 발행하지 않는다")
+    void leaveChatRoomRejectsMemberWhoIsNotActiveRoomMember() {
+        // Given
+        Long chatRoomId = 10L;
+        Long memberId = 1L;
+        when(chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatRoomId, memberId))
+                .thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> chatService.leaveChatRoom(memberId, chatRoomId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(ChattingErrorCode.ROOM_MEMBER_NOT_FOUND));
+        verifyNoInteractions(publisher, messagingTemplate);
     }
 
     private ChatRoomListDto.Response chatRoom(
