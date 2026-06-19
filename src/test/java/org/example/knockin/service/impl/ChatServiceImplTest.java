@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.example.knockin.dto.ChatMessageDto;
 import org.example.knockin.dto.ChatRoomListDto;
+import org.example.knockin.dto.EventType;
+import org.example.knockin.dto.MessageType;
 import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.chat.ChattingRequiredStatus;
 import org.example.knockin.entity.member.Member;
@@ -95,7 +97,7 @@ class ChatServiceImplTest {
         Long chatId = 10L;
         ChatMessageDto.Request request = new ChatMessageDto.Request();
         request.setClientMessageId("client-message-id");
-        request.setType(ChatMessageDto.MessageType.TEXT);
+        request.setType(MessageType.TEXT);
         request.setMessage("안녕하세요");
 
         UsernamePasswordAuthenticationToken authentication = authentication(1L);
@@ -109,10 +111,10 @@ class ChatServiceImplTest {
         verify(messagingTemplate).convertAndSend(eq("/sub/chats/10"), payloadCaptor.capture());
 
         ChatMessageDto.Response response = (ChatMessageDto.Response) payloadCaptor.getValue();
-        assertThat(response.getEventType()).isEqualTo(ChatMessageDto.EventType.CHAT_MESSAGE);
+        assertThat(response.getEventType()).isEqualTo(EventType.CHAT_MESSAGE);
         assertThat(response.getClientMessageId()).isEqualTo("client-message-id");
         assertThat(response.getSenderId()).isEqualTo(1L);
-        assertThat(response.getType()).isEqualTo(ChatMessageDto.MessageType.TEXT);
+        assertThat(response.getType()).isEqualTo(MessageType.TEXT);
         assertThat(response.getMessage()).isEqualTo("안녕하세요");
         assertThat(response.getCreatedAt()).isNotNull();
     }
@@ -138,7 +140,7 @@ class ChatServiceImplTest {
         // Given
         ChatMessageDto.Request request = new ChatMessageDto.Request();
         request.setClientMessageId("client-message-id");
-        request.setType(ChatMessageDto.MessageType.TEXT);
+        request.setType(MessageType.TEXT);
 
         // When & Then
         assertThatThrownBy(() -> chatService.sendMessage(10L, request, authentication(1L)))
@@ -152,7 +154,7 @@ class ChatServiceImplTest {
         // Given
         ChatMessageDto.Request request = new ChatMessageDto.Request();
         request.setClientMessageId("client-message-id");
-        request.setType(ChatMessageDto.MessageType.IMAGE);
+        request.setType(MessageType.IMAGE);
 
         // When & Then
         assertThatThrownBy(() -> chatService.sendMessage(10L, request, authentication(1L)))
@@ -190,7 +192,7 @@ class ChatServiceImplTest {
     private ChatMessageDto.Request textMessageRequest() {
         ChatMessageDto.Request request = new ChatMessageDto.Request();
         request.setClientMessageId("client-message-id");
-        request.setType(ChatMessageDto.MessageType.TEXT);
+        request.setType(MessageType.TEXT);
         request.setMessage("안녕하세요");
         return request;
     }

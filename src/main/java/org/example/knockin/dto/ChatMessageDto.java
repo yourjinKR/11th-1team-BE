@@ -70,14 +70,4 @@ public class ChatMessageDto {
             );
         }
     }
-
-    public enum EventType {
-        CHAT_MESSAGE,
-        USER_LEFT
-    }
-
-    public enum MessageType {
-        TEXT,
-        IMAGE
-    }
 }

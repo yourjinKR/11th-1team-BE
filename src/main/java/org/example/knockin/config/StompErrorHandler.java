@@ -2,6 +2,7 @@ package org.example.knockin.config;
 
 import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.global.api.ErrorResponse;
 import org.example.knockin.global.auth.exception.AuthErrorCode;
 import org.example.knockin.global.auth.exception.AuthException;
@@ -46,21 +47,10 @@ public class StompErrorHandler extends StompSubProtocolErrorHandler {
 
     private byte[] writeErrorPayload(ErrorCode errorCode) {
         try {
-            StompErrorPayload payload = new StompErrorPayload(
-                    null,
-                    ErrorResponse.of(errorCode),
-                    errorCode.getHttpStatus().value()
-            );
+            CommonResponse<?> payload = CommonResponse.status(errorCode.getHttpStatus()).error(ErrorResponse.of(errorCode));
             return objectMapper.writeValueAsString(payload).getBytes(StandardCharsets.UTF_8);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to serialize STOMP error payload.", e);
         }
-    }
-
-    private record StompErrorPayload(
-            Object data,
-            ErrorResponse error,
-            int status
-    ) {
     }
 }
