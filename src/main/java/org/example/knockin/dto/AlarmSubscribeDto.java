@@ -1,5 +1,7 @@
 package org.example.knockin.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,6 +16,7 @@ public class AlarmSubscribeDto {
     @Data
     @Builder
     public static class Response {
+        @Schema(description = "sse emitter")
         private SseEmitter sseEmitter;
     }
 }

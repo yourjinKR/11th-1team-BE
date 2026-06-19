@@ -1,5 +1,7 @@
 package org.example.knockin.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,6 +18,7 @@ public class MetaLifestylePatternsDto {
     @Data
     @Builder
     public static class Response {
+        @Schema(description = "patterns")
         private List<PatternItem> patterns;
 
         @Data
@@ -23,9 +26,13 @@ public class MetaLifestylePatternsDto {
         @AllArgsConstructor
         @NoArgsConstructor
         public static class PatternItem {
+            @Schema(description = "고유 식별 ID")
             private Long id;
+            @Schema(description = "이름")
             private String name;
+            @Schema(description = "유형")
             private LifePatternType type;
+            @Schema(description = "details")
             private List<DetailItem> details;
 
             @Data
@@ -33,7 +40,9 @@ public class MetaLifestylePatternsDto {
             @AllArgsConstructor
             @NoArgsConstructor
             public static class DetailItem {
+                @Schema(description = "values")
                 private String values;
+                @Schema(description = "설명")
                 private String description;
             }
         }

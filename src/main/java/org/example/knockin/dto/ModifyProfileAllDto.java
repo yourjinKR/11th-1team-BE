@@ -1,5 +1,7 @@
 package org.example.knockin.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,29 +19,48 @@ public class ModifyProfileAllDto {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class Request {
+        @Schema(description = "이름")
         private String name;
+        @Schema(description = "birth")
         private LocalDate birth;
+        @Schema(description = "gender")
         private Gender gender;
+        @Schema(description = "이메일")
         private String email;
+        @Schema(description = "약관")
         private List<Long> terms;
+        @Schema(description = "lifestyles")
         private List<LifeStyleInfo> lifestyles;
+        @Schema(description = "유형")
         private RoomProfileType type;
+        @Schema(description = "min deposit")
         private Integer minDeposit;
+        @Schema(description = "max deposit")
         private Integer maxDeposit;
+        @Schema(description = "min mounth rent")
         private Integer minMounthRent;
+        @Schema(description = "max mounth rent")
         private Integer maxMounthRent;
+        @Schema(description = "come enable at")
         private LocalDateTime comeEnableAt;
+        @Schema(description = "region")
         private List<Long> region;
+        @Schema(description = "방 프로필")
         private List<Long> roomProfile;
+        @Schema(description = "deposit")
         private Integer deposit;
+        @Schema(description = "mounth rent")
         private Integer mounthRent;
+        @Schema(description = "is comeable at negotiable")
         private boolean isComeableAtNegotiable;
 
         @Data
         @AllArgsConstructor
         @NoArgsConstructor
         public static class LifeStyleInfo {
+            @Schema(description = "고유 식별 ID")
             private Long id;
+            @Schema(description = "라이프스타일 id")
             private Long lifestyleId;
         }
     }
@@ -47,6 +68,7 @@ public class ModifyProfileAllDto {
     @Data
     @Builder
     public static class Response {
+        @Schema(description = "수정 일시")
         private LocalDateTime updatedAt;
     }
 }

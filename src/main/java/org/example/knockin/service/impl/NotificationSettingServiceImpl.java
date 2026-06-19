@@ -18,7 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NotificationSettingServiceImpl {
     private final MemberServiceImpl memberService;
-    private AlarmSettingRepository alarmSettingRepository;
+    private final AlarmSettingRepository alarmSettingRepository;
 
     public MyNotificationSettingsDto.Response findAlaramSettingList(Long memberId) {
         Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));

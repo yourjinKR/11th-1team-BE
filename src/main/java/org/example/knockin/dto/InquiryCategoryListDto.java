@@ -1,5 +1,7 @@
 package org.example.knockin.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import lombok.Builder;
 import lombok.Data;
 import java.util.List;
@@ -13,12 +15,15 @@ public class InquiryCategoryListDto {
     @Data
     @Builder
     public static class Response {
+        @Schema(description = "inquirie categorys")
         private List<Category> inquirieCategorys;
 
         @Data
         @Builder
         public static class Category {
+            @Schema(description = "고유 식별 ID")
             private Long id;
+            @Schema(description = "이름")
             private String name;
         }
     }

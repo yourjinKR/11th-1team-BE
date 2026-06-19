@@ -1,5 +1,7 @@
 package org.example.knockin.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,6 +15,7 @@ public class EmailSendDto {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class Request {
+        @Schema(description = "이메일")
         private String email;
     }
 
@@ -21,6 +24,7 @@ public class EmailSendDto {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class Response {
+        @Schema(description = "수정 일시")
         private LocalDateTime updatedAt;
     }
 }
