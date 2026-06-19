@@ -109,6 +109,10 @@ public class TokenProvider {
         return claims.getExpiration().after(new Date());
     }
 
+    public Date getExpiration(String token) {
+        return parseClaims(token).getExpiration();
+    }
+
     private Claims parseClaims(String token) {
         try {
             return Jwts.parser().verifyWith(secretKey).build()
