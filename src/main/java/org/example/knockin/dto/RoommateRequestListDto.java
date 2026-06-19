@@ -2,6 +2,8 @@ package org.example.knockin.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import org.example.knockin.entity.room.RoommateRequiredStatus;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -26,8 +28,8 @@ public class RoommateRequestListDto {
             private LocalDateTime createAt;
             @Schema(description = "채팅방 ID")
             private Long chatRoomId;
-            @Schema(description = "수락 여부")
-            private Boolean isAgree;
+            @Schema(description = "룸메이트 요청 상태")
+            private RoommateRequiredStatus status;
         }
     }
 }

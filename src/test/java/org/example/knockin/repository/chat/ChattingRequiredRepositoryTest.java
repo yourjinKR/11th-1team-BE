@@ -6,6 +6,7 @@ import jakarta.persistence.EntityManager;
 import org.example.knockin.config.QueryDslConfig;
 import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.chat.ChattingRequired;
+import org.example.knockin.entity.chat.ChattingRequiredStatus;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.MemberRole;
 import org.junit.jupiter.api.DisplayName;
@@ -77,7 +78,7 @@ class ChattingRequiredRepositoryTest {
         ChattingRequired chattingRequired = ChattingRequired.builder()
                 .requester(requester)
                 .requestee(requestee)
-                .isAgree(true)
+                .status(ChattingRequiredStatus.ACCEPTED)
                 .build();
         entityManager.persist(chattingRequired);
         return chattingRequired;

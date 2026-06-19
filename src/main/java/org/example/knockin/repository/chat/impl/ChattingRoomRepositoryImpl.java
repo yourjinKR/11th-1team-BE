@@ -37,7 +37,7 @@ public class ChattingRoomRepositoryImpl implements ChattingRoomRepositoryCustom 
                         basicInformation.name,
                         basicInformationFile.file.savedFileName,
                         chattingRoom.createdAt,
-                        chattingRoom.chattingRequired.isAgree
+                        chattingRoom.chattingRequired.status
                 ))
                 .from(chattingRoom)
                 .join(chattingRoom.chattingRequired, chattingRequired)

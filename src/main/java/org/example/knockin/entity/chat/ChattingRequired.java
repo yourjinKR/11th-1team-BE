@@ -2,6 +2,8 @@ package org.example.knockin.entity.chat;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -43,6 +45,7 @@ public class ChattingRequired extends CreatedAtEntity {
     @JoinColumn(name = "roommate_board_id")
     private RoommateBoard roommateBoard;
 
-    @Column(name = "is_agree", nullable = false)
-    private Boolean isAgree;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private ChattingRequiredStatus status;
 }

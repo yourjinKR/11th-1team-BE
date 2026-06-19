@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import java.time.LocalDateTime;
 import lombok.NoArgsConstructor;
+import org.example.knockin.entity.chat.ChattingRequiredStatus;
 
 @Data
 public class ChatRoomListDto {
@@ -28,7 +29,7 @@ public class ChatRoomListDto {
         @Schema(description = "채팅방 생성 일자")
         private LocalDateTime createdAt;
 
-        @Schema(description = "채팅 요청 동의 여부")
-        private Boolean isAgree;
+        @Schema(description = "채팅 요청 상태")
+        private ChattingRequiredStatus status;
     }
 }

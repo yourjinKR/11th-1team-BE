@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.example.knockin.dto.ChatRoomListDto;
+import org.example.knockin.entity.chat.ChattingRequiredStatus;
 import org.example.knockin.repository.chat.ChattingRoomRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,8 +32,8 @@ class ChatServiceImplTest {
         // Given
         Long memberId = 1L;
         List<ChatRoomListDto.Response> chatRooms = List.of(
-                chatRoom(10L, "상대방A", "profile-a.jpg", LocalDateTime.of(2026, 6, 18, 10, 0), true),
-                chatRoom(20L, "상대방B", "profile-b.jpg", LocalDateTime.of(2026, 6, 18, 11, 0), false)
+                chatRoom(10L, "상대방A", "profile-a.jpg", LocalDateTime.of(2026, 6, 18, 10, 0), ChattingRequiredStatus.ACCEPTED),
+                chatRoom(20L, "상대방B", "profile-b.jpg", LocalDateTime.of(2026, 6, 18, 11, 0), ChattingRequiredStatus.PENDING)
         );
         when(chattingRoomRepository.findByMemberId(memberId)).thenReturn(chatRooms);
 
@@ -47,8 +48,8 @@ class ChatServiceImplTest {
                 .containsExactly("상대방A", "상대방B");
         assertThat(responses).extracting(ChatRoomListDto.Response::getMemberProfileImageUrl)
                 .containsExactly("profile-a.jpg", "profile-b.jpg");
-        assertThat(responses).extracting(ChatRoomListDto.Response::getIsAgree)
-                .containsExactly(true, false);
+        assertThat(responses).extracting(ChatRoomListDto.Response::getStatus)
+                .containsExactly(ChattingRequiredStatus.ACCEPTED, ChattingRequiredStatus.PENDING);
         verify(chattingRoomRepository).findByMemberId(memberId);
     }
 
@@ -72,14 +73,14 @@ class ChatServiceImplTest {
             String memberName,
             String memberProfileImageUrl,
             LocalDateTime createdAt,
-            Boolean isAgree
+            ChattingRequiredStatus status
     ) {
         ChatRoomListDto.Response response = new ChatRoomListDto.Response();
         response.setChatRoomId(chatRoomId);
         response.setMemberName(memberName);
         response.setMemberProfileImageUrl(memberProfileImageUrl);
         response.setCreatedAt(createdAt);
-        response.setIsAgree(isAgree);
+        response.setStatus(status);
         return response;
     }
 }

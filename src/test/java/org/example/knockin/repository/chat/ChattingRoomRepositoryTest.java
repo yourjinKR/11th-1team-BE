@@ -15,6 +15,7 @@ import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.chat.ChatRoomMember;
 import org.example.knockin.entity.chat.ChatRoomMemberId;
 import org.example.knockin.entity.chat.ChattingRequired;
+import org.example.knockin.entity.chat.ChattingRequiredStatus;
 import org.example.knockin.entity.chat.ChattingRoom;
 import org.example.knockin.entity.file.BasicInformationFile;
 import org.example.knockin.entity.file.File;
@@ -51,21 +52,27 @@ class ChattingRoomRepositoryTest {
         // Given
         Member viewer = persistMember("viewer");
         Member activeOpponent = persistMember("active-opponent");
+        Member pendingOpponent = persistMember("pending-opponent");
         Member leftOpponent = persistMember("left-opponent");
         Member unrelatedMember = persistMember("unrelated");
         persistBasicInformationWithProfile(activeOpponent, "상대회원", "opponent-profile.jpg");
+        persistBasicInformationWithProfile(pendingOpponent, "대기상대", "pending-profile.jpg");
         persistBasicInformationWithProfile(leftOpponent, "나간방상대", "left-profile.jpg");
         persistBasicInformationWithProfile(unrelatedMember, "무관회원", "unrelated-profile.jpg");
 
-        ChattingRoom activeRoom = persistChattingRoom(viewer, activeOpponent, true);
+        ChattingRoom activeRoom = persistChattingRoom(viewer, activeOpponent, ChattingRequiredStatus.ACCEPTED);
         persistChatRoomMember(activeRoom, viewer, false);
         persistChatRoomMember(activeRoom, activeOpponent, false);
 
-        ChattingRoom leftRoom = persistChattingRoom(viewer, leftOpponent, true);
+        ChattingRoom pendingRoom = persistChattingRoom(viewer, pendingOpponent, ChattingRequiredStatus.PENDING);
+        persistChatRoomMember(pendingRoom, viewer, false);
+        persistChatRoomMember(pendingRoom, pendingOpponent, false);
+
+        ChattingRoom leftRoom = persistChattingRoom(viewer, leftOpponent, ChattingRequiredStatus.ACCEPTED);
         persistChatRoomMember(leftRoom, viewer, true);
         persistChatRoomMember(leftRoom, leftOpponent, false);
 
-        ChattingRoom unrelatedRoom = persistChattingRoom(activeOpponent, unrelatedMember, false);
+        ChattingRoom unrelatedRoom = persistChattingRoom(activeOpponent, unrelatedMember, ChattingRequiredStatus.REJECTED);
         persistChatRoomMember(unrelatedRoom, activeOpponent, false);
         persistChatRoomMember(unrelatedRoom, unrelatedMember, false);
 
@@ -76,13 +83,18 @@ class ChattingRoomRepositoryTest {
         List<ChatRoomListDto.Response> responses = chattingRoomRepository.findByMemberId(viewer.getId());
 
         // Then
-        assertThat(responses).hasSize(1);
-        ChatRoomListDto.Response response = responses.getFirst();
-        assertThat(response.getChatRoomId()).isEqualTo(activeRoom.getId());
-        assertThat(response.getMemberName()).isEqualTo("상대회원");
-        assertThat(response.getMemberProfileImageUrl()).isEqualTo("opponent-profile.jpg");
-        assertThat(response.getCreatedAt()).isEqualTo(CHAT_ROOM_CREATED_AT);
-        assertThat(response.getIsAgree()).isTrue();
+        assertThat(responses).hasSize(2);
+        ChatRoomListDto.Response acceptedResponse = findResponseByChatRoomId(responses, activeRoom.getId());
+        assertThat(acceptedResponse.getMemberName()).isEqualTo("상대회원");
+        assertThat(acceptedResponse.getMemberProfileImageUrl()).isEqualTo("opponent-profile.jpg");
+        assertThat(acceptedResponse.getCreatedAt()).isEqualTo(CHAT_ROOM_CREATED_AT);
+        assertThat(acceptedResponse.getStatus()).isEqualTo(ChattingRequiredStatus.ACCEPTED);
+
+        ChatRoomListDto.Response pendingResponse = findResponseByChatRoomId(responses, pendingRoom.getId());
+        assertThat(pendingResponse.getMemberName()).isEqualTo("대기상대");
+        assertThat(pendingResponse.getMemberProfileImageUrl()).isEqualTo("pending-profile.jpg");
+        assertThat(pendingResponse.getCreatedAt()).isEqualTo(CHAT_ROOM_CREATED_AT);
+        assertThat(pendingResponse.getStatus()).isEqualTo(ChattingRequiredStatus.PENDING);
     }
 
     @Test
@@ -91,7 +103,7 @@ class ChattingRoomRepositoryTest {
         // Given
         Member viewer = persistMember("viewer-empty");
         Member opponent = persistMember("opponent-empty");
-        ChattingRoom room = persistChattingRoom(viewer, opponent, true);
+        ChattingRoom room = persistChattingRoom(viewer, opponent, ChattingRequiredStatus.ACCEPTED);
         persistChatRoomMember(room, viewer, true);
         persistChatRoomMember(room, opponent, false);
         entityManager.flush();
@@ -152,11 +164,18 @@ class ChattingRoomRepositoryTest {
         }
     }
 
-    private ChattingRoom persistChattingRoom(Member requester, Member requestee, Boolean isAgree) {
+    private ChatRoomListDto.Response findResponseByChatRoomId(List<ChatRoomListDto.Response> responses, Long chatRoomId) {
+        return responses.stream()
+                .filter(response -> response.getChatRoomId().equals(chatRoomId))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private ChattingRoom persistChattingRoom(Member requester, Member requestee, ChattingRequiredStatus status) {
         ChattingRequired chattingRequired = ChattingRequired.builder()
                 .requester(requester)
                 .requestee(requestee)
-                .isAgree(isAgree)
+                .status(status)
                 .build();
         entityManager.persist(chattingRequired);
 

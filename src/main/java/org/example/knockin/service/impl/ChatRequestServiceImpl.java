@@ -7,6 +7,7 @@ import org.example.knockin.dto.ChatRequestDto;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.chat.ChatRoomMember;
 import org.example.knockin.entity.chat.ChattingRequired;
+import org.example.knockin.entity.chat.ChattingRequiredStatus;
 import org.example.knockin.entity.chat.ChattingRoom;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.exception.BusinessException;
@@ -74,7 +75,7 @@ public class ChatRequestServiceImpl {
                 .requester(requester)
                 .requestee(requestee)
                 .roommateBoard(roommateBoard)
-                .isAgree(true)
+                .status(ChattingRequiredStatus.ACCEPTED)
                 .build();
 
         return chattingRequiredRepository.save(chattingRequired);

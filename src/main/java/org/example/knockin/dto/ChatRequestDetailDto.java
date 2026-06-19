@@ -2,6 +2,7 @@ package org.example.knockin.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import org.example.knockin.entity.chat.ChattingRequiredStatus;
 import org.example.knockin.entity.life.LifePatternType;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,8 +42,8 @@ public class ChatRequestDetailDto {
             private Integer score;
             @Schema(description = "날짜 및 시간")
             private LocalDateTime createAt;
-            @Schema(description = "수락 여부")
-            private Boolean isAgree;
+            @Schema(description = "채팅 요청 상태")
+            private ChattingRequiredStatus status;
         }
 
         @Data
