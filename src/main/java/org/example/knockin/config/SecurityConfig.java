@@ -85,7 +85,8 @@ public class SecurityConfig {
                                 "/roommate/matches",
                                 "/meta/faq",
                                 "/meta/faqAll",
-                                "/meta/faq/*"
+                                "/meta/faq/*",
+                                "/meta/app-version"
                 ).permitAll()
                 .requestMatchers("/bo/**").hasAuthority(MemberRole.ADMIN.name()).anyRequest().authenticated())
                 .build();

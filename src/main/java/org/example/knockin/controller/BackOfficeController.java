@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.*;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.global.auth.dto.PrincipalDetails;
+import org.example.knockin.service.impl.AppVersionServiceImpl;
 import org.example.knockin.service.impl.FaqServiceImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "10. 백오피스 [BO]")
 public class BackOfficeController {
     private final FaqServiceImpl faqService;
+    private final AppVersionServiceImpl appVersionService;
 
     @PostMapping("/terms")
     @Operation(summary = "약관 저장")
@@ -205,6 +207,24 @@ public class BackOfficeController {
     @Operation(summary = "자주묻는 질문 상세 조회")
     public CommonResponse<FaqDto.Response> findFaq(@PathVariable Long id) {
         return CommonResponse.status(HttpStatus.OK).body(faqService.findFaq(id));
+    }
+
+    @GetMapping("/app-version")
+    @Operation(summary = "현재 앱버전 조회")
+    public CommonResponse<AppVersionDto.Response> findAppVersion() {
+        return CommonResponse.status(HttpStatus.OK).body(appVersionService.findAppVersion());
+    }
+
+    @PostMapping("/app-version")
+    @Operation(summary = "앱버전 삽입")
+    public CommonResponse<AppVersionSaveDto.Response> saveAppVersion(@RequestBody AppVersionSaveDto.Request request) {
+        return CommonResponse.status(HttpStatus.OK).body(appVersionService.saveAppVersion(request));
+    }
+
+    @PutMapping("/app-version")
+    @Operation(summary = "앱버전 수정")
+    public CommonResponse<AppVersionModifyDto.Response> modifyAppVersion(@RequestBody AppVersionModifyDto.Request request) {
+        return CommonResponse.status(HttpStatus.OK).body(appVersionService.modifyAppVersion(request));
     }
 }
 

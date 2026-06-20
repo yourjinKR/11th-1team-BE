@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.*;
 import org.example.knockin.global.api.CommonResponse;
+import org.example.knockin.service.impl.AppVersionServiceImpl;
 import org.example.knockin.service.impl.FaqServiceImpl;
 import org.example.knockin.service.impl.MetaServiceImpl;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UtilsController {
     private final MetaServiceImpl metaService;
     private final FaqServiceImpl faqService;
+    private final AppVersionServiceImpl appVersionService;
 
     @GetMapping("/terms")
     @Operation(summary = "약관 목록 조회")
@@ -80,6 +82,12 @@ public class UtilsController {
     @Operation(summary = "자주묻는 질문 상세 조회")
     public CommonResponse<FaqDto.Response> findFaq(@PathVariable Long id) {
         return CommonResponse.status(HttpStatus.OK).body(faqService.findFaq(id));
+    }
+
+    @GetMapping("/meta/app-version")
+    @Operation(summary = "현재 앱버전 조회")
+    public CommonResponse<AppVersionDto.Response> findAppVersion() {
+        return CommonResponse.status(HttpStatus.OK).body(appVersionService.findAppVersion());
     }
 
     @GetMapping("/auth/success")

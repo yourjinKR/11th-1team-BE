@@ -20,4 +20,12 @@ public class AppVersion extends BaseEntity {
 
     @ColumnDefault(value = "false")
     private Boolean isDeleted;
+
+    public void deleteAppVersion() {
+        this.isDeleted = true;
+    }
+
+    public void modifyVersion(String version) {
+        this.version = version;
+    }
 }
