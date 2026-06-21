@@ -3,7 +3,6 @@ package org.example.knockin.repository.chat.impl;
 import static org.example.knockin.entity.chat.QChattingRequired.chattingRequired;
 import static org.example.knockin.entity.chat.QChattingRoom.chattingRoom;
 import static org.example.knockin.entity.chat.QChatRoomMessage.chatRoomMessage;
-import static org.example.knockin.entity.chat.QChatRoomFile.chatRoomFile;
 import static org.example.knockin.entity.file.QBasicInformationFile.basicInformationFile;
 import static org.example.knockin.entity.member.QBasicInformation.basicInformation;
 import static org.example.knockin.entity.member.QMember.member;

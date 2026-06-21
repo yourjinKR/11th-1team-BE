@@ -1,11 +1,14 @@
 package org.example.knockin.service.impl;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.ChatMessageDto;
 import org.example.knockin.dto.ChatRoomDto;
 import org.example.knockin.dto.ChatRoomDto.Response;
+import org.example.knockin.dto.ChatRoomImageDto;
 import org.example.knockin.dto.ChatRoomListDto;
 import org.example.knockin.dto.ChatRoomLeftEvent;
 import org.example.knockin.dto.ChatRoomMessageEvent;
@@ -30,12 +33,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
 public class ChatServiceImpl {
 
-    public static String IMAGE_MESSAGE_CONTENTS = "사진을 보냈습니다.";
+    private static final String IMAGE_MESSAGE_CONTENTS = "사진을 보냈습니다.";
+    private static final int MAX_IMAGE_UPLOAD_COUNT = 10;
 
     private final ChattingRoomRepository chattingRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
@@ -49,6 +54,32 @@ public class ChatServiceImpl {
 
     public List<ChatRoomListDto.Response> getChatRoomList(Long memberId) {
         return chattingRoomRepository.findByMemberId(memberId);
+    }
+
+    @Transactional
+    public ChatRoomImageDto.Response uploadImages(Long chatRoomId, Long memberId, List<MultipartFile> multipartFiles) {
+        validateImageFiles(multipartFiles);
+        chatRoomAccessService.checkCanSendMessage(chatRoomId, memberId);
+
+        List<File> uploadedFiles = new ArrayList<>();
+        try {
+            for (MultipartFile multipartFile : multipartFiles) {
+                File uploadedFile = fileService.upload(multipartFile, FileType.CHAT_ROOM_IMAGE);
+                File savedFile = fileRepository.save(uploadedFile);
+                uploadedFiles.add(savedFile);
+            }
+        } catch (IOException e) {
+            fileRepository.deleteAll(uploadedFiles);
+            throw new BusinessException(FileErrorCode.FILE_UPLOAD_FAILED);
+        } catch (RuntimeException e) {
+            fileRepository.deleteAll(uploadedFiles);
+            throw e;
+        }
+
+        List<String> imageUrls = uploadedFiles.stream()
+                .map(File::getSavedFileName)
+                .toList();
+        return new ChatRoomImageDto.Response(imageUrls);
     }
 
     @Transactional
@@ -153,6 +184,18 @@ public class ChatServiceImpl {
     private void validateImageMessage(ChatMessageDto.Request request) {
         if (!StringUtils.hasText(request.getImageUrl())) {
             throw new BusinessException(ChattingErrorCode.MESSAGE_PAYLOAD_INVALID);
+        }
+    }
+
+    private void validateImageFiles(List<MultipartFile> multipartFiles) {
+        if (multipartFiles == null || multipartFiles.isEmpty()) {
+            throw new BusinessException(FileErrorCode.FILE_EMPTY);
+        }
+        if (multipartFiles.size() > MAX_IMAGE_UPLOAD_COUNT) {
+            throw new BusinessException(FileErrorCode.FILE_COUNT_EXCEEDED);
+        }
+        if (multipartFiles.stream().anyMatch(file -> file == null || file.isEmpty())) {
+            throw new BusinessException(FileErrorCode.FILE_EMPTY);
         }
     }
 }

@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,7 +24,13 @@ import org.hibernate.annotations.ColumnDefault;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "chat_room_member")
+@Table(
+        name = "chat_room_member",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_chat_room_member_chatting_room_member",
+                columnNames = {"chatting_room_id", "member_id"}
+        )
+)
 public class ChatRoomMember {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

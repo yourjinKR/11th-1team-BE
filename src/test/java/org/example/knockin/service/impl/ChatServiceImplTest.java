@@ -2,36 +2,53 @@ package org.example.knockin.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import org.example.knockin.dto.ChatMessageDto;
 import org.example.knockin.dto.ChatRoomDto;
+import org.example.knockin.dto.ChatRoomImageDto;
 import org.example.knockin.dto.ChatRoomLeftEvent;
 import org.example.knockin.dto.ChatRoomListDto;
+import org.example.knockin.dto.ChatRoomMessageEvent;
 import org.example.knockin.dto.EventType;
 import org.example.knockin.dto.MessageType;
+import org.example.knockin.entity.chat.ChatRoomFile;
 import org.example.knockin.entity.chat.ChatRoomMember;
+import org.example.knockin.entity.chat.ChatRoomMessage;
 import org.example.knockin.entity.chat.ChattingRequiredStatus;
+import org.example.knockin.entity.file.File;
+import org.example.knockin.entity.file.FileType;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.ChattingErrorCode;
+import org.example.knockin.global.exception.FileErrorCode;
+import org.example.knockin.repository.chat.ChatRoomFileRepository;
 import org.example.knockin.repository.chat.ChatRoomMemberRepository;
+import org.example.knockin.repository.chat.ChatRoomMessageRepository;
 import org.example.knockin.repository.chat.ChattingRoomRepository;
+import org.example.knockin.repository.file.FileRepository;
+import org.example.knockin.service.FileService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
+import org.springframework.web.multipart.MultipartFile;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("채팅 서비스")
@@ -51,6 +68,18 @@ class ChatServiceImplTest {
 
     @Mock
     private ChatRoomAccessService chatRoomAccessService;
+
+    @Mock
+    private ChatRoomMessageRepository chatRoomMessageRepository;
+
+    @Mock
+    private FileService fileService;
+
+    @Mock
+    private FileRepository fileRepository;
+
+    @Mock
+    private ChatRoomFileRepository chatRoomFileRepository;
 
     @InjectMocks
     private ChatServiceImpl chatService;
@@ -98,20 +127,254 @@ class ChatServiceImplTest {
     }
 
     @Test
-    @DisplayName("메시지 전송 시 발신자 식별자로 채팅방 구독 채널에 발행한다")
-    void sendMessagePublishesChatMessageToRoomDestination() {
+    @DisplayName("채팅방 이미지 파일을 업로드하고 URL 목록을 반환한다")
+    void uploadImagesUploadsFilesAndReturnsUrls() throws IOException {
+        // Given
+        Long chatRoomId = 10L;
+        Long memberId = 1L;
+        MultipartFile firstMultipartFile = multipartFile(false);
+        MultipartFile secondMultipartFile = multipartFile(false);
+        File firstFile = chatImage("first.jpg");
+        File secondFile = chatImage("second.jpg");
+        when(fileService.upload(firstMultipartFile, FileType.CHAT_ROOM_IMAGE)).thenReturn(firstFile);
+        when(fileService.upload(secondMultipartFile, FileType.CHAT_ROOM_IMAGE)).thenReturn(secondFile);
+        when(fileRepository.save(firstFile)).thenReturn(firstFile);
+        when(fileRepository.save(secondFile)).thenReturn(secondFile);
+
+        // When
+        ChatRoomImageDto.Response response = chatService.uploadImages(
+                chatRoomId,
+                memberId,
+                List.of(firstMultipartFile, secondMultipartFile)
+        );
+
+        // Then
+        assertThat(response.getImageUrls()).containsExactly("first.jpg", "second.jpg");
+        InOrder inOrder = inOrder(chatRoomAccessService, fileService, fileRepository);
+        inOrder.verify(chatRoomAccessService).checkCanSendMessage(chatRoomId, memberId);
+        inOrder.verify(fileService).upload(firstMultipartFile, FileType.CHAT_ROOM_IMAGE);
+        inOrder.verify(fileRepository).save(firstFile);
+        inOrder.verify(fileService).upload(secondMultipartFile, FileType.CHAT_ROOM_IMAGE);
+        inOrder.verify(fileRepository).save(secondFile);
+    }
+
+    @Test
+    @DisplayName("채팅방 이미지 업로드 요청에 파일이 없으면 실패한다")
+    void uploadImagesRejectsEmptyFileList() {
+        assertThatThrownBy(() -> chatService.uploadImages(10L, 1L, List.of()))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(FileErrorCode.FILE_EMPTY));
+        verifyNoInteractions(chatRoomAccessService, fileService, fileRepository);
+    }
+
+    @Test
+    @DisplayName("채팅방 이미지 업로드 요청 파일 중 빈 파일이 있으면 실패한다")
+    void uploadImagesRejectsEmptyFile() {
+        // Given
+        MultipartFile emptyFile = multipartFile(true);
+
+        // When & Then
+        assertThatThrownBy(() -> chatService.uploadImages(10L, 1L, List.of(emptyFile)))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(FileErrorCode.FILE_EMPTY));
+        verifyNoInteractions(chatRoomAccessService, fileService, fileRepository);
+    }
+
+    @Test
+    @DisplayName("채팅방 이미지 업로드 요청 파일이 10개를 초과하면 실패한다")
+    void uploadImagesRejectsMoreThanTenFiles() {
+        // Given
+        List<MultipartFile> files = IntStream.range(0, 11)
+                .mapToObj(index -> mock(MultipartFile.class))
+                .toList();
+
+        // When & Then
+        assertThatThrownBy(() -> chatService.uploadImages(10L, 1L, files))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(FileErrorCode.FILE_COUNT_EXCEEDED));
+        verifyNoInteractions(chatRoomAccessService, fileService, fileRepository);
+    }
+
+    @Test
+    @DisplayName("채팅방 이미지 업로드 중 실패하면 이미 저장한 파일 DB 행을 정리한다")
+    void uploadImagesDeletesUploadedFileRowsWhenLaterUploadFails() throws IOException {
+        // Given
+        MultipartFile firstMultipartFile = multipartFile(false);
+        MultipartFile secondMultipartFile = multipartFile(false);
+        File firstFile = chatImage("first.jpg");
+        when(fileService.upload(firstMultipartFile, FileType.CHAT_ROOM_IMAGE)).thenReturn(firstFile);
+        when(fileRepository.save(firstFile)).thenReturn(firstFile);
+        when(fileService.upload(secondMultipartFile, FileType.CHAT_ROOM_IMAGE))
+                .thenThrow(new IOException("upload failed"));
+
+        // When & Then
+        assertThatThrownBy(() -> chatService.uploadImages(10L, 1L, List.of(firstMultipartFile, secondMultipartFile)))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(FileErrorCode.FILE_UPLOAD_FAILED));
+        verify(fileRepository).deleteAll(List.of(firstFile));
+    }
+
+    @Test
+    @DisplayName("텍스트 메시지 전송 시 메시지를 저장하고 커밋 후 발행할 이벤트를 등록한다")
+    void sendTextMessageSavesMessageAndPublishesEvent() {
         // Given
         Long chatId = 10L;
         Long senderId = 1L;
-        ChatMessageDto.Request request = new ChatMessageDto.Request();
-        request.setClientMessageId("client-message-id");
-        request.setType(MessageType.TEXT);
-        request.setMessage("안녕하세요");
+        ChatRoomMember roomMember = activeRoomMember();
+        ChatMessageDto.Request request = textMessageRequest();
+        when(chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatId, senderId))
+                .thenReturn(Optional.of(roomMember));
+        when(chatRoomMessageRepository.save(any(ChatRoomMessage.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
         // When
         chatService.sendMessage(chatId, request, senderId);
 
         // Then
-        verify(chatRoomAccessService).checkCanSendMessage(chatId, senderId);
+        ArgumentCaptor<ChatRoomMessage> messageCaptor = ArgumentCaptor.forClass(ChatRoomMessage.class);
+        verify(chatRoomMessageRepository).save(messageCaptor.capture());
+        assertThat(messageCaptor.getValue().getContents()).isEqualTo("안녕하세요");
+        assertThat(messageCaptor.getValue().getChatRoomMember()).isSameAs(roomMember);
+
+        ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(publisher).publishEvent(eventCaptor.capture());
+        ChatRoomMessageEvent event = (ChatRoomMessageEvent) eventCaptor.getValue();
+        assertThat(event.chatRoomId()).isEqualTo(chatId);
+        assertThat(event.senderId()).isEqualTo(senderId);
+        assertThat(event.clientMessageId()).isEqualTo("client-message-id");
+        assertThat(event.messageType()).isEqualTo(MessageType.TEXT);
+        assertThat(event.message()).isEqualTo("안녕하세요");
+        assertThat(event.imageUrl()).isNull();
+        verifyNoInteractions(messagingTemplate);
+    }
+
+    @Test
+    @DisplayName("이미지 메시지 전송 시 메시지와 파일 연결을 저장하고 커밋 후 발행할 이벤트를 등록한다")
+    void sendImageMessageSavesMessageFileAndPublishesEvent() {
+        // Given
+        Long chatId = 10L;
+        Long senderId = 1L;
+        ChatRoomMember roomMember = activeRoomMember();
+        ChatMessageDto.Request request = imageMessageRequest("chat-image.jpg");
+        File file = chatImage("chat-image.jpg");
+        ChatRoomMessage savedMessage = ChatRoomMessage.builder()
+                .contents("사진을 보냈습니다.")
+                .chatRoomMember(roomMember)
+                .build();
+        when(chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatId, senderId))
+                .thenReturn(Optional.of(roomMember));
+        when(fileRepository.findBySavedFileNameAndType("chat-image.jpg", FileType.CHAT_ROOM_IMAGE))
+                .thenReturn(Optional.of(file));
+        when(chatRoomMessageRepository.save(any(ChatRoomMessage.class))).thenReturn(savedMessage);
+        when(chatRoomFileRepository.save(any(ChatRoomFile.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        chatService.sendMessage(chatId, request, senderId);
+
+        // Then
+        ArgumentCaptor<ChatRoomMessage> messageCaptor = ArgumentCaptor.forClass(ChatRoomMessage.class);
+        verify(chatRoomMessageRepository).save(messageCaptor.capture());
+        assertThat(messageCaptor.getValue().getContents()).isEqualTo("사진을 보냈습니다.");
+        assertThat(messageCaptor.getValue().getChatRoomMember()).isSameAs(roomMember);
+
+        ArgumentCaptor<ChatRoomFile> chatRoomFileCaptor = ArgumentCaptor.forClass(ChatRoomFile.class);
+        verify(chatRoomFileRepository).save(chatRoomFileCaptor.capture());
+        assertThat(chatRoomFileCaptor.getValue().getFile()).isSameAs(file);
+        assertThat(chatRoomFileCaptor.getValue().getChatRoomMessage()).isSameAs(savedMessage);
+
+        ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(publisher).publishEvent(eventCaptor.capture());
+        ChatRoomMessageEvent event = (ChatRoomMessageEvent) eventCaptor.getValue();
+        assertThat(event.messageType()).isEqualTo(MessageType.IMAGE);
+        assertThat(event.imageUrl()).isEqualTo("chat-image.jpg");
+        verifyNoInteractions(messagingTemplate);
+    }
+
+    @Test
+    @DisplayName("이미지 메시지 URL과 일치하는 채팅방 이미지 파일이 없으면 실패한다")
+    void sendImageMessageRejectsUnknownImageUrl() {
+        // Given
+        Long chatId = 10L;
+        Long senderId = 1L;
+        ChatMessageDto.Request request = imageMessageRequest("unknown.jpg");
+        when(chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatId, senderId))
+                .thenReturn(Optional.of(activeRoomMember()));
+        when(fileRepository.findBySavedFileNameAndType("unknown.jpg", FileType.CHAT_ROOM_IMAGE))
+                .thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> chatService.sendMessage(chatId, request, senderId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(FileErrorCode.FILE_NOT_FOUND));
+        verifyNoInteractions(chatRoomMessageRepository, chatRoomFileRepository, publisher, messagingTemplate);
+    }
+
+    @Test
+    @DisplayName("채팅방에 참여 중인 멤버가 아니면 메시지를 저장하지 않는다")
+    void sendMessageRejectsMemberWhoIsNotActiveRoomMember() {
+        // Given
+        Long chatId = 10L;
+        Long senderId = 1L;
+        ChatMessageDto.Request request = textMessageRequest();
+        when(chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatId, senderId))
+                .thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> chatService.sendMessage(chatId, request, senderId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(ChattingErrorCode.ROOM_MEMBER_NOT_FOUND));
+        verifyNoInteractions(chatRoomMessageRepository, chatRoomFileRepository, publisher, messagingTemplate);
+    }
+
+    @Test
+    @DisplayName("텍스트 메시지 본문이 없으면 메시지를 저장하지 않는다")
+    void sendMessageRejectsTextMessageWithoutMessage() {
+        // Given
+        ChatMessageDto.Request request = new ChatMessageDto.Request();
+        request.setClientMessageId("client-message-id");
+        request.setType(MessageType.TEXT);
+
+        // When & Then
+        assertThatThrownBy(() -> chatService.sendMessage(10L, request, 1L))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(ChattingErrorCode.MESSAGE_PAYLOAD_INVALID));
+        verifyNoInteractions(chatRoomMemberRepository, chatRoomMessageRepository, messagingTemplate);
+    }
+
+    @Test
+    @DisplayName("이미지 메시지 URL이 없으면 메시지를 저장하지 않는다")
+    void sendMessageRejectsImageMessageWithoutImageUrl() {
+        // Given
+        ChatMessageDto.Request request = new ChatMessageDto.Request();
+        request.setClientMessageId("client-message-id");
+        request.setType(MessageType.IMAGE);
+
+        // When & Then
+        assertThatThrownBy(() -> chatService.sendMessage(10L, request, 1L))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(ChattingErrorCode.MESSAGE_PAYLOAD_INVALID));
+        verifyNoInteractions(chatRoomMemberRepository, chatRoomMessageRepository, messagingTemplate);
+    }
+
+    @Test
+    @DisplayName("메시지 전송 이벤트가 커밋된 후 채팅 메시지를 구독 채널로 발행한다")
+    void handleMessageSendPublishesChatMessageToRoomDestination() {
+        // Given
+        Long chatId = 10L;
+        Long senderId = 1L;
+        ChatRoomMessageEvent event = ChatRoomMessageEvent.builder()
+                .chatRoomId(chatId)
+                .senderId(senderId)
+                .clientMessageId("client-message-id")
+                .messageType(MessageType.TEXT)
+                .message("안녕하세요")
+                .build();
+
+        // When
+        chatService.handleMessageSend(event);
+
+        // Then
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
         verify(messagingTemplate).convertAndSend(eq("/sub/chats/10"), payloadCaptor.capture());
 
@@ -123,52 +386,6 @@ class ChatServiceImplTest {
         assertThat(response.getType()).isEqualTo(MessageType.TEXT);
         assertThat(response.getMessage()).isEqualTo("안녕하세요");
         assertThat(response.getCreatedAt()).isNotNull();
-    }
-
-    @Test
-    @DisplayName("채팅방에 참여 중인 멤버가 아니면 메시지를 발행하지 않는다")
-    void sendMessageRejectsMemberWhoIsNotActiveRoomMember() {
-        // Given
-        Long chatId = 10L;
-        Long senderId = 1L;
-        ChatMessageDto.Request request = textMessageRequest();
-        doThrow(new BusinessException(ChattingErrorCode.ROOM_MEMBER_NOT_FOUND))
-                .when(chatRoomAccessService)
-                .checkCanSendMessage(chatId, senderId);
-
-        // When & Then
-        assertThatThrownBy(() -> chatService.sendMessage(chatId, request, senderId))
-                .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(ChattingErrorCode.ROOM_MEMBER_NOT_FOUND));
-        verifyNoInteractions(messagingTemplate);
-    }
-
-    @Test
-    @DisplayName("텍스트 메시지 본문이 없으면 메시지를 발행하지 않는다")
-    void sendMessageRejectsTextMessageWithoutMessage() {
-        // Given
-        ChatMessageDto.Request request = new ChatMessageDto.Request();
-        request.setClientMessageId("client-message-id");
-        request.setType(MessageType.TEXT);
-
-        // When & Then
-        assertThatThrownBy(() -> chatService.sendMessage(10L, request, 1L))
-                .isInstanceOf(BusinessException.class);
-        verifyNoInteractions(chatRoomAccessService, messagingTemplate);
-    }
-
-    @Test
-    @DisplayName("이미지 메시지 URL이 없으면 메시지를 발행하지 않는다")
-    void sendMessageRejectsImageMessageWithoutImageUrl() {
-        // Given
-        ChatMessageDto.Request request = new ChatMessageDto.Request();
-        request.setClientMessageId("client-message-id");
-        request.setType(MessageType.IMAGE);
-
-        // When & Then
-        assertThatThrownBy(() -> chatService.sendMessage(10L, request, 1L))
-                .isInstanceOf(BusinessException.class);
-        verifyNoInteractions(chatRoomAccessService, messagingTemplate);
     }
 
     @Test
@@ -261,5 +478,35 @@ class ChatServiceImplTest {
         request.setType(MessageType.TEXT);
         request.setMessage("안녕하세요");
         return request;
+    }
+
+    private ChatMessageDto.Request imageMessageRequest(String imageUrl) {
+        ChatMessageDto.Request request = new ChatMessageDto.Request();
+        request.setClientMessageId("client-message-id");
+        request.setType(MessageType.IMAGE);
+        request.setImageUrl(imageUrl);
+        return request;
+    }
+
+    private ChatRoomMember activeRoomMember() {
+        return ChatRoomMember.builder()
+                .isLeft(false)
+                .build();
+    }
+
+    private File chatImage(String savedFileName) {
+        return File.builder()
+                .type(FileType.CHAT_ROOM_IMAGE)
+                .originalFileName(savedFileName)
+                .savedFileName(savedFileName)
+                .fileExt("jpg")
+                .isDeleted(false)
+                .build();
+    }
+
+    private MultipartFile multipartFile(boolean empty) {
+        MultipartFile multipartFile = mock(MultipartFile.class);
+        when(multipartFile.isEmpty()).thenReturn(empty);
+        return multipartFile;
     }
 }

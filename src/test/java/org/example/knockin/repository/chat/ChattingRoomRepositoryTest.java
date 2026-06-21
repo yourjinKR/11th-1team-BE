@@ -1,6 +1,7 @@
 package org.example.knockin.repository.chat;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import jakarta.persistence.EntityManager;
 import java.lang.reflect.Constructor;
@@ -13,6 +14,7 @@ import org.example.knockin.config.QueryDslConfig;
 import org.example.knockin.dto.ChatRoomListDto;
 import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.chat.ChatRoomMember;
+import org.example.knockin.entity.chat.ChatRoomMessage;
 import org.example.knockin.entity.chat.ChattingRequired;
 import org.example.knockin.entity.chat.ChattingRequiredStatus;
 import org.example.knockin.entity.chat.ChattingRoom;
@@ -88,12 +90,55 @@ class ChattingRoomRepositoryTest {
         assertThat(acceptedResponse.getMemberProfileImageUrl()).isEqualTo("opponent-profile.jpg");
         assertThat(acceptedResponse.getCreatedAt()).isEqualTo(CHAT_ROOM_CREATED_AT);
         assertThat(acceptedResponse.getStatus()).isEqualTo(ChattingRequiredStatus.ACCEPTED);
+        assertThat(acceptedResponse.getLastMessage()).isNull();
 
         ChatRoomListDto.Response pendingResponse = findResponseByChatRoomId(responses, pendingRoom.getId());
         assertThat(pendingResponse.getMemberName()).isEqualTo("대기상대");
         assertThat(pendingResponse.getMemberProfileImageUrl()).isEqualTo("pending-profile.jpg");
         assertThat(pendingResponse.getCreatedAt()).isEqualTo(CHAT_ROOM_CREATED_AT);
         assertThat(pendingResponse.getStatus()).isEqualTo(ChattingRequiredStatus.PENDING);
+        assertThat(pendingResponse.getLastMessage()).isNull();
+    }
+
+    @Test
+    @DisplayName("채팅방 목록은 해당 방의 마지막 메시지를 함께 반환한다")
+    void findByMemberIdReturnsLastMessage() {
+        // Given
+        Member viewer = persistMember("viewer-last-message");
+        Member opponent = persistMember("opponent-last-message");
+        persistBasicInformationWithProfile(opponent, "마지막메시지상대", "last-message-profile.jpg");
+        ChattingRoom room = persistChattingRoom(viewer, opponent, ChattingRequiredStatus.ACCEPTED);
+        ChatRoomMember viewerRoomMember = persistChatRoomMember(room, viewer, false);
+        ChatRoomMember opponentRoomMember = persistChatRoomMember(room, opponent, false);
+        persistChatRoomMessage(viewerRoomMember, "이전 메시지");
+        persistChatRoomMessage(opponentRoomMember, "최근 메시지");
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<ChatRoomListDto.Response> responses = chattingRoomRepository.findByMemberId(viewer.getId());
+
+        // Then
+        assertThat(responses).hasSize(1);
+        assertThat(responses.getFirst().getLastMessage()).isEqualTo("최근 메시지");
+    }
+
+    @Test
+    @DisplayName("같은 채팅방에는 같은 회원이 한 번만 참여할 수 있다")
+    void chatRoomMemberRejectsDuplicateRoomMember() {
+        // Given
+        Member viewer = persistMember("viewer-duplicate-room-member");
+        Member opponent = persistMember("opponent-duplicate-room-member");
+        ChattingRoom room = persistChattingRoom(viewer, opponent, ChattingRequiredStatus.ACCEPTED);
+        persistChatRoomMember(room, viewer, false);
+
+        // When & Then
+        assertThatThrownBy(() -> {
+            persistChatRoomMember(room, viewer, false);
+            entityManager.flush();
+            entityManager.clear();
+        }).isInstanceOf(RuntimeException.class);
     }
 
     @Test
@@ -198,5 +243,14 @@ class ChattingRoomRepositoryTest {
                 .build();
         entityManager.persist(chatRoomMember);
         return chatRoomMember;
+    }
+
+    private ChatRoomMessage persistChatRoomMessage(ChatRoomMember chatRoomMember, String contents) {
+        ChatRoomMessage chatRoomMessage = ChatRoomMessage.builder()
+                .chatRoomMember(chatRoomMember)
+                .contents(contents)
+                .build();
+        entityManager.persist(chatRoomMessage);
+        return chatRoomMessage;
     }
 }
