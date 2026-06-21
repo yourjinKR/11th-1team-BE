@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.IntStream;
 import org.example.knockin.dto.ChatMessageDto;
 import org.example.knockin.dto.ChatRoomDto;
 import org.example.knockin.dto.ChatRoomImageDto;
@@ -127,91 +126,66 @@ class ChatServiceImplTest {
     }
 
     @Test
-    @DisplayName("채팅방 이미지 파일을 업로드하고 URL 목록을 반환한다")
-    void uploadImagesUploadsFilesAndReturnsUrls() throws IOException {
+    @DisplayName("채팅방 이미지 파일을 업로드하고 URL을 반환한다")
+    void uploadImageUploadsFileAndReturnsUrl() throws IOException {
         // Given
         Long chatRoomId = 10L;
         Long memberId = 1L;
-        MultipartFile firstMultipartFile = multipartFile(false);
-        MultipartFile secondMultipartFile = multipartFile(false);
-        File firstFile = chatImage("first.jpg");
-        File secondFile = chatImage("second.jpg");
-        when(fileService.upload(firstMultipartFile, FileType.CHAT_ROOM_IMAGE)).thenReturn(firstFile);
-        when(fileService.upload(secondMultipartFile, FileType.CHAT_ROOM_IMAGE)).thenReturn(secondFile);
-        when(fileRepository.save(firstFile)).thenReturn(firstFile);
-        when(fileRepository.save(secondFile)).thenReturn(secondFile);
+        MultipartFile multipartFile = multipartFile(false);
+        File file = chatImage("chat-image.jpg");
+        when(fileService.upload(multipartFile, FileType.CHAT_ROOM_IMAGE)).thenReturn(file);
+        when(fileRepository.save(file)).thenReturn(file);
 
         // When
-        ChatRoomImageDto.Response response = chatService.uploadImages(
+        ChatRoomImageDto.Response response = chatService.uploadImage(
                 chatRoomId,
                 memberId,
-                List.of(firstMultipartFile, secondMultipartFile)
+                multipartFile
         );
 
         // Then
-        assertThat(response.getImageUrls()).containsExactly("first.jpg", "second.jpg");
+        assertThat(response.getImageUrl()).isEqualTo("chat-image.jpg");
         InOrder inOrder = inOrder(chatRoomAccessService, fileService, fileRepository);
         inOrder.verify(chatRoomAccessService).checkCanSendMessage(chatRoomId, memberId);
-        inOrder.verify(fileService).upload(firstMultipartFile, FileType.CHAT_ROOM_IMAGE);
-        inOrder.verify(fileRepository).save(firstFile);
-        inOrder.verify(fileService).upload(secondMultipartFile, FileType.CHAT_ROOM_IMAGE);
-        inOrder.verify(fileRepository).save(secondFile);
+        inOrder.verify(fileService).upload(multipartFile, FileType.CHAT_ROOM_IMAGE);
+        inOrder.verify(fileRepository).save(file);
     }
 
     @Test
     @DisplayName("채팅방 이미지 업로드 요청에 파일이 없으면 실패한다")
-    void uploadImagesRejectsEmptyFileList() {
-        assertThatThrownBy(() -> chatService.uploadImages(10L, 1L, List.of()))
+    void uploadImageRejectsNullFile() {
+        assertThatThrownBy(() -> chatService.uploadImage(10L, 1L, null))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(FileErrorCode.FILE_EMPTY));
         verifyNoInteractions(chatRoomAccessService, fileService, fileRepository);
     }
 
     @Test
-    @DisplayName("채팅방 이미지 업로드 요청 파일 중 빈 파일이 있으면 실패한다")
-    void uploadImagesRejectsEmptyFile() {
+    @DisplayName("채팅방 이미지 업로드 요청 파일이 비어 있으면 실패한다")
+    void uploadImageRejectsEmptyFile() {
         // Given
         MultipartFile emptyFile = multipartFile(true);
 
         // When & Then
-        assertThatThrownBy(() -> chatService.uploadImages(10L, 1L, List.of(emptyFile)))
+        assertThatThrownBy(() -> chatService.uploadImage(10L, 1L, emptyFile))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(FileErrorCode.FILE_EMPTY));
         verifyNoInteractions(chatRoomAccessService, fileService, fileRepository);
     }
 
     @Test
-    @DisplayName("채팅방 이미지 업로드 요청 파일이 10개를 초과하면 실패한다")
-    void uploadImagesRejectsMoreThanTenFiles() {
+    @DisplayName("채팅방 이미지 업로드 중 실패하면 업로드 실패 예외를 던진다")
+    void uploadImageThrowsWhenFileUploadFails() throws IOException {
         // Given
-        List<MultipartFile> files = IntStream.range(0, 11)
-                .mapToObj(index -> mock(MultipartFile.class))
-                .toList();
-
-        // When & Then
-        assertThatThrownBy(() -> chatService.uploadImages(10L, 1L, files))
-                .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(FileErrorCode.FILE_COUNT_EXCEEDED));
-        verifyNoInteractions(chatRoomAccessService, fileService, fileRepository);
-    }
-
-    @Test
-    @DisplayName("채팅방 이미지 업로드 중 실패하면 이미 저장한 파일 DB 행을 정리한다")
-    void uploadImagesDeletesUploadedFileRowsWhenLaterUploadFails() throws IOException {
-        // Given
-        MultipartFile firstMultipartFile = multipartFile(false);
-        MultipartFile secondMultipartFile = multipartFile(false);
-        File firstFile = chatImage("first.jpg");
-        when(fileService.upload(firstMultipartFile, FileType.CHAT_ROOM_IMAGE)).thenReturn(firstFile);
-        when(fileRepository.save(firstFile)).thenReturn(firstFile);
-        when(fileService.upload(secondMultipartFile, FileType.CHAT_ROOM_IMAGE))
+        MultipartFile multipartFile = multipartFile(false);
+        when(fileService.upload(multipartFile, FileType.CHAT_ROOM_IMAGE))
                 .thenThrow(new IOException("upload failed"));
 
         // When & Then
-        assertThatThrownBy(() -> chatService.uploadImages(10L, 1L, List.of(firstMultipartFile, secondMultipartFile)))
+        assertThatThrownBy(() -> chatService.uploadImage(10L, 1L, multipartFile))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(FileErrorCode.FILE_UPLOAD_FAILED));
-        verify(fileRepository).deleteAll(List.of(firstFile));
+        verifyNoInteractions(fileRepository);
     }
 
     @Test

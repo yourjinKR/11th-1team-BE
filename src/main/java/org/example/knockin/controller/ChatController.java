@@ -59,13 +59,13 @@ public class ChatController {
 
     @PostMapping(value = "/{chatId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "채팅방 이미지 업로드")
-    public CommonResponse<ChatRoomImageDto.Response> uploadImages(
+    public CommonResponse<ChatRoomImageDto.Response> uploadImage(
             @PathVariable Long chatId,
-            @RequestPart(value = "files", required = false) List<MultipartFile> files,
+            @RequestPart(value = "file", required = false) MultipartFile file,
             @AuthenticationPrincipal PrincipalDetails details
     ) {
         Long memberId = details.getMember().getId();
-        ChatRoomImageDto.Response response = chatService.uploadImages(chatId, memberId, files);
+        ChatRoomImageDto.Response response = chatService.uploadImage(chatId, memberId, file);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 

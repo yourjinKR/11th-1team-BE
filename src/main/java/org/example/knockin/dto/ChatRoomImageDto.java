@@ -1,7 +1,6 @@
 package org.example.knockin.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,7 +14,7 @@ public class ChatRoomImageDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Response {
-        @Schema(description = "이미지 URL 목록")
-        private List<String> imageUrls;
+        @Schema(description = "이미지 URL")
+        private String imageUrl;
     }
 }

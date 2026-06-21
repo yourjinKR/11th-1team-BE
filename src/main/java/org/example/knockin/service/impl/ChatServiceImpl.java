@@ -2,7 +2,6 @@ package org.example.knockin.service.impl;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.ChatMessageDto;
@@ -40,7 +39,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class ChatServiceImpl {
 
     private static final String IMAGE_MESSAGE_CONTENTS = "사진을 보냈습니다.";
-    private static final int MAX_IMAGE_UPLOAD_COUNT = 10;
 
     private final ChattingRoomRepository chattingRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
@@ -57,29 +55,17 @@ public class ChatServiceImpl {
     }
 
     @Transactional
-    public ChatRoomImageDto.Response uploadImages(Long chatRoomId, Long memberId, List<MultipartFile> multipartFiles) {
-        validateImageFiles(multipartFiles);
+    public ChatRoomImageDto.Response uploadImage(Long chatRoomId, Long memberId, MultipartFile multipartFile) {
+        validateImageFile(multipartFile);
         chatRoomAccessService.checkCanSendMessage(chatRoomId, memberId);
 
-        List<File> uploadedFiles = new ArrayList<>();
         try {
-            for (MultipartFile multipartFile : multipartFiles) {
-                File uploadedFile = fileService.upload(multipartFile, FileType.CHAT_ROOM_IMAGE);
-                File savedFile = fileRepository.save(uploadedFile);
-                uploadedFiles.add(savedFile);
-            }
+            File uploadedFile = fileService.upload(multipartFile, FileType.CHAT_ROOM_IMAGE);
+            File savedFile = fileRepository.save(uploadedFile);
+            return new ChatRoomImageDto.Response(savedFile.getSavedFileName());
         } catch (IOException e) {
-            fileRepository.deleteAll(uploadedFiles);
             throw new BusinessException(FileErrorCode.FILE_UPLOAD_FAILED);
-        } catch (RuntimeException e) {
-            fileRepository.deleteAll(uploadedFiles);
-            throw e;
         }
-
-        List<String> imageUrls = uploadedFiles.stream()
-                .map(File::getSavedFileName)
-                .toList();
-        return new ChatRoomImageDto.Response(imageUrls);
     }
 
     @Transactional
@@ -187,14 +173,8 @@ public class ChatServiceImpl {
         }
     }
 
-    private void validateImageFiles(List<MultipartFile> multipartFiles) {
-        if (multipartFiles == null || multipartFiles.isEmpty()) {
-            throw new BusinessException(FileErrorCode.FILE_EMPTY);
-        }
-        if (multipartFiles.size() > MAX_IMAGE_UPLOAD_COUNT) {
-            throw new BusinessException(FileErrorCode.FILE_COUNT_EXCEEDED);
-        }
-        if (multipartFiles.stream().anyMatch(file -> file == null || file.isEmpty())) {
+    private void validateImageFile(MultipartFile multipartFile) {
+        if (multipartFile == null || multipartFile.isEmpty()) {
             throw new BusinessException(FileErrorCode.FILE_EMPTY);
         }
     }
