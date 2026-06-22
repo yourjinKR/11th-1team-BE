@@ -63,31 +63,31 @@ public class BackOfficeController {
     @PostMapping("/room-types")
     @Operation(summary = "방 유형 저장")
     public CommonResponse<BoRoomTypeDto.Response> saveRoomType(@RequestBody BoRoomTypeDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoRoomTypeDto.Response());
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.saveRoomType(request));
     }
 
     @GetMapping("/room-types")
     @Operation(summary = "방 유형 목록 조회")
     public CommonResponse<BoRoomTypeListDto.Response> findRoomTypeList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoRoomTypeListDto.Response());
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findRoomTypeList(pageable));
     }
 
     @PutMapping("/room-types/{id}")
     @Operation(summary = "방 유형 수정")
     public CommonResponse<BoRoomTypeDto.Response> modifyRoomType(@PathVariable Long id, @RequestBody BoRoomTypeDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoRoomTypeDto.Response());
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.modifyRoomType(request, id));
     }
 
     @DeleteMapping("/room-types/{id}")
     @Operation(summary = "방 유형 삭제")
     public CommonResponse<BoRoomTypeDto.Response> deleteRoomType(@PathVariable Long id) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoRoomTypeDto.Response());
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.deleteRoomType(id));
     }
 
     @GetMapping("/room-types/{id}")
     @Operation(summary = "방 유형 상세 조회")
     public CommonResponse<BoRoomTypeDetailDto.Response> findRoomType(@PathVariable Long id) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoRoomTypeDetailDto.Response());
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findRoomType(id));
     }
 
     @GetMapping("/lifestyle-patterns")

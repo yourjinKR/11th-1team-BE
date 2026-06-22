@@ -1,14 +1,12 @@
 package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.example.knockin.dto.BoTermsDetailDto;
-import org.example.knockin.dto.BoTermsDto;
-import org.example.knockin.dto.BoTermsListDto;
+import org.example.knockin.dto.*;
 import org.example.knockin.entity.agreement.Agreement;
+import org.example.knockin.entity.room.RoomType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,6 +15,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BackOfficeServiceImpl {
     private final AgreementServiceImpl agreementService;
+    private final RoomTypeServiceImpl roomTypeService;
 
     @Transactional
     public BoTermsDto.Response saveTerms(BoTermsDto.Request request) {
@@ -51,5 +50,34 @@ public class BackOfficeServiceImpl {
     public BoTermsDto.Response modifyLastTerms(BoTermsDto.Request request, Long termsId) {
         agreementService.modifyAgreement(Agreement.builder().title(request.getTitle()).contents(request.getContents()).isRequired(request.getIsRequired()).build(), termsId);
         return BoTermsDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public BoRoomTypeDto.Response saveRoomType(BoRoomTypeDto.Request request) {
+        roomTypeService.saveRoomType(RoomType.builder().name(request.getName()).build());
+        return BoRoomTypeDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    public BoRoomTypeListDto.Response findRoomTypeList(Pageable pageable) {
+        List<BoRoomTypeListDto.Response.RoomTypeItem> roomTypeItemList = roomTypeService.findRoomTypeList(pageable).stream().map(item ->
+                BoRoomTypeListDto.Response.RoomTypeItem.builder().id(item.getId()).name(item.getName()).build()).toList();
+        return BoRoomTypeListDto.Response.builder().roomType(roomTypeItemList).build();
+    }
+
+    @Transactional
+    public BoRoomTypeDto.Response modifyRoomType(BoRoomTypeDto.Request request, Long roomTypeId) {
+        roomTypeService.modifyRoomType(RoomType.builder().name(request.getName()).build(), roomTypeId);
+        return BoRoomTypeDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public BoRoomTypeDto.Response deleteRoomType(Long roomTypeId) {
+        roomTypeService.deleteRoomType(roomTypeId);
+        return BoRoomTypeDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    public BoRoomTypeDetailDto.Response findRoomType(Long roomTypeId) {
+        RoomType roomType = roomTypeService.findRoomType(roomTypeId);
+        return BoRoomTypeDetailDto.Response.builder().id(roomType.getId()).name(roomType.getName()).build();
     }
 }

@@ -27,4 +27,12 @@ public class RoomType {
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted;
+
+    public void modifyRoomType(RoomType roomType) {
+        this.name = roomType.getName();
+    }
+
+    public void deleteRoomType() {
+        this.isDeleted = true;
+    }
 }
