@@ -1,12 +1,13 @@
 package org.example.knockin.entity.chat;
 
 import jakarta.persistence.Column;
-import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -24,15 +25,14 @@ import org.hibernate.annotations.ColumnDefault;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "chat_room_member")
 public class ChatRoomMember {
-    @EmbeddedId
-    private ChatRoomMemberId id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @MapsId("chattingRoomId")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chatting_room_id", nullable = false)
     private ChattingRoom chattingRoom;
 
-    @MapsId("memberId")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
@@ -43,7 +43,6 @@ public class ChatRoomMember {
 
     public static ChatRoomMember of(ChattingRoom chattingRoom, Member member) {
         return ChatRoomMember.builder()
-                .id(new ChatRoomMemberId(chattingRoom.getId(), member.getId()))
                 .chattingRoom(chattingRoom)
                 .member(member)
                 .isLeft(false)

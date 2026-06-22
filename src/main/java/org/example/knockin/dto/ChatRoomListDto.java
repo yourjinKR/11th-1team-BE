@@ -31,5 +31,8 @@ public class ChatRoomListDto {
 
         @Schema(description = "채팅 요청 상태")
         private ChattingRequiredStatus status;
+        
+        @Schema(description = "마지막 메세지")
+        private String lastMessage;
     }
 }

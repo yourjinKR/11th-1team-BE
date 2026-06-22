@@ -2,6 +2,8 @@ package org.example.knockin.repository.chat.impl;
 
 import static org.example.knockin.entity.chat.QChattingRequired.chattingRequired;
 import static org.example.knockin.entity.chat.QChattingRoom.chattingRoom;
+import static org.example.knockin.entity.chat.QChatRoomMessage.chatRoomMessage;
+import static org.example.knockin.entity.chat.QChatRoomFile.chatRoomFile;
 import static org.example.knockin.entity.file.QBasicInformationFile.basicInformationFile;
 import static org.example.knockin.entity.member.QBasicInformation.basicInformation;
 import static org.example.knockin.entity.member.QMember.member;
@@ -37,7 +39,8 @@ public class ChattingRoomRepositoryImpl implements ChattingRoomRepositoryCustom 
                         basicInformation.name,
                         basicInformationFile.file.savedFileName,
                         chattingRoom.createdAt,
-                        chattingRoom.chattingRequired.status
+                        chattingRoom.chattingRequired.status,
+                        chatRoomMessage.contents
                 ))
                 .from(chattingRoom)
                 .join(chattingRoom.chattingRequired, chattingRequired)
@@ -67,6 +70,14 @@ public class ChattingRoomRepositoryImpl implements ChattingRoomRepositoryCustom 
                                 .select(basicInformationFileSub.id.max())
                                 .from(basicInformationFileSub)
                                 .where(basicInformationFileSub.basicInformation.eq(basicInformation))
+                ))
+                .leftJoin(chatRoomMessage)
+                .on(chatRoomMessage.id.eq(
+                        JPAExpressions
+                                .select(chatRoomMessage.id.max())
+                                .from(chatRoomMessage)
+                                .where(chatRoomMessage.chatRoomMember.eq(viewerRoomMember)
+                                        .or(chatRoomMessage.chatRoomMember.eq(opponentRoomMember)))
                 ))
                 .orderBy(chattingRoom.createdAt.desc())
                 .fetch();

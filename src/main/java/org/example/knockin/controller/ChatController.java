@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/chats")
@@ -54,10 +55,10 @@ public class ChatController {
     }
 
 
-    @MessageMapping("/chats/{chatId}/messages")
+    @MessageMapping("/chats/{chatRoomId}/messages")
     @Operation(summary = "메시지 전송")
     public void sendMessage(
-            @DestinationVariable("chatId") Long chatId,
+            @DestinationVariable("chatRoomId") Long chatId,
             @Payload ChatMessageDto.Request request,
             Principal principal
     ) {

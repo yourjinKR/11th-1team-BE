@@ -13,7 +13,6 @@ import org.example.knockin.config.QueryDslConfig;
 import org.example.knockin.dto.ChatRoomListDto;
 import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.chat.ChatRoomMember;
-import org.example.knockin.entity.chat.ChatRoomMemberId;
 import org.example.knockin.entity.chat.ChattingRequired;
 import org.example.knockin.entity.chat.ChattingRequiredStatus;
 import org.example.knockin.entity.chat.ChattingRoom;
@@ -193,7 +192,6 @@ class ChattingRoomRepositoryTest {
 
     private ChatRoomMember persistChatRoomMember(ChattingRoom chattingRoom, Member member, Boolean isLeft) {
         ChatRoomMember chatRoomMember = ChatRoomMember.builder()
-                .id(new ChatRoomMemberId(chattingRoom.getId(), member.getId()))
                 .chattingRoom(chattingRoom)
                 .member(member)
                 .isLeft(isLeft)

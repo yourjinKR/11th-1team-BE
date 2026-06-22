@@ -1,6 +1,8 @@
 package org.example.knockin.service.impl;
 
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.entity.chat.ChatRoomMember;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.ChattingErrorCode;
 import org.example.knockin.repository.chat.ChatRoomMemberRepository;

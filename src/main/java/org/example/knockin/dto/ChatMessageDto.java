@@ -2,6 +2,7 @@ package org.example.knockin.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -49,16 +50,16 @@ public class ChatMessageDto {
         @Schema(description = "서버 broadcast 시각")
         private LocalDateTime createdAt;
 
-        public static Response chatMessage(Long chatRoomId, Long senderId, Request request, LocalDateTime createdAt) {
+        public static Response chatMessage(ChatRoomMessageEvent event) {
             return new Response(
                     EventType.CHAT_MESSAGE,
-                    chatRoomId,
-                    request.getClientMessageId(),
-                    senderId,
-                    request.getType(),
-                    request.getMessage(),
-                    request.getImageUrl(),
-                    createdAt
+                    event.chatRoomId(),
+                    event.clientMessageId(),
+                    event.senderId(),
+                    event.messageType(),
+                    event.message(),
+                    event.imageUrl(),
+                    LocalDateTime.now()
             );
         }
 
