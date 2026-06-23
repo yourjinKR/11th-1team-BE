@@ -5,7 +5,6 @@ import static org.example.knockin.entity.chat.QChattingRoom.chattingRoom;
 import static org.example.knockin.entity.chat.QChatRoomMessage.chatRoomMessage;
 import static org.example.knockin.entity.file.QBasicInformationFile.basicInformationFile;
 import static org.example.knockin.entity.member.QBasicInformation.basicInformation;
-import static org.example.knockin.entity.member.QMember.member;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.JPAExpressions;
@@ -16,6 +15,7 @@ import org.example.knockin.dto.ChatRoomListDto;
 import org.example.knockin.entity.chat.QChatRoomMember;
 import org.example.knockin.entity.file.QBasicInformationFile;
 import org.example.knockin.entity.member.QBasicInformation;
+import org.example.knockin.entity.member.QMember;
 import org.example.knockin.repository.chat.ChattingRoomRepositoryCustom;
 import org.springframework.stereotype.Repository;
 
@@ -26,6 +26,8 @@ public class ChattingRoomRepositoryImpl implements ChattingRoomRepositoryCustom 
 
     @Override
     public List<ChatRoomListDto.Response> findByMemberId(Long memberId) {
+        QMember viewerMember = new QMember("viewerMember");
+        QMember opponentMember = new QMember("opponentMember");
         QChatRoomMember viewerRoomMember = new QChatRoomMember("viewerRoomMember");
         QChatRoomMember opponentRoomMember = new QChatRoomMember("opponentRoomMember");
         QBasicInformation basicInformationSub = new QBasicInformation("basicInformationSub");
@@ -49,19 +51,19 @@ public class ChattingRoomRepositoryImpl implements ChattingRoomRepositoryCustom 
                         viewerRoomMember.member.id.eq(memberId),
                         viewerRoomMember.isLeft.isFalse()
                 )
+                .join(viewerRoomMember.member, viewerMember)
                 .join(opponentRoomMember)
                 .on(
                         opponentRoomMember.chattingRoom.eq(chattingRoom),
-                        opponentRoomMember.member.id.ne(memberId),
-                        opponentRoomMember.isLeft.isFalse()
+                        opponentRoomMember.member.id.ne(memberId)
                 )
-                .join(opponentRoomMember.member, member)
+                .join(opponentRoomMember.member, opponentMember)
                 .leftJoin(basicInformation)
                 .on(basicInformation.id.eq(
                         JPAExpressions
                                 .select(basicInformationSub.id.max())
                                 .from(basicInformationSub)
-                                .where(basicInformationSub.member.eq(member))
+                                .where(basicInformationSub.member.eq(opponentMember))
                 ))
                 .leftJoin(basicInformationFile)
                 .on(basicInformationFile.id.eq(
@@ -75,8 +77,7 @@ public class ChattingRoomRepositoryImpl implements ChattingRoomRepositoryCustom 
                         JPAExpressions
                                 .select(chatRoomMessage.id.max())
                                 .from(chatRoomMessage)
-                                .where(chatRoomMessage.chatRoomMember.eq(viewerRoomMember)
-                                        .or(chatRoomMessage.chatRoomMember.eq(opponentRoomMember)))
+                                .where(chatRoomMessage.chattingRoom.eq(chattingRoom))
                 ))
                 .orderBy(chattingRoom.createdAt.desc())
                 .fetch();

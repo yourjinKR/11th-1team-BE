@@ -1,6 +1,7 @@
 package org.example.knockin.dto;
 
 public enum EventType {
-    CHAT_MESSAGE,
-    USER_LEFT
+    USER_MESSAGE,
+    SYSTEM_MESSAGE,
+    ROOMMATE_REQUEST
 }

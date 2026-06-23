@@ -22,7 +22,6 @@ import org.example.knockin.entity.room.RoomSeekerProfile;
 import org.example.knockin.global.auth.dto.AuthResponse;
 import org.example.knockin.repository.member.MemberRepositoryCustom;
 import org.example.knockin.repository.member.row.MatchingBasicInfoRow;
-import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 

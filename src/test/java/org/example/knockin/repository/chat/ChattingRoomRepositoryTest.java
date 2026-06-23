@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.example.knockin.config.QueryDslConfig;
 import org.example.knockin.dto.ChatRoomListDto;
+import org.example.knockin.dto.MessageType;
 import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.chat.ChatRoomMember;
 import org.example.knockin.entity.chat.ChatRoomMessage;
@@ -110,8 +111,8 @@ class ChattingRoomRepositoryTest {
         ChattingRoom room = persistChattingRoom(viewer, opponent, ChattingRequiredStatus.ACCEPTED);
         ChatRoomMember viewerRoomMember = persistChatRoomMember(room, viewer, false);
         ChatRoomMember opponentRoomMember = persistChatRoomMember(room, opponent, false);
-        persistChatRoomMessage(viewerRoomMember, "이전 메시지");
-        persistChatRoomMessage(opponentRoomMember, "최근 메시지");
+        persistChatRoomMessage(room, viewerRoomMember.getMember(), "이전 메시지");
+        persistChatRoomMessage(room, opponentRoomMember.getMember(), "최근 메시지");
 
         entityManager.flush();
         entityManager.clear();
@@ -245,9 +246,11 @@ class ChattingRoomRepositoryTest {
         return chatRoomMember;
     }
 
-    private ChatRoomMessage persistChatRoomMessage(ChatRoomMember chatRoomMember, String contents) {
+    private ChatRoomMessage persistChatRoomMessage(ChattingRoom chattingRoom, Member member, String contents) {
         ChatRoomMessage chatRoomMessage = ChatRoomMessage.builder()
-                .chatRoomMember(chatRoomMember)
+                .chattingRoom(chattingRoom)
+                .member(member)
+                .type(MessageType.TEXT)
                 .contents(contents)
                 .build();
         entityManager.persist(chatRoomMessage);

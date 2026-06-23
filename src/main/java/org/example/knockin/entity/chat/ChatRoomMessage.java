@@ -2,6 +2,8 @@ package org.example.knockin.entity.chat;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -14,6 +16,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.example.knockin.dto.MessageType;
+import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.jpa.CreatedAtEntity;
 
 @Getter
@@ -27,10 +31,18 @@ public class ChatRoomMessage extends CreatedAtEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "contents", length = 500)
-    private String contents;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id")
+    private Member member;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "chat_room_member_id")
-    private ChatRoomMember chatRoomMember;
+    @JoinColumn(name = "chatting_room_id", nullable = false)
+    private ChattingRoom chattingRoom;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type")
+    private MessageType type;
+
+    @Column(name = "contents", length = 500)
+    private String contents;
 }

@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.ChatMessageDto;
 import org.example.knockin.dto.ChatRoomDto;
 import org.example.knockin.dto.ChatRoomImageDto;
+import org.example.knockin.dto.ChatRoomDetailDto;
 import org.example.knockin.dto.ChatRoomListDto;
 import org.example.knockin.dto.ChatRoomListDto.Response;
 import org.example.knockin.global.api.CommonResponse;
@@ -46,6 +47,17 @@ public class ChatController {
         return CommonResponse.status(HttpStatus.OK).body(responses);
     }
 
+    @GetMapping("/{chatId}")
+    @Operation(summary = "채팅방 상세 조회")
+    public CommonResponse<ChatRoomDetailDto.Response> findChatRoomDetail(
+            @PathVariable Long chatId,
+            @AuthenticationPrincipal PrincipalDetails details
+    ) {
+        Long memberId = details.getMember().getId();
+        ChatRoomDetailDto.Response response = chatService.getChatRoomDetail(chatId, memberId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
+    }
+
     @PostMapping("/{chatId}/leave")
     @Operation(summary = "채팅방 나가기")
     public CommonResponse<ChatRoomDto.Response> leaveChatRoom(
@@ -77,7 +89,7 @@ public class ChatController {
             Principal principal
     ) {
         Long memberId = principalMemberResolver.resolveMemberId(principal);
-        chatService.sendMessage(chatId, request, memberId);
+        chatService.sendUserMessage(chatId, request, memberId);
     }
 }
 
