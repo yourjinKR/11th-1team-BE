@@ -56,7 +56,7 @@ class MetaServiceImplTest {
         Agreement agreement = mock(Agreement.class);
         given(agreement.getId()).willReturn(1L);
         given(agreement.getTitle()).willReturn("약관 제목");
-        given(agreementRepository.findAllByIsDeleted(false)).willReturn(List.of(agreement));
+        given(agreementRepository.findByAgreementsIsCurrentAndIsDeleted()).willReturn(List.of(agreement));
 
         TermsListDto.Response result = metaService.findTermList();
 

@@ -74,7 +74,7 @@ public class MetaServiceImpl {
     }
 
     public TermsListDto.Response findTermList() {
-        List<TermsListDto.Response.TermsItem> termsItemList = agreementRepository.findAllByIsDeleted(false).stream().map(item ->
+        List<TermsListDto.Response.TermsItem> termsItemList = agreementRepository.findByAgreementsIsCurrentAndIsDeleted().stream().map(item ->
             TermsListDto.Response.TermsItem.builder().id(item.getId()).title(item.getTitle()).build()).toList();
         return TermsListDto.Response.builder().terms(termsItemList).build();
     }

@@ -22,8 +22,9 @@ public class AgreementServiceImpl {
     @Transactional
     public Agreement saveAgreement(Agreement agreement) {
         agreementLogRepository.findAll().forEach(AgreementLog::clearCurrent);
-        agreementLogRepository.save(AgreementLog.builder().agreement(agreement).isCurrent(true).build());
-        return agreementRepository.save(agreement);
+        Agreement agreementEntity = agreementRepository.save(agreement);
+        agreementLogRepository.save(AgreementLog.builder().agreement(agreementEntity).isCurrent(true).build());
+        return agreementEntity;
     }
 
     @Transactional

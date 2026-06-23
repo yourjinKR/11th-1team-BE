@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface AgreementRepositoryCustom {
     List<Agreement> findByAgreements(List<Long> agreementId);
+    List<Agreement> findByAgreementsIsCurrentAndIsDeleted();
 }
