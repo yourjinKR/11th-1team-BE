@@ -2,10 +2,14 @@ package org.example.knockin.service.impl;
 
 import org.example.knockin.dto.*;
 import org.example.knockin.entity.agreement.Agreement;
+import org.example.knockin.entity.alarm.Notification;
 import org.example.knockin.entity.life.LifePattern;
 import org.example.knockin.entity.life.LifePatternInformation;
 import org.example.knockin.entity.life.LifePatternType;
+import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.RoomType;
+import org.example.knockin.global.auth.exception.AuthErrorCode;
+import org.example.knockin.global.exception.BusinessException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +22,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -42,6 +49,12 @@ class BackOfficeServiceImplTest {
 
     @Mock
     private AuthenticationServiceImpl authenticationService;
+
+    @Mock
+    private NotificationServiceImpl notificationService;
+
+    @Mock
+    private MemberServiceImpl memberService;
 
     @InjectMocks
     private BackOfficeServiceImpl backOfficeService;
@@ -448,5 +461,163 @@ class BackOfficeServiceImplTest {
         assertThat(response).isNotNull();
         assertThat(response.getUpdatedAt()).isNotNull();
         verify(authenticationService).deleteVerifications(id);
+    }
+
+    @Test
+    @DisplayName("공지사항 등록 성공 테스트 (saveNotice)")
+    void saveNoticeSuccessTest() {
+        // given
+        Long memberId = 1L;
+        BoNoticeDto.Request request = new BoNoticeDto.Request("공지 제목", "공지 내용");
+        Member member = mock(Member.class);
+
+        given(memberService.findById(memberId)).willReturn(Optional.of(member));
+
+        // when
+        BoNoticeDto.Response response = backOfficeService.saveNotice(request, memberId);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(notificationService).saveNotification(any(Notification.class));
+    }
+
+    @Test
+    @DisplayName("공지사항 등록 시 회원을 찾을 수 없으면 BusinessException 발생")
+    void saveNoticeMemberNotFoundTest() {
+        // given
+        Long memberId = 1L;
+        BoNoticeDto.Request request = new BoNoticeDto.Request("공지 제목", "공지 내용");
+
+        given(memberService.findById(memberId)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> backOfficeService.saveNotice(request, memberId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", AuthErrorCode.MEMBER_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("공지사항 목록 조회 성공 테스트 (findNoticeList)")
+    void findNoticeListSuccessTest() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        BoNoticeListDto.Response.NoticeItem item = BoNoticeListDto.Response.NoticeItem.builder()
+                .id(1L)
+                .title("공지 제목")
+                .writer("작성자")
+                .build();
+
+        given(notificationService.findNotificationList(pageable)).willReturn(List.of(item));
+
+        // when
+        BoNoticeListDto.Response response = backOfficeService.findNoticeList(pageable);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getNotices()).hasSize(1);
+        assertThat(response.getNotices().get(0).getId()).isEqualTo(1L);
+        assertThat(response.getNotices().get(0).getTitle()).isEqualTo("공지 제목");
+    }
+
+    @Test
+    @DisplayName("공지사항 상세 조회 성공 테스트 (findNotice)")
+    void findNoticeSuccessTest() {
+        // given
+        Long id = 1L;
+        BoNoticeDetailDto.Response expected = new BoNoticeDetailDto.Response();
+        BoNoticeDetailDto.Response.NoticeDetail noticeDetail = new BoNoticeDetailDto.Response.NoticeDetail();
+        noticeDetail.setId(id);
+        noticeDetail.setTitle("공지 제목");
+        expected.setNotice(noticeDetail);
+
+        given(notificationService.findNotification(id)).willReturn(expected);
+
+        // when
+        BoNoticeDetailDto.Response response = backOfficeService.findNotice(id);
+
+        // then
+        assertThat(response).isEqualTo(expected);
+    }
+
+    @Test
+    @DisplayName("공지사항 수정 성공 테스트 (modifyNotice)")
+    void modifyNoticeSuccessTest() {
+        // given
+        Long id = 1L;
+        Long memberId = 2L;
+        BoNoticeDto.Request request = new BoNoticeDto.Request("수정 제목", "수정 내용");
+        Member member = mock(Member.class);
+        Notification notification = spy(Notification.builder()
+                .id(id)
+                .title("기존 제목")
+                .contents("기존 내용")
+                .build());
+
+        given(memberService.findById(memberId)).willReturn(Optional.of(member));
+        given(notificationService.findNotificationById(id)).willReturn(notification);
+
+        // when
+        BoNoticeDto.Response response = backOfficeService.modifyNotice(request, id, memberId);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(notification).modifyNotification(request, member);
+    }
+
+    @Test
+    @DisplayName("공지사항 수정 시 회원을 찾을 수 없으면 BusinessException 발생")
+    void modifyNoticeMemberNotFoundTest() {
+        // given
+        Long id = 1L;
+        Long memberId = 2L;
+        BoNoticeDto.Request request = new BoNoticeDto.Request("수정 제목", "수정 내용");
+
+        given(memberService.findById(memberId)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> backOfficeService.modifyNotice(request, id, memberId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", AuthErrorCode.MEMBER_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("공지사항 삭제 성공 테스트 (deleteNotice)")
+    void deleteNoticeSuccessTest() {
+        // given
+        Long id = 1L;
+        Long memberId = 2L;
+        Member member = mock(Member.class);
+        Notification notification = spy(Notification.builder()
+                .id(id)
+                .isDeleted(false)
+                .build());
+
+        given(memberService.findById(memberId)).willReturn(Optional.of(member));
+        given(notificationService.findNotificationById(id)).willReturn(notification);
+
+        // when
+        BoNoticeDto.Response response = backOfficeService.deleteNotice(id, memberId);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(notification).deleteNotification(member);
+    }
+
+    @Test
+    @DisplayName("공지사항 삭제 시 회원을 찾을 수 없으면 BusinessException 발생")
+    void deleteNoticeMemberNotFoundTest() {
+        // given
+        Long id = 1L;
+        Long memberId = 2L;
+
+        given(memberService.findById(memberId)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> backOfficeService.deleteNotice(id, memberId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", AuthErrorCode.MEMBER_NOT_FOUND);
     }
 }

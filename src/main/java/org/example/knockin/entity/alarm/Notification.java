@@ -9,9 +9,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.example.knockin.dto.BoNoticeDto;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.jpa.BaseEntity;
 import org.hibernate.annotations.ColumnDefault;
@@ -19,6 +18,8 @@ import org.hibernate.annotations.ColumnDefault;
 
 @Getter
 @Entity
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "notification")
 public class Notification extends BaseEntity {
@@ -40,4 +41,15 @@ public class Notification extends BaseEntity {
     @ColumnDefault("false")
     @Column(name = "is_deleted")
     private Boolean isDeleted;
+
+    public void modifyNotification(BoNoticeDto.Request request, Member member) {
+        this.title = request.getTitle();
+        this.contents = request.getContents();
+        this.member = member;
+    }
+
+    public void deleteNotification(Member member) {
+        this.member = member;
+        this.isDeleted = true;
+    }
 }

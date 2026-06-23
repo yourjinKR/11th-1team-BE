@@ -158,32 +158,32 @@ public class BackOfficeController {
 
     @PostMapping("/notices")
     @Operation(summary = "공지사항 저장")
-    public CommonResponse<BoNoticeDto.Response> saveNotice(@RequestBody BoNoticeDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoNoticeDto.Response());
+    public CommonResponse<BoNoticeDto.Response> saveNotice(@RequestBody BoNoticeDto.Request request, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.saveNotice(request, principalDetails.getMember().getId()));
     }
 
     @GetMapping("/notices")
     @Operation(summary = "공지사항 목록 조회")
     public CommonResponse<BoNoticeListDto.Response> findNoticeList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoNoticeListDto.Response());
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findNoticeList(pageable));
     }
 
     @GetMapping("/notices/{id}")
     @Operation(summary = "공지사항 상세 조회")
     public CommonResponse<BoNoticeDetailDto.Response> findNotice(@PathVariable Long id) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoNoticeDetailDto.Response());
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findNotice(id));
     }
 
     @PutMapping("/notices/{id}")
     @Operation(summary = "공지사항 수정")
-    public CommonResponse<BoNoticeDto.Response> modifyNotice(@PathVariable Long id, @RequestBody BoNoticeDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoNoticeDto.Response());
+    public CommonResponse<BoNoticeDto.Response> modifyNotice(@PathVariable Long id, @RequestBody BoNoticeDto.Request request, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.modifyNotice(request, id, principalDetails.getMember().getId()));
     }
 
     @DeleteMapping("/notices/{id}")
     @Operation(summary = "공지사항 삭제")
-    public CommonResponse<BoNoticeDto.Response> deleteNotice(@PathVariable Long id) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoNoticeDto.Response());
+    public CommonResponse<BoNoticeDto.Response> deleteNotice(@PathVariable Long id, @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.deleteNotice(id, principalDetails.getMember().getId()));
     }
 
     @PostMapping("/inquiries")

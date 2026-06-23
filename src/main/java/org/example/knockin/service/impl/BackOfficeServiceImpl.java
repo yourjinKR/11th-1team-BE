@@ -3,9 +3,13 @@ package org.example.knockin.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.*;
 import org.example.knockin.entity.agreement.Agreement;
+import org.example.knockin.entity.alarm.Notification;
 import org.example.knockin.entity.life.LifePattern;
 import org.example.knockin.entity.life.LifePatternInformation;
+import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.RoomType;
+import org.example.knockin.global.auth.exception.AuthErrorCode;
+import org.example.knockin.global.exception.BusinessException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +25,8 @@ public class BackOfficeServiceImpl {
     private final RoomTypeServiceImpl roomTypeService;
     private final LifeStyleServiceImpl lifeStyleService;
     private final AuthenticationServiceImpl authenticationService;
+    private final NotificationServiceImpl notificationService;
+    private final MemberServiceImpl memberService;
 
     @Transactional
     public BoTermsDto.Response saveTerms(BoTermsDto.Request request) {
@@ -145,5 +151,36 @@ public class BackOfficeServiceImpl {
     public BoVerificationDto.Response deleteVerifications(Long id) {
         authenticationService.deleteVerifications(id);
         return BoVerificationDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public BoNoticeDto.Response saveNotice(BoNoticeDto.Request request, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+        notificationService.saveNotification(Notification.builder().member(member).title(request.getTitle()).contents(request.getContents()).build());
+        return BoNoticeDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    public BoNoticeListDto.Response findNoticeList(Pageable pageable) {
+        return BoNoticeListDto.Response.builder().notices(notificationService.findNotificationList(pageable)).build();
+    }
+
+    public BoNoticeDetailDto.Response findNotice(Long id) {
+        return notificationService.findNotification(id);
+    }
+
+    @Transactional
+    public BoNoticeDto.Response modifyNotice(BoNoticeDto.Request request, Long id, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+        Notification notification = notificationService.findNotificationById(id);
+        notification.modifyNotification(request, member);
+        return BoNoticeDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public BoNoticeDto.Response deleteNotice(Long id, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+        Notification notification = notificationService.findNotificationById(id);
+        notification.deleteNotification(member);
+        return BoNoticeDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 }

@@ -28,8 +28,6 @@ public class BoNoticeDetailDto {
             private String writer;
             @Schema(description = "생성 일시")
             private LocalDateTime createAt;
-            @Schema(description = "유형")
-            private String type;
         }
     }
 }
