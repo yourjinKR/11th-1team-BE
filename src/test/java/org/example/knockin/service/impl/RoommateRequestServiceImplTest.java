@@ -22,6 +22,7 @@ import org.example.knockin.entity.chat.ChattingRoom;
 import org.example.knockin.entity.member.BasicInformation;
 import org.example.knockin.entity.member.Gender;
 import org.example.knockin.entity.member.Member;
+import org.example.knockin.entity.room.MyRoommate;
 import org.example.knockin.entity.room.RoommateMatchingRequired;
 import org.example.knockin.entity.room.RoommateMatchingRequiredAlarm;
 import org.example.knockin.entity.room.RoommateRequiredStatus;
@@ -30,6 +31,7 @@ import org.example.knockin.global.exception.MemberErrorCode;
 import org.example.knockin.global.exception.RoommateMatchingRequiredErrorCode;
 import org.example.knockin.repository.chat.ChatRoomMemberRepository;
 import org.example.knockin.repository.member.BasicInformationRepository;
+import org.example.knockin.repository.room.MyRoommateRepository;
 import org.example.knockin.repository.room.RoommateMatchingRequiredAlarmRepository;
 import org.example.knockin.repository.room.RoommateMatchingRequiredRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -64,6 +66,9 @@ class RoommateRequestServiceImplTest {
 
     @Mock
     private BasicInformationRepository basicInformationRepository;
+
+    @Mock
+    private MyRoommateRepository myRoommateRepository;
 
     @InjectMocks
     private RoommateRequestServiceImpl roommateRequestService;
@@ -225,6 +230,161 @@ class RoommateRequestServiceImplTest {
         verifyNoInteractions(roommateMatchingRequiredAlarmRepository, alarmService, messagingTemplate);
     }
 
+    @Test
+    @DisplayName("피요청자가 요청을 수락하면 상태를 수락으로 변경하고 내 룸메이트와 알림과 채팅방 소켓 이벤트를 저장한다")
+    void acceptRequiredChangesStatusAndPublishesSideEffects() {
+        // Given
+        Long requestId = 1000L;
+        Long requesterId = 1L;
+        Long requesteeId = 2L;
+        Long chatRoomId = 10L;
+        Member requester = member(requesterId);
+        Member requestee = member(requesteeId);
+        ChattingRoom chattingRoom = chattingRoom(chatRoomId);
+        RoommateMatchingRequired roommateRequest = persistedRoommateRequest(
+                roommateRequest(requester, requestee, chattingRoom, RoommateRequiredStatus.PENDING),
+                requestId
+        );
+
+        when(roommateMatchingRequiredRepository.findById(requestId)).thenReturn(Optional.of(roommateRequest));
+        when(basicInformationRepository.findLatestBasicInformation(requestee))
+                .thenReturn(Optional.of(basicInformation(requestee, "이수현")));
+        when(roommateMatchingRequiredAlarmRepository.save(any(RoommateMatchingRequiredAlarm.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        RoommateRequestDto.Response response = roommateRequestService.acceptRequired(requesteeId, requestId);
+
+        // Then
+        RoommateMatchingRequiredInfo info = response.getRoommateMatchingRequiredInfo();
+        assertThat(info.getId()).isEqualTo(requestId);
+        assertThat(info.getRequesterMemberId()).isEqualTo(requesterId);
+        assertThat(info.getRequesteeMemberId()).isEqualTo(requesteeId);
+        assertThat(info.getStatus()).isEqualTo(RoommateRequiredStatus.ACCEPTED);
+        assertThat(roommateRequest.getStatus()).isEqualTo(RoommateRequiredStatus.ACCEPTED);
+
+        ArgumentCaptor<MyRoommate> myRoommateCaptor = ArgumentCaptor.forClass(MyRoommate.class);
+        verify(myRoommateRepository).save(myRoommateCaptor.capture());
+        assertThat(myRoommateCaptor.getValue().getRoommateMatchingRequired()).isSameAs(roommateRequest);
+        assertThat(myRoommateCaptor.getValue().getIsDeleted()).isFalse();
+
+        ArgumentCaptor<RoommateMatchingRequiredAlarm> alarmCaptor = ArgumentCaptor.forClass(RoommateMatchingRequiredAlarm.class);
+        verify(roommateMatchingRequiredAlarmRepository).save(alarmCaptor.capture());
+        assertThat(alarmCaptor.getValue().getMember()).isSameAs(requester);
+        assertThat(alarmCaptor.getValue().getTitle()).isEqualTo("이수현님과 룸메이트가 확정되었어요");
+        assertThat(alarmCaptor.getValue().getContents()).isEqualTo("이수현님과 룸메이트가 확정되었어요");
+        assertThat(alarmCaptor.getValue().getRoommateMatchingRequired()).isSameAs(roommateRequest);
+        verify(alarmService).sendToClient(eq(requesterId), eq(AlarmType.OFFER.name()), any(RoommateMatchingRequiredAlarm.class));
+
+        assertSocketResponse(chatRoomId, response);
+    }
+
+    @Test
+    @DisplayName("피요청자가 요청을 거절하면 상태를 거절로 변경하고 채팅방 소켓 이벤트만 발행한다")
+    void rejectRequiredChangesStatusAndPublishesSocketEvent() {
+        // Given
+        Long requestId = 1000L;
+        Long requesterId = 1L;
+        Long requesteeId = 2L;
+        Long chatRoomId = 10L;
+        RoommateMatchingRequired roommateRequest = persistedRoommateRequest(
+                roommateRequest(member(requesterId), member(requesteeId), chattingRoom(chatRoomId), RoommateRequiredStatus.PENDING),
+                requestId
+        );
+
+        when(roommateMatchingRequiredRepository.findById(requestId)).thenReturn(Optional.of(roommateRequest));
+
+        // When
+        RoommateRequestDto.Response response = roommateRequestService.rejectRequired(requesteeId, requestId);
+
+        // Then
+        assertThat(response.getRoommateMatchingRequiredInfo().getStatus()).isEqualTo(RoommateRequiredStatus.REJECTED);
+        assertThat(roommateRequest.getStatus()).isEqualTo(RoommateRequiredStatus.REJECTED);
+        assertSocketResponse(chatRoomId, response);
+        verifyNoInteractions(myRoommateRepository, basicInformationRepository, roommateMatchingRequiredAlarmRepository, alarmService);
+    }
+
+    @Test
+    @DisplayName("요청자가 요청을 취소하면 상태를 취소로 변경하고 채팅방 소켓 이벤트만 발행한다")
+    void cancelRequiredChangesStatusAndPublishesSocketEvent() {
+        // Given
+        Long requestId = 1000L;
+        Long requesterId = 1L;
+        Long requesteeId = 2L;
+        Long chatRoomId = 10L;
+        RoommateMatchingRequired roommateRequest = persistedRoommateRequest(
+                roommateRequest(member(requesterId), member(requesteeId), chattingRoom(chatRoomId), RoommateRequiredStatus.PENDING),
+                requestId
+        );
+
+        when(roommateMatchingRequiredRepository.findById(requestId)).thenReturn(Optional.of(roommateRequest));
+
+        // When
+        RoommateRequestDto.Response response = roommateRequestService.cancelRequired(requesterId, requestId);
+
+        // Then
+        assertThat(response.getRoommateMatchingRequiredInfo().getStatus()).isEqualTo(RoommateRequiredStatus.CANCELED);
+        assertThat(roommateRequest.getStatus()).isEqualTo(RoommateRequiredStatus.CANCELED);
+        assertSocketResponse(chatRoomId, response);
+        verifyNoInteractions(myRoommateRepository, basicInformationRepository, roommateMatchingRequiredAlarmRepository, alarmService);
+    }
+
+    @Test
+    @DisplayName("요청자가 수락을 시도하면 권한 없음 예외를 던지고 부수 효과를 만들지 않는다")
+    void acceptRequiredRejectsRequesterAccess() {
+        // Given
+        Long requestId = 1000L;
+        Long requesterId = 1L;
+        RoommateMatchingRequired roommateRequest = persistedRoommateRequest(
+                roommateRequest(member(requesterId), member(2L), chattingRoom(10L), RoommateRequiredStatus.PENDING),
+                requestId
+        );
+
+        when(roommateMatchingRequiredRepository.findById(requestId)).thenReturn(Optional.of(roommateRequest));
+
+        // When & Then
+        assertThatThrownBy(() -> roommateRequestService.acceptRequired(requesterId, requestId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RoommateMatchingRequiredErrorCode.ACCESS_DENIED));
+        assertThat(roommateRequest.getStatus()).isEqualTo(RoommateRequiredStatus.PENDING);
+        verifyNoInteractions(myRoommateRepository, basicInformationRepository, roommateMatchingRequiredAlarmRepository, alarmService, messagingTemplate);
+    }
+
+    @Test
+    @DisplayName("피요청자가 취소를 시도하면 권한 없음 예외를 던지고 부수 효과를 만들지 않는다")
+    void cancelRequiredRejectsRequesteeAccess() {
+        // Given
+        Long requestId = 1000L;
+        Long requesteeId = 2L;
+        RoommateMatchingRequired roommateRequest = persistedRoommateRequest(
+                roommateRequest(member(1L), member(requesteeId), chattingRoom(10L), RoommateRequiredStatus.PENDING),
+                requestId
+        );
+
+        when(roommateMatchingRequiredRepository.findById(requestId)).thenReturn(Optional.of(roommateRequest));
+
+        // When & Then
+        assertThatThrownBy(() -> roommateRequestService.cancelRequired(requesteeId, requestId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RoommateMatchingRequiredErrorCode.ACCESS_DENIED));
+        assertThat(roommateRequest.getStatus()).isEqualTo(RoommateRequiredStatus.PENDING);
+        verifyNoInteractions(myRoommateRepository, basicInformationRepository, roommateMatchingRequiredAlarmRepository, alarmService, messagingTemplate);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 요청을 거절하려 하면 조회 실패 예외를 던지고 부수 효과를 만들지 않는다")
+    void rejectRequiredRejectsMissingRequest() {
+        // Given
+        Long requestId = 1000L;
+        when(roommateMatchingRequiredRepository.findById(requestId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> roommateRequestService.rejectRequired(2L, requestId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RoommateMatchingRequiredErrorCode.NOT_FOUND));
+        verifyNoInteractions(myRoommateRepository, basicInformationRepository, roommateMatchingRequiredAlarmRepository, alarmService, messagingTemplate);
+    }
+
     private RoommateRequestDto.Request request(Long chatRoomId) {
         RoommateRequestDto.Request request = new RoommateRequestDto.Request();
         request.setChatRoomId(chatRoomId);
@@ -276,5 +436,16 @@ class RoommateRequestServiceImplTest {
                 .gender(Gender.MALE)
                 .email(name + "@example.com")
                 .build();
+    }
+
+    private void assertSocketResponse(Long chatRoomId, RoommateRequestDto.Response response) {
+        ArgumentCaptor<Object> socketCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(messagingTemplate).convertAndSend(eq("/sub/chats/" + chatRoomId), socketCaptor.capture());
+        ChatSocketResponse<RoommateRequestDto.Response> socketResponse =
+                (ChatSocketResponse<RoommateRequestDto.Response>) socketCaptor.getValue();
+        assertThat(socketResponse.getEventType()).isEqualTo(EventType.ROOMMATE_REQUEST);
+        assertThat(socketResponse.getChatRoomId()).isEqualTo(chatRoomId);
+        assertThat(socketResponse.getPayload()).isSameAs(response);
+        assertThat(socketResponse.getCreatedAt()).isNotNull();
     }
 }

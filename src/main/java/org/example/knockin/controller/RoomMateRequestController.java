@@ -36,20 +36,35 @@ public class RoomMateRequestController {
 
     @PostMapping("/{requestId}/accept")
     @Operation(summary = "룸메이트 요청 수락")
-    public CommonResponse<RoommateRequestDto.Response> saveRoomMateRequestAccept(@PathVariable Long requestId) {
-        return CommonResponse.status(HttpStatus.OK).body(new RoommateRequestDto.Response());
+    public CommonResponse<RoommateRequestDto.Response> saveRoomMateRequestAccept(
+            @AuthenticationPrincipal PrincipalDetails details,
+            @PathVariable Long requestId
+    ) {
+        Long memberId = details.getMember().getId();
+        Response response = roommateRequestService.acceptRequired(memberId, requestId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @PostMapping("/{requestId}/reject")
     @Operation(summary = "룸메이트 요청 거절")
-    public CommonResponse<RoommateRequestDto.Response> saveRoomMateRequestReject(@PathVariable Long requestId) {
-        return CommonResponse.status(HttpStatus.OK).body(new RoommateRequestDto.Response());
+    public CommonResponse<RoommateRequestDto.Response> saveRoomMateRequestReject(
+            @AuthenticationPrincipal PrincipalDetails details,
+            @PathVariable Long requestId
+    ) {
+        Long memberId = details.getMember().getId();
+        Response response = roommateRequestService.rejectRequired(memberId, requestId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @PostMapping("/{requestId}/cancel")
     @Operation(summary = "룸메이트 요청 취소")
-    public CommonResponse<RoommateRequestDto.Response> saveRoomMateRequestCancel(@PathVariable Long requestId) {
-        return CommonResponse.status(HttpStatus.OK).body(new RoommateRequestDto.Response());
+    public CommonResponse<RoommateRequestDto.Response> saveRoomMateRequestCancel(
+            @AuthenticationPrincipal PrincipalDetails details,
+            @PathVariable Long requestId
+    ) {
+        Long memberId = details.getMember().getId();
+        Response response = roommateRequestService.cancelRequired(memberId, requestId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @GetMapping("")

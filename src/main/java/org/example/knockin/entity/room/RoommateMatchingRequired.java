@@ -48,4 +48,28 @@ public class RoommateMatchingRequired extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private RoommateRequiredStatus status;
+
+    public boolean isRequester(Long requesterId) {
+        return this.requester.getId().equals(requesterId);
+    }
+
+    public boolean isRequestee(Long requesteeId) {
+        return requestee.getId().equals(requesteeId);
+    }
+
+    public void accept() {
+        this.status = RoommateRequiredStatus.ACCEPTED;
+    }
+
+    public void reject() {
+        this.status = RoommateRequiredStatus.REJECTED;
+    }
+
+    public void cancel() {
+        this.status = RoommateRequiredStatus.CANCELED;
+    }
+
+    public void expire() {
+        this.status = RoommateRequiredStatus.EXPIRED;
+    }
 }
