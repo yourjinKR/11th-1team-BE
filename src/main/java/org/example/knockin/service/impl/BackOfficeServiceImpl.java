@@ -20,6 +20,7 @@ public class BackOfficeServiceImpl {
     private final AgreementServiceImpl agreementService;
     private final RoomTypeServiceImpl roomTypeService;
     private final LifeStyleServiceImpl lifeStyleService;
+    private final AuthenticationServiceImpl authenticationService;
 
     @Transactional
     public BoTermsDto.Response saveTerms(BoTermsDto.Request request) {
@@ -116,5 +117,33 @@ public class BackOfficeServiceImpl {
     public BoLifeStylePatternDto.Response deleteLifeStylePattern(Long patternId) {
         lifeStyleService.deleteLifePattern(patternId);
         return BoLifeStylePatternDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    public BoVerificationApproveListDto.Response findVerificationApproves(Pageable pageable) {
+        return BoVerificationApproveListDto.Response.builder().employeeAuth(authenticationService.findVerificationApproves(pageable)).build();
+    }
+
+    public BoVerificationCancelListDto.Response findVerificationCancels(Pageable pageable) {
+        return BoVerificationCancelListDto.Response.builder().employeeAuth(authenticationService.findVerificationCancels(pageable)).build();
+    }
+
+    public BoVerificationWaitingListDto.Response findVerificationsList(Pageable pageable) {
+        return BoVerificationWaitingListDto.Response.builder().employeeAuth(authenticationService.findVerificationsList(pageable)).build();
+    }
+
+    public BoVerificationWaitingDetailDto.Response findVerifications(Long id) {
+        return authenticationService.findVerifications(id);
+    }
+
+    @Transactional
+    public BoVerificationDto.Response saveVerifications(Long id) {
+        authenticationService.saveVerifications(id);
+        return BoVerificationDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public BoVerificationDto.Response deleteVerifications(Long id) {
+        authenticationService.deleteVerifications(id);
+        return BoVerificationDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 }

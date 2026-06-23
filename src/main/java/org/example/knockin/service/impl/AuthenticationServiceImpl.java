@@ -1,25 +1,31 @@
 package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.example.knockin.dto.EmailConfirmDto;
-import org.example.knockin.dto.EmailSendDto;
+import org.example.knockin.dto.*;
+import org.example.knockin.entity.auth.ApproveType;
 import org.example.knockin.entity.auth.Authentication;
+import org.example.knockin.entity.auth.AuthenticationApprove;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.member.Member;
+import org.example.knockin.global.exception.AuthenticationErrorCode;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.EmailErrorCode;
 import org.example.knockin.global.exception.MemberErrorCode;
+import org.example.knockin.repository.auth.AuthenticationApproveRepository;
 import org.example.knockin.repository.auth.AuthenticationRepository;
 import org.example.knockin.service.MailSendService;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -27,6 +33,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthenticationServiceImpl {
     private final AuthenticationRepository authenticationRepository;
+    private final AuthenticationApproveRepository authenticationApproveRepository;
     private final MemberServiceImpl memberService;
     private final MailSendService mailSendService;
     private final ResourceLoader resourceLoader;
@@ -111,5 +118,37 @@ public class AuthenticationServiceImpl {
         } catch (IOException e) {
             throw new BusinessException(EmailErrorCode.EMAIL_TEMPLATE_LOAD_ERROR);
         }
+    }
+
+    public List<BoVerificationApproveListDto.Response.EmployeeAuthItem> findVerificationApproves(Pageable pageable) {
+        return authenticationRepository.findVerificationApproves(pageable);
+    }
+
+    public List<BoVerificationCancelListDto.Response.EmployeeAuthItem> findVerificationCancels(Pageable pageable) {
+        return authenticationRepository.findVerificationCancels(pageable);
+    }
+
+    public List<BoVerificationWaitingListDto.Response.EmployeeAuthItem> findVerificationsList(Pageable pageable) {
+        return authenticationRepository.findVerificationsList(pageable);
+    }
+
+    public BoVerificationWaitingDetailDto.Response findVerifications(Long id) {
+        BoVerificationWaitingDetailDto.Response response = authenticationRepository.findVerifications(id);
+        LocalDateTime now = LocalDateTime.now();
+        long days = Duration.between(response.getCreateAt(), now).toDays();
+        response.setElapsedAt((int) days);
+        return response;
+    }
+
+    @Transactional
+    public void saveVerifications(Long id) {
+        Authentication authentication = authenticationRepository.findById(id).orElseThrow(() -> new BusinessException(AuthenticationErrorCode.AUTHENTICATION_NOT_FOUNT));
+        authenticationApproveRepository.save(AuthenticationApprove.builder().authentication(authentication).status(ApproveType.ACCEPTED).build());
+    }
+
+    @Transactional
+    public void deleteVerifications(Long id) {
+        Authentication authentication = authenticationRepository.findById(id).orElseThrow(() -> new BusinessException(AuthenticationErrorCode.AUTHENTICATION_NOT_FOUNT));
+        authenticationApproveRepository.save(AuthenticationApprove.builder().authentication(authentication).status(ApproveType.REJECT).build());
     }
 }

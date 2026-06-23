@@ -1,13 +1,16 @@
 package org.example.knockin.service.impl;
 
-import org.example.knockin.dto.EmailConfirmDto;
-import org.example.knockin.dto.EmailSendDto;
+import org.example.knockin.dto.*;
+import org.example.knockin.entity.auth.ApproveType;
 import org.example.knockin.entity.auth.Authentication;
+import org.example.knockin.entity.auth.AuthenticationApprove;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.member.Member;
+import org.example.knockin.global.exception.AuthenticationErrorCode;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.EmailErrorCode;
 import org.example.knockin.global.exception.MemberErrorCode;
+import org.example.knockin.repository.auth.AuthenticationApproveRepository;
 import org.example.knockin.repository.auth.AuthenticationRepository;
 import org.example.knockin.service.MailSendService;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +21,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.ByteArrayInputStream;
@@ -41,6 +46,9 @@ class AuthenticationServiceImplTest {
 
     @Mock
     private AuthenticationRepository authenticationRepository;
+
+    @Mock
+    private AuthenticationApproveRepository authenticationApproveRepository;
 
     @Mock
     private MemberServiceImpl memberService;
@@ -257,5 +265,111 @@ class AuthenticationServiceImplTest {
         assertThatThrownBy(() -> authenticationService.confirmAuthNumStudent(request, memberId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", EmailErrorCode.EMAIL_VALID_ERROR);
+    }
+
+    @Test
+    @DisplayName("승인 완료된 인증 목록 페이징 조회 성공 테스트")
+    void findVerificationApprovesTest() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        BoVerificationApproveListDto.Response.EmployeeAuthItem item = new BoVerificationApproveListDto.Response.EmployeeAuthItem();
+        given(authenticationRepository.findVerificationApproves(pageable)).willReturn(List.of(item));
+
+        // when
+        List<BoVerificationApproveListDto.Response.EmployeeAuthItem> result = authenticationService.findVerificationApproves(pageable);
+
+        // then
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("반려/취소된 인증 목록 페이징 조회 성공 테스트")
+    void findVerificationCancelsTest() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        BoVerificationCancelListDto.Response.EmployeeAuthItem item = new BoVerificationCancelListDto.Response.EmployeeAuthItem();
+        given(authenticationRepository.findVerificationCancels(pageable)).willReturn(List.of(item));
+
+        // when
+        List<BoVerificationCancelListDto.Response.EmployeeAuthItem> result = authenticationService.findVerificationCancels(pageable);
+
+        // then
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("인증 대기 목록 페이징 조회 성공 테스트")
+    void findVerificationsListTest() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        BoVerificationWaitingListDto.Response.EmployeeAuthItem item = new BoVerificationWaitingListDto.Response.EmployeeAuthItem();
+        given(authenticationRepository.findVerificationsList(pageable)).willReturn(List.of(item));
+
+        // when
+        List<BoVerificationWaitingListDto.Response.EmployeeAuthItem> result = authenticationService.findVerificationsList(pageable);
+
+        // then
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("인증 대기 상세 조회 및 경과일 계산 성공 테스트")
+    void findVerificationsDetailTest() {
+        // given
+        Long id = 1L;
+        BoVerificationWaitingDetailDto.Response detail = new BoVerificationWaitingDetailDto.Response();
+        detail.setCreateAt(LocalDateTime.now().minusDays(5));
+
+        given(authenticationRepository.findVerifications(id)).willReturn(detail);
+
+        // when
+        BoVerificationWaitingDetailDto.Response result = authenticationService.findVerifications(id);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.getElapsedAt()).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("인증 승인 등록 성공 테스트")
+    void saveVerificationsSuccessTest() {
+        // given
+        Long id = 1L;
+        Authentication authentication = Authentication.builder().id(id).build();
+        given(authenticationRepository.findById(id)).willReturn(Optional.of(authentication));
+
+        // when
+        authenticationService.saveVerifications(id);
+
+        // then
+        verify(authenticationApproveRepository).save(any(AuthenticationApprove.class));
+    }
+
+    @Test
+    @DisplayName("인증 승인 등록 시 대상 인증건 미존재 시 예외 발생 테스트")
+    void saveVerificationsNotFoundTest() {
+        // given
+        Long id = 1L;
+        given(authenticationRepository.findById(id)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> authenticationService.saveVerifications(id))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", AuthenticationErrorCode.AUTHENTICATION_NOT_FOUNT);
+    }
+
+    @Test
+    @DisplayName("인증 반려 등록 성공 테스트")
+    void deleteVerificationsSuccessTest() {
+        // given
+        Long id = 1L;
+        Authentication authentication = Authentication.builder().id(id).build();
+        given(authenticationRepository.findById(id)).willReturn(Optional.of(authentication));
+
+        // when
+        authenticationService.deleteVerifications(id);
+
+        // then
+        verify(authenticationApproveRepository).save(any(AuthenticationApprove.class));
     }
 }

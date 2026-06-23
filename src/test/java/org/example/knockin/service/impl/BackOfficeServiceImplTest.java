@@ -40,6 +40,9 @@ class BackOfficeServiceImplTest {
     @Mock
     private LifeStyleServiceImpl lifeStyleService;
 
+    @Mock
+    private AuthenticationServiceImpl authenticationService;
+
     @InjectMocks
     private BackOfficeServiceImpl backOfficeService;
 
@@ -352,5 +355,98 @@ class BackOfficeServiceImplTest {
         assertThat(response).isNotNull();
         assertThat(response.getUpdatedAt()).isNotNull();
         verify(lifeStyleService).deleteLifePattern(id);
+    }
+
+    @Test
+    @DisplayName("승인된 신원 인증 목록 조회 성공 테스트 (findVerificationApproves)")
+    void findVerificationApprovesTest() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        BoVerificationApproveListDto.Response.EmployeeAuthItem item = new BoVerificationApproveListDto.Response.EmployeeAuthItem();
+        given(authenticationService.findVerificationApproves(pageable)).willReturn(List.of(item));
+
+        // when
+        BoVerificationApproveListDto.Response response = backOfficeService.findVerificationApproves(pageable);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getEmployeeAuth()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("반려된 신원 인증 목록 조회 성공 테스트 (findVerificationCancels)")
+    void findVerificationCancelsTest() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        BoVerificationCancelListDto.Response.EmployeeAuthItem item = new BoVerificationCancelListDto.Response.EmployeeAuthItem();
+        given(authenticationService.findVerificationCancels(pageable)).willReturn(List.of(item));
+
+        // when
+        BoVerificationCancelListDto.Response response = backOfficeService.findVerificationCancels(pageable);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getEmployeeAuth()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("대기 중인 신원 인증 목록 조회 성공 테스트 (findVerificationsList)")
+    void findVerificationsListTest() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        BoVerificationWaitingListDto.Response.EmployeeAuthItem item = new BoVerificationWaitingListDto.Response.EmployeeAuthItem();
+        given(authenticationService.findVerificationsList(pageable)).willReturn(List.of(item));
+
+        // when
+        BoVerificationWaitingListDto.Response response = backOfficeService.findVerificationsList(pageable);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getEmployeeAuth()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("인증 대기 상세 조회 성공 테스트 (findVerifications)")
+    void findVerificationsDetailTest() {
+        // given
+        Long id = 1L;
+        BoVerificationWaitingDetailDto.Response detail = new BoVerificationWaitingDetailDto.Response();
+        given(authenticationService.findVerifications(id)).willReturn(detail);
+
+        // when
+        BoVerificationWaitingDetailDto.Response response = backOfficeService.findVerifications(id);
+
+        // then
+        assertThat(response).isEqualTo(detail);
+    }
+
+    @Test
+    @DisplayName("신원 인증 승인 처리 성공 테스트 (saveVerifications)")
+    void saveVerificationsSuccessTest() {
+        // given
+        Long id = 1L;
+
+        // when
+        BoVerificationDto.Response response = backOfficeService.saveVerifications(id);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(authenticationService).saveVerifications(id);
+    }
+
+    @Test
+    @DisplayName("신원 인증 반려 처리 성공 테스트 (deleteVerifications)")
+    void deleteVerificationsSuccessTest() {
+        // given
+        Long id = 1L;
+
+        // when
+        BoVerificationDto.Response response = backOfficeService.deleteVerifications(id);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(authenticationService).deleteVerifications(id);
     }
 }

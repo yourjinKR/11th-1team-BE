@@ -120,16 +120,40 @@ public class BackOfficeController {
         return CommonResponse.status(HttpStatus.OK).body(backOfficeService.deleteLifeStylePattern(id));
     }
 
-    @GetMapping("/verifications/company")
-    @Operation(summary = "업체 인증 목록 조회")
-    public CommonResponse<BoVerificationCompanyListDto.Response> findVerificationsCompanyList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoVerificationCompanyListDto.Response());
+    @GetMapping("/verifications/approve")
+    @Operation(summary = "인증 승인완료 상세보기")
+    public CommonResponse<BoVerificationApproveListDto.Response> findVerificationApproves(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findVerificationApproves(pageable));
     }
 
-    @PatchMapping("/verifications/company/{id}/approve")
-    @Operation(summary = "업체 인증 승인")
-    public CommonResponse<BoVerificationCompanyDto.Response> saveVerificationsCompany(@PathVariable Long id) {
-        return CommonResponse.status(HttpStatus.OK).body(new BoVerificationCompanyDto.Response());
+    @GetMapping("/verifications/cancel")
+    @Operation(summary = "인증 반려 상세보기")
+    public CommonResponse<BoVerificationCancelListDto.Response> findVerificationCancels(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findVerificationCancels(pageable));
+    }
+
+    @GetMapping("/verifications/wait")
+    @Operation(summary = "인증 목록 조회")
+    public CommonResponse<BoVerificationWaitingListDto.Response> findVerificationsList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findVerificationsList(pageable));
+    }
+
+    @GetMapping("/verifications/wait/{id}")
+    @Operation(summary = "인증 상세보기")
+    public CommonResponse<BoVerificationWaitingDetailDto.Response> findVerifications(@PathVariable Long id) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findVerifications(id));
+    }
+
+    @PatchMapping("/verifications/wait/{id}/approve")
+    @Operation(summary = "인증 승인")
+    public CommonResponse<BoVerificationDto.Response> saveVerifications(@PathVariable Long id) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.saveVerifications(id));
+    }
+
+    @PatchMapping("/verifications/wait/{id}/cancel")
+    @Operation(summary = "인증 반려")
+    public CommonResponse<BoVerificationDto.Response> deleteVerifications(@PathVariable Long id) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.deleteVerifications(id));
     }
 
     @PostMapping("/notices")

@@ -2,13 +2,22 @@ package org.example.knockin.repository.auth.impl;
 
 import static org.example.knockin.entity.auth.QAuthentication.authentication;
 import static org.example.knockin.entity.member.QMember.member;
+import static org.example.knockin.entity.auth.QAuthenticationApprove.authenticationApprove;
+import static org.example.knockin.entity.member.QBasicInformation.basicInformation;
 
+import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.dto.BoVerificationApproveListDto;
+import org.example.knockin.dto.BoVerificationCancelListDto;
+import org.example.knockin.dto.BoVerificationWaitingDetailDto;
+import org.example.knockin.dto.BoVerificationWaitingListDto;
+import org.example.knockin.entity.auth.ApproveType;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.repository.auth.AuthenticationRepositoryCustom;
 import org.jspecify.annotations.NullMarked;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 @NullMarked
@@ -29,5 +38,71 @@ public class AuthenticationRepositoryImpl implements AuthenticationRepositoryCus
                 )
                 .join(authentication.member, member)
                 .fetch();
+    }
+
+    @Override
+    public List<BoVerificationApproveListDto.Response.EmployeeAuthItem> findVerificationApproves(Pageable pageable) {
+        return jpaQueryFactory.select(Projections.fields(BoVerificationApproveListDto.Response.EmployeeAuthItem.class,
+                    basicInformation.name,
+                    authentication.type,
+                    authentication.isAccepted,
+                    authentication.email,
+                    authenticationApprove.createdAt
+                )).from(authenticationApprove).join(authenticationApprove.authentication, authentication)
+                .join(member).on(authentication.member.eq(member))
+                .leftJoin(basicInformation).on(basicInformation.member.eq(member))
+                .where(authenticationApprove.status.eq(ApproveType.ACCEPTED))
+                .offset(pageable.getOffset()).limit(pageable.getPageSize())
+                .fetch();
+    }
+
+    @Override
+    public List<BoVerificationCancelListDto.Response.EmployeeAuthItem> findVerificationCancels(Pageable pageable) {
+        return jpaQueryFactory.select(Projections.fields(BoVerificationCancelListDto.Response.EmployeeAuthItem.class,
+                        basicInformation.name,
+                        authentication.type,
+                        authentication.isAccepted,
+                        authentication.email,
+                        authenticationApprove.createdAt,
+                        authenticationApprove.rejectReason.as("description")
+                )).from(authenticationApprove).join(authenticationApprove.authentication, authentication)
+                .join(member).on(authentication.member.eq(member))
+                .leftJoin(basicInformation).on(basicInformation.member.eq(member))
+                .where(authenticationApprove.status.eq(ApproveType.REJECT))
+                .offset(pageable.getOffset()).limit(pageable.getPageSize())
+                .fetch();
+    }
+
+    @Override
+    public List<BoVerificationWaitingListDto.Response.EmployeeAuthItem> findVerificationsList(Pageable pageable) {
+        return jpaQueryFactory.select(Projections.fields(BoVerificationWaitingListDto.Response.EmployeeAuthItem.class,
+                        authentication.id,
+                        basicInformation.name,
+                        authentication.type,
+                        authentication.isAccepted,
+                        authentication.email,
+                        authenticationApprove.createdAt
+                )).from(authentication)
+                .join(member).on(authentication.member.eq(member))
+                .leftJoin(basicInformation).on(basicInformation.member.eq(member))
+                .where(authenticationApprove.status.eq(ApproveType.REJECT))
+                .offset(pageable.getOffset()).limit(pageable.getPageSize())
+                .fetch();
+    }
+
+    @Override
+    public BoVerificationWaitingDetailDto.Response findVerifications(Long id) {
+        return jpaQueryFactory.select(Projections.fields(BoVerificationWaitingDetailDto.Response.class,
+                        authentication.id,
+                        basicInformation.name,
+                        authentication.type,
+                        authentication.isAccepted,
+                        authentication.email,
+                        authenticationApprove.createdAt
+                )).from(authentication)
+                .join(member).on(authentication.member.eq(member))
+                .leftJoin(basicInformation).on(basicInformation.member.eq(member))
+                .where(authenticationApprove.status.eq(ApproveType.REJECT), authentication.id.eq(id))
+                .fetchOne();
     }
 }
