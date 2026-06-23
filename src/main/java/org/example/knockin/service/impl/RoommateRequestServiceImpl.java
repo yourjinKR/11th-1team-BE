@@ -20,7 +20,7 @@ import org.example.knockin.entity.room.RoommateRequiredStatus;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.ChattingErrorCode;
 import org.example.knockin.global.exception.MemberErrorCode;
-import org.example.knockin.global.exception.RoommateMatchingRequiredErrorCode;
+import org.example.knockin.global.exception.RequiredErrorCode;
 import org.example.knockin.repository.chat.ChatRoomMemberRepository;
 import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.room.MyRoommateRepository;
@@ -59,7 +59,7 @@ public class RoommateRequestServiceImpl {
         RoommateMatchingRequired roommateMatchingRequired = roommateMatchingRequiredRepository.findLatest(chatRoomId)
                 .map(previous -> {
                     if (previous.getStatus().equals(RoommateRequiredStatus.PENDING)) {
-                        throw new BusinessException(RoommateMatchingRequiredErrorCode.DUPLICATE);
+                        throw new BusinessException(RequiredErrorCode.ROOMMATE_DUPLICATE);
                     }
                     return saveRequired(requester, requestee, chattingRoom);
                 })
@@ -128,10 +128,10 @@ public class RoommateRequestServiceImpl {
     @Transactional
     public RoommateRequestDto.Response acceptRequired(Long memberId, Long requestId) {
         RoommateMatchingRequired roommateMatchingRequired = roommateMatchingRequiredRepository.findById(requestId)
-                .orElseThrow(() -> new BusinessException(RoommateMatchingRequiredErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(RequiredErrorCode.ROOMMATE_NOT_FOUND));
 
         if (!roommateMatchingRequired.isRequestee(memberId)) {
-            throw new BusinessException(RoommateMatchingRequiredErrorCode.ACCESS_DENIED);
+            throw new BusinessException(RequiredErrorCode.ROOMMATE_ACCESS_DENIED);
         }
 
         validateRequired(roommateMatchingRequired);
@@ -158,10 +158,10 @@ public class RoommateRequestServiceImpl {
     @Transactional
     public RoommateRequestDto.Response rejectRequired(Long memberId, Long requestId) {
         RoommateMatchingRequired roommateMatchingRequired = roommateMatchingRequiredRepository.findById(requestId)
-                .orElseThrow(() -> new BusinessException(RoommateMatchingRequiredErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(RequiredErrorCode.ROOMMATE_NOT_FOUND));
 
         if (!roommateMatchingRequired.isRequestee(memberId)) {
-            throw new BusinessException(RoommateMatchingRequiredErrorCode.ACCESS_DENIED);
+            throw new BusinessException(RequiredErrorCode.ROOMMATE_ACCESS_DENIED);
         }
 
         validateRequired(roommateMatchingRequired);
@@ -174,10 +174,10 @@ public class RoommateRequestServiceImpl {
     @Transactional
     public RoommateRequestDto.Response cancelRequired(Long memberId, Long requestId) {
         RoommateMatchingRequired roommateMatchingRequired = roommateMatchingRequiredRepository.findById(requestId)
-                .orElseThrow(() -> new BusinessException(RoommateMatchingRequiredErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(RequiredErrorCode.ROOMMATE_NOT_FOUND));
 
         if (!roommateMatchingRequired.isRequester(memberId)) {
-            throw new BusinessException(RoommateMatchingRequiredErrorCode.ACCESS_DENIED);
+            throw new BusinessException(RequiredErrorCode.ROOMMATE_ACCESS_DENIED);
         }
 
         validateRequired(roommateMatchingRequired);
@@ -204,7 +204,7 @@ public class RoommateRequestServiceImpl {
 
     private void validateRequired(RoommateMatchingRequired roommateMatchingRequired) {
         if (!roommateMatchingRequired.isPending()) {
-            throw new BusinessException(RoommateMatchingRequiredErrorCode.INVALID_STATUS);
+            throw new BusinessException(RequiredErrorCode.ROOMMATE_INVALID_STATUS);
         }
     }
 }

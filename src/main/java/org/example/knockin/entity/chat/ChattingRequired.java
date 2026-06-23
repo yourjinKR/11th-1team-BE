@@ -48,4 +48,20 @@ public class ChattingRequired extends CreatedAtEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private ChattingRequiredStatus status;
+
+    public boolean isPending() {
+        return this.status == ChattingRequiredStatus.PENDING;
+    }
+
+    public void accept() {
+        this.status = ChattingRequiredStatus.ACCEPTED;
+    }
+
+    public void reject() {
+        this.status = ChattingRequiredStatus.REJECTED;
+    }
+
+    public void cancel() {
+        this.status = ChattingRequiredStatus.CANCELED;
+    }
 }

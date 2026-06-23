@@ -51,20 +51,35 @@ public class ChatRequestController {
 
     @PostMapping("/{requestId}/accept")
     @Operation(summary = "채팅 요청 수락")
-    public CommonResponse<ChatRequestDto.Response> saveChatRequestAccept(@PathVariable Long requestId) {
-        return CommonResponse.status(HttpStatus.OK).body(new ChatRequestDto.Response());
+    public CommonResponse<ChatRequestDto.Response> saveChatRequestAccept(
+            @AuthenticationPrincipal PrincipalDetails details,
+            @PathVariable Long requestId
+    ) {
+        Long memberId = details.getMember().getId();
+        Response response = chatRequestService.acceptRequired(memberId, requestId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @PostMapping("/{requestId}/reject")
     @Operation(summary = "채팅 요청 거절")
-    public CommonResponse<ChatRequestDto.Response> saveChatRequestReject(@PathVariable Long requestId) {
-        return CommonResponse.status(HttpStatus.OK).body(new ChatRequestDto.Response());
+    public CommonResponse<ChatRequestDto.Response> saveChatRequestReject(
+            @AuthenticationPrincipal PrincipalDetails details,
+            @PathVariable Long requestId
+    ) {
+        Long memberId = details.getMember().getId();
+        Response response = chatRequestService.rejectRequired(memberId, requestId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @PostMapping("/{requestId}/cancel")
     @Operation(summary = "채팅 요청 취소")
-    public CommonResponse<ChatRequestDto.Response> saveChatRequestCancel(@PathVariable Long requestId) {
-        return CommonResponse.status(HttpStatus.OK).body(new ChatRequestDto.Response());
+    public CommonResponse<ChatRequestDto.Response> saveChatRequestCancel(
+            @AuthenticationPrincipal PrincipalDetails details,
+            @PathVariable Long requestId
+    ) {
+        Long memberId = details.getMember().getId();
+        Response response = chatRequestService.cancelRequired(memberId, requestId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 }
 

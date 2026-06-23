@@ -30,7 +30,7 @@ import org.example.knockin.entity.room.RoommateMatchingRequiredAlarm;
 import org.example.knockin.entity.room.RoommateRequiredStatus;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.MemberErrorCode;
-import org.example.knockin.global.exception.RoommateMatchingRequiredErrorCode;
+import org.example.knockin.global.exception.RequiredErrorCode;
 import org.example.knockin.repository.chat.ChatRoomMemberRepository;
 import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.room.MyRoommateRepository;
@@ -167,7 +167,7 @@ class RoommateRequestServiceImplTest {
         // When & Then
         assertThatThrownBy(() -> roommateRequestService.saveRoommateRequest(requesterId, request(chatRoomId)))
                 .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RoommateMatchingRequiredErrorCode.DUPLICATE));
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RequiredErrorCode.ROOMMATE_DUPLICATE));
 
         verifyNoInteractions(basicInformationRepository, roommateMatchingRequiredAlarmRepository, alarmService, messagingTemplate);
     }
@@ -351,7 +351,7 @@ class RoommateRequestServiceImplTest {
         // When & Then
         assertThatThrownBy(() -> roommateRequestService.acceptRequired(requesterId, requestId))
                 .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RoommateMatchingRequiredErrorCode.ACCESS_DENIED));
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RequiredErrorCode.ROOMMATE_ACCESS_DENIED));
         assertThat(roommateRequest.getStatus()).isEqualTo(RoommateRequiredStatus.PENDING);
         verifyNoInteractions(myRoommateRepository, basicInformationRepository, roommateMatchingRequiredAlarmRepository, alarmService, messagingTemplate);
     }
@@ -372,7 +372,7 @@ class RoommateRequestServiceImplTest {
         // When & Then
         assertThatThrownBy(() -> roommateRequestService.cancelRequired(requesteeId, requestId))
                 .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RoommateMatchingRequiredErrorCode.ACCESS_DENIED));
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RequiredErrorCode.ROOMMATE_ACCESS_DENIED));
         assertThat(roommateRequest.getStatus()).isEqualTo(RoommateRequiredStatus.PENDING);
         verifyNoInteractions(myRoommateRepository, basicInformationRepository, roommateMatchingRequiredAlarmRepository, alarmService, messagingTemplate);
     }
@@ -387,7 +387,7 @@ class RoommateRequestServiceImplTest {
         // When & Then
         assertThatThrownBy(() -> roommateRequestService.rejectRequired(2L, requestId))
                 .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RoommateMatchingRequiredErrorCode.NOT_FOUND));
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RequiredErrorCode.ROOMMATE_NOT_FOUND));
         verifyNoInteractions(myRoommateRepository, basicInformationRepository, roommateMatchingRequiredAlarmRepository, alarmService, messagingTemplate);
     }
 
@@ -407,7 +407,7 @@ class RoommateRequestServiceImplTest {
         // When & Then
         assertThatThrownBy(() -> roommateRequestService.acceptRequired(requesteeId, requestId))
                 .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RoommateMatchingRequiredErrorCode.INVALID_STATUS));
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RequiredErrorCode.ROOMMATE_INVALID_STATUS));
         assertThat(roommateRequest.getStatus()).isEqualTo(RoommateRequiredStatus.REJECTED);
         verifyNoInteractions(myRoommateRepository, basicInformationRepository, roommateMatchingRequiredAlarmRepository, alarmService, messagingTemplate);
     }
@@ -428,7 +428,7 @@ class RoommateRequestServiceImplTest {
         // When & Then
         assertThatThrownBy(() -> roommateRequestService.rejectRequired(requesteeId, requestId))
                 .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RoommateMatchingRequiredErrorCode.INVALID_STATUS));
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RequiredErrorCode.ROOMMATE_INVALID_STATUS));
         assertThat(roommateRequest.getStatus()).isEqualTo(RoommateRequiredStatus.ACCEPTED);
         verifyNoInteractions(myRoommateRepository, basicInformationRepository, roommateMatchingRequiredAlarmRepository, alarmService, messagingTemplate);
     }
@@ -449,7 +449,7 @@ class RoommateRequestServiceImplTest {
         // When & Then
         assertThatThrownBy(() -> roommateRequestService.cancelRequired(requesterId, requestId))
                 .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RoommateMatchingRequiredErrorCode.INVALID_STATUS));
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RequiredErrorCode.ROOMMATE_INVALID_STATUS));
         assertThat(roommateRequest.getStatus()).isEqualTo(RoommateRequiredStatus.EXPIRED);
         verifyNoInteractions(myRoommateRepository, basicInformationRepository, roommateMatchingRequiredAlarmRepository, alarmService, messagingTemplate);
     }
