@@ -199,6 +199,7 @@ class ChatServiceImplTest {
         when(chatRoomMemberRepository.findPartnerMember(roomMember, chatRoomId)).thenReturn(opponent);
         when(basicInformationRepository.findChattingRoomBasicInfoRow(opponent))
                 .thenReturn(Optional.of(new ChattingRoomBasicInfoRow(
+                        opponent.getId(),
                         "상대방",
                         opponentBirth,
                         Gender.FEMALE,

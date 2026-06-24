@@ -227,13 +227,12 @@ public class ChatServiceImpl {
     }
 
     private ChatRoomDetailDto.ProfileInfo getOpponentProfileInfo(ChatRoomMember me, Long chatRoomId) {
-        Member oppositeMember = chatRoomMemberRepository.findPartnerMember(me, chatRoomId);
-        ChattingRoomBasicInfoRow row = basicInformationRepository.findChattingRoomBasicInfoRow(
-                        oppositeMember)
+        Member opponentMember = chatRoomMemberRepository.findPartnerMember(me, chatRoomId);
+        ChattingRoomBasicInfoRow row = basicInformationRepository.findChattingRoomBasicInfoRow(opponentMember)
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.BASIC_INFO_NOT_FOUND));
 
         return ChatRoomDetailDto.ProfileInfo.builder()
-                .id(oppositeMember.getId())
+                .id(row.memberId())
                 .name(row.name())
                 .age(DateUtils.calculateAge(row.birth()))
                 .gender(row.gender())

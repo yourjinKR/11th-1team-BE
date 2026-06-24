@@ -38,8 +38,13 @@ public class ChatRequestController {
 
     @GetMapping("/{requestId}")
     @Operation(summary = "채팅 요청 상세 조회")
-    public CommonResponse<ChatRequestDetailDto.Response> findChatRequest(@PathVariable Long requestId) {
-        return CommonResponse.status(HttpStatus.OK).body(new ChatRequestDetailDto.Response());
+    public CommonResponse<ChatRequestDetailDto.Response> findChatRequest(
+            @AuthenticationPrincipal PrincipalDetails details,
+            @PathVariable Long requestId
+    ) {
+        Long memberId = details.getMember().getId();
+        ChatRequestDetailDto.Response response = chatRequestService.getChatRequestDetail(memberId, requestId);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @PostMapping("")

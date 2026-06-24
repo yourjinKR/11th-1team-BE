@@ -15,6 +15,11 @@ public interface HasMemberId {
         ));
     }
 
+    static <T extends HasMemberId> Map<Long, List<T>> groupingByMemberId(List<T> rows) {
+        return rows.stream()
+                .collect(Collectors.groupingBy(HasMemberId::memberId));
+    }
+
     static <T extends HasMemberId, R> Map<Long, List<R>> groupingByMemberId(List<T> rows, Function<T, R> mapper) {
         return rows.stream()
                 .collect(Collectors.groupingBy(

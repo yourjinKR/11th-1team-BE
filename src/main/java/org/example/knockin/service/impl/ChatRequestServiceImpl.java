@@ -1,13 +1,14 @@
 package org.example.knockin.service.impl;
 
-import java.awt.print.Pageable;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.dto.ChatRequestDetailDto;
+import org.example.knockin.dto.ChatRequestDetailDto.Response.Lifestyle;
+import org.example.knockin.dto.ChatRequestDetailDto.Response.MemberInfo;
 import org.example.knockin.dto.ChatRequestDto;
 import org.example.knockin.dto.ChatRequestListDto;
-import org.example.knockin.dto.ChatRequestListDto.Response;
 import org.example.knockin.entity.alarm.AlarmType;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.chat.ChattingRequired;
@@ -21,12 +22,16 @@ import org.example.knockin.global.exception.MemberErrorCode;
 import org.example.knockin.global.exception.RequiredErrorCode;
 import org.example.knockin.global.exception.RoommateBoardErrorCode;
 import org.example.knockin.global.util.DateUtils;
+import org.example.knockin.global.util.HasMemberId;
 import org.example.knockin.repository.board.RoommateBoardRepository;
 import org.example.knockin.repository.chat.ChattingRequiredAlarmRepository;
 import org.example.knockin.repository.chat.ChattingRequiredRepository;
 import org.example.knockin.repository.chat.row.ChatRequestListRow;
+import org.example.knockin.repository.life.MemberLifePatternRepository;
+import org.example.knockin.repository.life.row.MatchingLifestyleRow;
 import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.MemberRepository;
+import org.example.knockin.repository.member.row.ChattingRoomBasicInfoRow;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ChatRequestServiceImpl {
 
-    private static Map<ChattingRequiredStatus, String> templateMap = Map.of(
+    private final static Map<ChattingRequiredStatus, String> templateMap = Map.of(
             ChattingRequiredStatus.PENDING, "%s님이 매칭을 요청했어요",
             ChattingRequiredStatus.ACCEPTED, "%s님이 매칭 요청을 수락했어요",
             ChattingRequiredStatus.REJECTED, "%s님이 매칭 요청을 거절했어요",
@@ -49,8 +54,9 @@ public class ChatRequestServiceImpl {
     private final AlarmServiceImpl alarmService;
     private final ChattingRequiredAlarmRepository chattingRequiredAlarmRepository;
     private final BasicInformationRepository basicInformationRepository;
+    private final MemberLifePatternRepository memberLifePatternRepository;
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ChatRequestListDto.Response> getPendingChatRequestList(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
@@ -73,6 +79,87 @@ public class ChatRequestServiceImpl {
                 .score(score)
                 .createdAt(row.createdAt())
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public ChatRequestDetailDto.Response getChatRequestDetail(Long memberId, Long requestId) {
+        ChattingRequired chattingRequired = chattingRequiredRepository.findById(requestId)
+                .orElseThrow(() -> new BusinessException(RequiredErrorCode.CHATTING_NOT_FOUND));
+
+        boolean isRequester = isRequester(memberId, chattingRequired);
+        Member requester = chattingRequired.getRequester();
+        Member requestee = chattingRequired.getRequestee();
+        Long myId = isRequester ? requester.getId() : requestee.getId();
+        Long opponentId = isRequester ? requestee.getId() : requester.getId();
+
+        List<ChattingRoomBasicInfoRow> basicInfoRows = basicInformationRepository.findChattingRoomBasicInfoRows(List.of(myId, opponentId));
+        Map<Long, ChattingRoomBasicInfoRow> basicInfoRowMap = HasMemberId.toMapByMemberId(basicInfoRows);
+
+        List<MatchingLifestyleRow> lifestyleRows = memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(myId, opponentId));
+        Map<Long, List<MatchingLifestyleRow>> lifeStyleRowMap = HasMemberId.groupingByMemberId(lifestyleRows);
+
+        MemberInfo meInfo = toMemberInfo(myId, basicInfoRowMap.get(myId), lifeStyleRowMap.get(myId));
+        MemberInfo opponentInfo = toMemberInfo(opponentId, basicInfoRowMap.get(opponentId), lifeStyleRowMap.get(opponentId));
+
+        return ChatRequestDetailDto.Response.builder()
+                .requiredId(chattingRequired.getId())
+                .status(chattingRequired.getStatus())
+                .createdAt(chattingRequired.getCreatedAt())
+                // TODO: 점수 계산식 확정 후 적용
+                .score(100)
+                .me(meInfo)
+                .opponent(opponentInfo)
+                .isRequester(isRequester)
+                .build();
+    }
+
+    private ChatRequestDetailDto.Response.MemberInfo toMemberInfo(
+            Long memberId,
+            ChattingRoomBasicInfoRow basicInformationRow,
+            List<MatchingLifestyleRow> lifestyleRows
+    ) {
+        if (basicInformationRow == null) {
+            throw new BusinessException(MemberErrorCode.BASIC_INFO_NOT_FOUND);
+        }
+
+        List<Lifestyle> lifestyles = (lifestyleRows == null ? List.<MatchingLifestyleRow>of() : lifestyleRows)
+                .stream()
+                .map(this::toLifeStyle)
+                .toList();
+
+        return ChatRequestDetailDto.Response.MemberInfo.builder()
+                .memberId(memberId)
+                .memberName(basicInformationRow.name())
+                .memberAge(DateUtils.calculateAge(basicInformationRow.birth()))
+                .gender(basicInformationRow.gender())
+                .profileImageUrl(basicInformationRow.profileImageUrl())
+                .lifeStyles(lifestyles)
+                .build();
+    }
+
+    private ChatRequestDetailDto.Response.Lifestyle toLifeStyle(MatchingLifestyleRow row) {
+        return ChatRequestDetailDto.Response.Lifestyle.builder()
+                .lifestyleId(row.lifestyleId())
+                .name(row.name())
+                .value(row.value())
+                .description(row.description())
+                .type(row.type())
+                .build();
+    }
+
+    private boolean isRequester(Long memberId, ChattingRequired chattingRequired) {
+        Long requesterId = chattingRequired.getRequester().getId();
+        Long requesteeId = chattingRequired.getRequestee().getId();
+
+        if (requesterId.equals(memberId)) {
+            return true;
+        }
+
+        if (requesteeId.equals(memberId)) {
+            return false;
+        }
+
+        throw new BusinessException(RequiredErrorCode.CHATTING_ACCESS_DENIED);
     }
 
     @Transactional

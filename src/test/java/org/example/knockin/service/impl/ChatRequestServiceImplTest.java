@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.example.knockin.dto.ChatRequestDetailDto;
 import org.example.knockin.dto.ChatRequestListDto;
 import org.example.knockin.dto.ChatRequestDto;
 import org.example.knockin.entity.alarm.AlarmType;
@@ -21,6 +22,7 @@ import org.example.knockin.entity.chat.ChattingRequired;
 import org.example.knockin.entity.chat.ChattingRequiredAlarm;
 import org.example.knockin.entity.chat.ChattingRequiredStatus;
 import org.example.knockin.entity.chat.ChattingRoom;
+import org.example.knockin.entity.life.LifePatternType;
 import org.example.knockin.entity.member.BasicInformation;
 import org.example.knockin.entity.member.Gender;
 import org.example.knockin.entity.member.Member;
@@ -36,8 +38,11 @@ import org.example.knockin.repository.chat.ChattingRequiredAlarmRepository;
 import org.example.knockin.repository.chat.ChattingRequiredRepository;
 import org.example.knockin.repository.chat.ChattingRoomRepository;
 import org.example.knockin.repository.chat.row.ChatRequestListRow;
+import org.example.knockin.repository.life.MemberLifePatternRepository;
+import org.example.knockin.repository.life.row.MatchingLifestyleRow;
 import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.MemberRepository;
+import org.example.knockin.repository.member.row.ChattingRoomBasicInfoRow;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +50,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("채팅 요청 서비스")
@@ -73,6 +79,9 @@ class ChatRequestServiceImplTest {
 
     @Mock
     private BasicInformationRepository basicInformationRepository;
+
+    @Mock
+    private MemberLifePatternRepository memberLifePatternRepository;
 
     @InjectMocks
     private ChatRequestServiceImpl chatRequestService;
@@ -149,6 +158,146 @@ class ChatRequestServiceImplTest {
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
         verifyNoInteractions(chattingRequiredRepository, roommateBoardRepository, chattingRoomRepository,
                 chatRoomMemberRepository, basicInformationRepository, chattingRequiredAlarmRepository, alarmService);
+    }
+
+    @Test
+    @DisplayName("피요청자가 채팅 요청 상세를 조회하면 본인과 요청자 정보를 구분해 반환한다")
+    void getChatRequestDetailReturnsRequesteePerspective() {
+        // Given
+        Long requestId = 1000L;
+        Long requesterId = 1L;
+        Long requesteeId = 2L;
+        LocalDateTime createdAt = LocalDateTime.of(2026, 6, 25, 9, 0);
+        Member requester = Member.builder().id(requesterId).build();
+        Member requestee = Member.builder().id(requesteeId).build();
+        ChattingRequired chattingRequired = chatRequest(requestId, requester, requestee, ChattingRequiredStatus.PENDING, createdAt);
+        LocalDate requesteeBirth = LocalDate.of(2001, 1, 1);
+        LocalDate requesterBirth = LocalDate.of(2000, 2, 2);
+
+        when(chattingRequiredRepository.findById(requestId)).thenReturn(Optional.of(chattingRequired));
+        when(basicInformationRepository.findChattingRoomBasicInfoRows(List.of(requesteeId, requesterId)))
+                .thenReturn(List.of(
+                        basicInfoRow(requesteeId, "피요청자", requesteeBirth, Gender.FEMALE, "requestee.jpg"),
+                        basicInfoRow(requesterId, "요청자", requesterBirth, Gender.MALE, "requester.jpg")
+                ));
+        when(memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(requesteeId, requesterId)))
+                .thenReturn(List.of(
+                        lifestyleRow(requesteeId, 11L, "청결", "4", "깔끔한 편", LifePatternType.SCALE),
+                        lifestyleRow(requesterId, 12L, "흡연", "비흡연", "흡연하지 않음", LifePatternType.SINGLE_CHOICE)
+                ));
+
+        // When
+        ChatRequestDetailDto.Response response = chatRequestService.getChatRequestDetail(requesteeId, requestId);
+
+        // Then
+        assertThat(response.getRequiredId()).isEqualTo(requestId);
+        assertThat(response.getStatus()).isEqualTo(ChattingRequiredStatus.PENDING);
+        assertThat(response.getCreatedAt()).isEqualTo(createdAt);
+        assertThat(response.getScore()).isEqualTo(100);
+        assertThat(response.getIsRequester()).isFalse();
+
+        assertThat(response.getMe().getMemberId()).isEqualTo(requesteeId);
+        assertThat(response.getMe().getMemberName()).isEqualTo("피요청자");
+        assertThat(response.getMe().getMemberAge()).isEqualTo(DateUtils.calculateAge(requesteeBirth));
+        assertThat(response.getMe().getGender()).isEqualTo(Gender.FEMALE);
+        assertThat(response.getMe().getProfileImageUrl()).isEqualTo("requestee.jpg");
+        assertThat(response.getMe().getLifeStyles()).hasSize(1);
+        assertThat(response.getMe().getLifeStyles().getFirst().getLifestyleId()).isEqualTo(11L);
+        assertThat(response.getMe().getLifeStyles().getFirst().getName()).isEqualTo("청결");
+
+        assertThat(response.getOpponent().getMemberId()).isEqualTo(requesterId);
+        assertThat(response.getOpponent().getMemberName()).isEqualTo("요청자");
+        assertThat(response.getOpponent().getMemberAge()).isEqualTo(DateUtils.calculateAge(requesterBirth));
+        assertThat(response.getOpponent().getGender()).isEqualTo(Gender.MALE);
+        assertThat(response.getOpponent().getProfileImageUrl()).isEqualTo("requester.jpg");
+        assertThat(response.getOpponent().getLifeStyles()).hasSize(1);
+        assertThat(response.getOpponent().getLifeStyles().getFirst().getLifestyleId()).isEqualTo(12L);
+        assertThat(response.getOpponent().getLifeStyles().getFirst().getType()).isEqualTo(LifePatternType.SINGLE_CHOICE);
+    }
+
+    @Test
+    @DisplayName("요청자가 채팅 요청 상세를 조회하면 요청자 여부를 참으로 반환하고 라이프스타일이 없으면 빈 목록을 반환한다")
+    void getChatRequestDetailReturnsRequesterPerspectiveWithEmptyLifestyle() {
+        // Given
+        Long requestId = 1000L;
+        Long requesterId = 1L;
+        Long requesteeId = 2L;
+        Member requester = Member.builder().id(requesterId).build();
+        Member requestee = Member.builder().id(requesteeId).build();
+        ChattingRequired chattingRequired = chatRequest(requestId, requester, requestee, ChattingRequiredStatus.ACCEPTED,
+                LocalDateTime.of(2026, 6, 25, 9, 30));
+
+        when(chattingRequiredRepository.findById(requestId)).thenReturn(Optional.of(chattingRequired));
+        when(basicInformationRepository.findChattingRoomBasicInfoRows(List.of(requesterId, requesteeId)))
+                .thenReturn(List.of(
+                        basicInfoRow(requesterId, "요청자", LocalDate.of(2000, 1, 1), Gender.MALE, null),
+                        basicInfoRow(requesteeId, "피요청자", LocalDate.of(2001, 1, 1), Gender.FEMALE, null)
+                ));
+        when(memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(requesterId, requesteeId)))
+                .thenReturn(List.of());
+
+        // When
+        ChatRequestDetailDto.Response response = chatRequestService.getChatRequestDetail(requesterId, requestId);
+
+        // Then
+        assertThat(response.getIsRequester()).isTrue();
+        assertThat(response.getMe().getMemberId()).isEqualTo(requesterId);
+        assertThat(response.getOpponent().getMemberId()).isEqualTo(requesteeId);
+        assertThat(response.getMe().getLifeStyles()).isEmpty();
+        assertThat(response.getOpponent().getLifeStyles()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("채팅 요청 당사자가 아닌 회원이 상세를 조회하면 권한 없음 예외를 던진다")
+    void getChatRequestDetailRejectsUnrelatedMember() {
+        // Given
+        Long requestId = 1000L;
+        Member requester = Member.builder().id(1L).build();
+        Member requestee = Member.builder().id(2L).build();
+        ChattingRequired chattingRequired = chatRequest(requester, requestee, ChattingRequiredStatus.PENDING);
+        when(chattingRequiredRepository.findById(requestId)).thenReturn(Optional.of(chattingRequired));
+
+        // When & Then
+        assertThatThrownBy(() -> chatRequestService.getChatRequestDetail(3L, requestId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RequiredErrorCode.CHATTING_ACCESS_DENIED));
+        verifyNoInteractions(basicInformationRepository, memberLifePatternRepository);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 채팅 요청 상세를 조회하면 조회 실패 예외를 던진다")
+    void getChatRequestDetailRejectsMissingRequest() {
+        // Given
+        Long requestId = 1000L;
+        when(chattingRequiredRepository.findById(requestId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> chatRequestService.getChatRequestDetail(1L, requestId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(RequiredErrorCode.CHATTING_NOT_FOUND));
+        verifyNoInteractions(basicInformationRepository, memberLifePatternRepository);
+    }
+
+    @Test
+    @DisplayName("채팅 요청 상세 조회에 필요한 기본 정보가 없으면 기본 정보 없음 예외를 던진다")
+    void getChatRequestDetailRejectsMissingBasicInformation() {
+        // Given
+        Long requestId = 1000L;
+        Long requesterId = 1L;
+        Long requesteeId = 2L;
+        Member requester = Member.builder().id(requesterId).build();
+        Member requestee = Member.builder().id(requesteeId).build();
+        ChattingRequired chattingRequired = chatRequest(requestId, requester, requestee, ChattingRequiredStatus.PENDING,
+                LocalDateTime.of(2026, 6, 25, 10, 0));
+        when(chattingRequiredRepository.findById(requestId)).thenReturn(Optional.of(chattingRequired));
+        when(basicInformationRepository.findChattingRoomBasicInfoRows(List.of(requesteeId, requesterId)))
+                .thenReturn(List.of(basicInfoRow(requesteeId, "피요청자", LocalDate.of(2001, 1, 1), Gender.FEMALE, null)));
+        when(memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(requesteeId, requesterId))).thenReturn(List.of());
+
+        // When & Then
+        assertThatThrownBy(() -> chatRequestService.getChatRequestDetail(requesteeId, requestId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.BASIC_INFO_NOT_FOUND));
     }
 
     @Test
@@ -526,6 +675,40 @@ class ChatRequestServiceImplTest {
                 .requestee(requestee)
                 .status(status)
                 .build();
+    }
+
+    private ChattingRequired chatRequest(
+            Long id,
+            Member requester,
+            Member requestee,
+            ChattingRequiredStatus status,
+            LocalDateTime createdAt
+    ) {
+        ChattingRequired chattingRequired = chatRequest(requester, requestee, status);
+        ReflectionTestUtils.setField(chattingRequired, "id", id);
+        ReflectionTestUtils.setField(chattingRequired, "createdAt", createdAt);
+        return chattingRequired;
+    }
+
+    private ChattingRoomBasicInfoRow basicInfoRow(
+            Long memberId,
+            String name,
+            LocalDate birth,
+            Gender gender,
+            String profileImageUrl
+    ) {
+        return new ChattingRoomBasicInfoRow(memberId, name, birth, gender, profileImageUrl);
+    }
+
+    private MatchingLifestyleRow lifestyleRow(
+            Long memberId,
+            Long lifestyleId,
+            String name,
+            String value,
+            String description,
+            LifePatternType type
+    ) {
+        return new MatchingLifestyleRow(memberId, lifestyleId, name, value, description, type);
     }
 
     private BasicInformation basicInformation(Member member, String name) {
