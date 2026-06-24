@@ -7,6 +7,7 @@ import org.example.knockin.dto.EventType;
 import org.example.knockin.dto.RoommateRequestDto;
 import org.example.knockin.dto.RoommateRequestDto.Response;
 import org.example.knockin.dto.RoommateRequestDto.RoommateMatchingRequiredInfo;
+import org.example.knockin.dto.RoommateRequestListDto;
 import org.example.knockin.entity.alarm.AlarmType;
 import org.example.knockin.entity.chat.ChatRoomMember;
 import org.example.knockin.entity.chat.ChattingRoom;
@@ -25,6 +26,8 @@ import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.room.MyRoommateRepository;
 import org.example.knockin.repository.room.RoommateMatchingRequiredAlarmRepository;
 import org.example.knockin.repository.room.RoommateMatchingRequiredRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -182,6 +185,21 @@ public class RoommateRequestServiceImpl {
         Response response = toDto(roommateMatchingRequired);
         sendRequestMessage(roommateMatchingRequired.getChattingRoom().getId(), response);
         return response;
+    }
+
+    public Page<RoommateRequestListDto.Response> getRequiredList(Long memberId, Pageable pageable) {
+        return roommateMatchingRequiredRepository.findByRequesterIdAndRequesteeId(memberId, memberId, pageable).map(this::toListDto);
+    }
+
+    private RoommateRequestListDto.Response toListDto(RoommateMatchingRequired roommateMatchingRequired) {
+        return RoommateRequestListDto.Response.builder()
+                .id(roommateMatchingRequired.getId())
+                .requesterId(roommateMatchingRequired.getRequester().getId())
+                .requesteeId(roommateMatchingRequired.getRequestee().getId())
+                .chatRoomId(roommateMatchingRequired.getChattingRoom().getId())
+                .status(roommateMatchingRequired.getStatus())
+                .createAt(roommateMatchingRequired.getCreatedAt())
+                .build();
     }
 
     private void validateRequired(RoommateMatchingRequired roommateMatchingRequired) {

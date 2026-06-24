@@ -11,11 +11,13 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.example.knockin.dto.ChatSocketResponse;
 import org.example.knockin.dto.EventType;
 import org.example.knockin.dto.RoommateRequestDto;
 import org.example.knockin.dto.RoommateRequestDto.RoommateMatchingRequiredInfo;
+import org.example.knockin.dto.RoommateRequestListDto;
 import org.example.knockin.entity.alarm.AlarmType;
 import org.example.knockin.entity.chat.ChatRoomMember;
 import org.example.knockin.entity.chat.ChattingRoom;
@@ -42,6 +44,10 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -446,6 +452,45 @@ class RoommateRequestServiceImplTest {
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(RoommateMatchingRequiredErrorCode.INVALID_STATUS));
         assertThat(roommateRequest.getStatus()).isEqualTo(RoommateRequiredStatus.EXPIRED);
         verifyNoInteractions(myRoommateRepository, basicInformationRepository, roommateMatchingRequiredAlarmRepository, alarmService, messagingTemplate);
+    }
+
+    @Test
+    @DisplayName("룸메이트 요청 목록을 조회하면 요청 정보를 페이지 응답으로 반환한다")
+    void getRequiredListReturnsMappedRequestPage() {
+        // Given
+        Long memberId = 1L;
+        Pageable pageable = PageRequest.of(0, 20);
+        Member requester = member(memberId);
+        Member requestee = member(2L);
+        ChattingRoom chattingRoom = chattingRoom(10L);
+        RoommateMatchingRequired roommateRequest = persistedRoommateRequest(
+                roommateRequest(requester, requestee, chattingRoom, RoommateRequiredStatus.PENDING),
+                1000L
+        );
+        Page<RoommateMatchingRequired> requestPage = new PageImpl<>(List.of(roommateRequest), pageable, 1);
+
+        when(roommateMatchingRequiredRepository.findByRequesterIdAndRequesteeId(memberId, memberId, pageable))
+                .thenReturn(requestPage);
+
+        // When
+        Page<RoommateRequestListDto.Response> response = roommateRequestService.getRequiredList(memberId, pageable);
+
+        // Then
+        assertThat(response.getTotalElements()).isEqualTo(1);
+        assertThat(response.getNumber()).isZero();
+        assertThat(response.getSize()).isEqualTo(20);
+
+        RoommateRequestListDto.Response content = response.getContent().getFirst();
+        assertThat(content.getId()).isEqualTo(1000L);
+        assertThat(content.getRequesterId()).isEqualTo(memberId);
+        assertThat(content.getRequesteeId()).isEqualTo(2L);
+        assertThat(content.getChatRoomId()).isEqualTo(10L);
+        assertThat(content.getStatus()).isEqualTo(RoommateRequiredStatus.PENDING);
+        assertThat(content.getCreateAt()).isEqualTo(LocalDateTime.of(2026, 6, 23, 10, 0));
+
+        verify(roommateMatchingRequiredRepository).findByRequesterIdAndRequesteeId(memberId, memberId, pageable);
+        verifyNoInteractions(chatRoomMemberRepository, basicInformationRepository, myRoommateRepository,
+                roommateMatchingRequiredAlarmRepository, alarmService, messagingTemplate);
     }
 
     private RoommateRequestDto.Request request(Long chatRoomId) {

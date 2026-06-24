@@ -9,6 +9,7 @@ import org.example.knockin.dto.RoommateRequestListDto;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.global.auth.dto.PrincipalDetails;
 import org.example.knockin.service.impl.RoommateRequestServiceImpl;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -69,8 +70,13 @@ public class RoomMateRequestController {
 
     @GetMapping("")
     @Operation(summary = "룸메이트 요청 목록 조회")
-    public CommonResponse<RoommateRequestListDto.Response> findRoomMateRequestList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return CommonResponse.status(HttpStatus.OK).body(new RoommateRequestListDto.Response());
+    public CommonResponse<Page<RoommateRequestListDto.Response>> findRoomMateRequestList(
+            @AuthenticationPrincipal PrincipalDetails details,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        Long memberId = details.getMember().getId();
+        Page<RoommateRequestListDto.Response> result = roommateRequestService.getRequiredList(memberId, pageable);
+        return CommonResponse.status(HttpStatus.OK).body(result);
     }
 }
 
