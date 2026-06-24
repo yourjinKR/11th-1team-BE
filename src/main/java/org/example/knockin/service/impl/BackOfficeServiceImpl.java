@@ -9,6 +9,8 @@ import org.example.knockin.entity.inquiry.InquiryComment;
 import org.example.knockin.entity.life.LifePattern;
 import org.example.knockin.entity.life.LifePatternInformation;
 import org.example.knockin.entity.member.Member;
+import org.example.knockin.entity.member.MemberRole;
+import org.example.knockin.entity.member.MemberState;
 import org.example.knockin.entity.room.RoomType;
 import org.example.knockin.global.auth.exception.AuthErrorCode;
 import org.example.knockin.global.exception.BusinessException;
@@ -202,5 +204,28 @@ public class BackOfficeServiceImpl {
 
     public BoInquiryDetailDto.Response findInquirie(Long id) {
         return BoInquiryDetailDto.Response.builder().inquirie(inquirieService.findBackOfficeInquirie(id)).build();
+    }
+
+    public BoMemberListDto.Response findMemberList(Pageable pageable) {
+        return memberService.findBackOfficeMemberList(pageable);
+    }
+
+    public BoMemberDetailDto.Response findMember(Long id) {
+        memberService.findById(id).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+        return memberService.findBackOfficeMember(id);
+    }
+
+    @Transactional
+    public BoMemberCancelDto.Response deleteMember(Long id) {
+        Member member = memberService.findById(id).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+        memberService.setMemberState(member, MemberState.INACTIVE);
+        return BoMemberCancelDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public BoMemberAuthDto.Response authMember(Long id, BoMemberAuthDto.Request request) {
+        Member member = memberService.findById(id).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
+        memberService.setMemberAuth(member, request.getMemberRole());
+        return BoMemberAuthDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 }

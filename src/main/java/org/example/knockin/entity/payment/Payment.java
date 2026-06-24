@@ -16,7 +16,7 @@ public class Payment extends CreatedAtEntity {
     private Long id;
 
     @Column(nullable = false, unique = true, length = 100)
-    private String key;
+    private String paymentKey;
 
     @Enumerated(EnumType.STRING)
     private PaymentType type;

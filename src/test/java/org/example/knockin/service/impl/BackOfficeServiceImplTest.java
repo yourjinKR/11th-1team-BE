@@ -9,6 +9,8 @@ import org.example.knockin.entity.life.LifePattern;
 import org.example.knockin.entity.life.LifePatternInformation;
 import org.example.knockin.entity.life.LifePatternType;
 import org.example.knockin.entity.member.Member;
+import org.example.knockin.entity.member.MemberRole;
+import org.example.knockin.entity.member.MemberState;
 import org.example.knockin.entity.room.RoomType;
 import org.example.knockin.global.auth.exception.AuthErrorCode;
 import org.example.knockin.global.exception.BusinessException;
@@ -661,7 +663,53 @@ class BackOfficeServiceImplTest {
         given(memberService.findById(memberId)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> backOfficeService.saveInquiryReply(request, memberId))
+        assertThatThrownBy(() -> backOfficeService.saveInquiryReply(request, memberId));
+    }
+
+    @DisplayName("회원 목록 조회 성공 테스트 (findMemberList)")
+    void findMemberListSuccessTest() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        BoMemberListDto.Response expected = BoMemberListDto.Response.builder().build();
+
+        given(memberService.findBackOfficeMemberList(pageable)).willReturn(expected);
+
+        // when
+        BoMemberListDto.Response response = backOfficeService.findMemberList(pageable);
+
+        // then
+        assertThat(response).isEqualTo(expected);
+        verify(memberService).findBackOfficeMemberList(pageable);
+    }
+
+    @Test
+    @DisplayName("회원 상세 조회 성공 테스트 (findMember)")
+    void findMemberSuccessTest() {
+        // given
+        Long id = 1L;
+        Member member = mock(Member.class);
+        BoMemberDetailDto.Response expected = new BoMemberDetailDto.Response();
+
+        given(memberService.findById(id)).willReturn(Optional.of(member));
+        given(memberService.findBackOfficeMember(id)).willReturn(expected);
+
+        // when
+        BoMemberDetailDto.Response response = backOfficeService.findMember(id);
+
+        // then
+        assertThat(response).isEqualTo(expected);
+        verify(memberService).findBackOfficeMember(id);
+    }
+
+    @Test
+    @DisplayName("회원 상세 조회 시 회원을 찾지 못하면 BusinessException 발생")
+    void findMemberNotFoundTest() {
+        // given
+        Long id = 1L;
+        given(memberService.findById(id)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> backOfficeService.findMember(id))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", AuthErrorCode.MEMBER_NOT_FOUND);
     }
@@ -704,5 +752,69 @@ class BackOfficeServiceImplTest {
         // then
         assertThat(response).isNotNull();
         assertThat(response.getInquirie()).isEqualTo(detail);
+    }
+
+    @DisplayName("회원 삭제/비활성화 성공 테스트 (deleteMember)")
+    void deleteMemberSuccessTest() {
+        // given
+        Long id = 1L;
+        Member member = mock(Member.class);
+
+        given(memberService.findById(id)).willReturn(Optional.of(member));
+
+        // when
+        BoMemberCancelDto.Response response = backOfficeService.deleteMember(id);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(memberService).setMemberState(member, MemberState.INACTIVE);
+    }
+
+    @Test
+    @DisplayName("회원 삭제/비활성화 시 회원을 찾지 못하면 BusinessException 발생")
+    void deleteMemberNotFoundTest() {
+        // given
+        Long id = 1L;
+        given(memberService.findById(id)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> backOfficeService.deleteMember(id))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", AuthErrorCode.MEMBER_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("회원 권한 부여 성공 테스트 (authMember)")
+    void authMemberSuccessTest() {
+        // given
+        Long id = 1L;
+        BoMemberAuthDto.Request request = new BoMemberAuthDto.Request(MemberRole.ADMIN);
+        Member member = mock(Member.class);
+
+        given(memberService.findById(id)).willReturn(Optional.of(member));
+
+        // when
+        BoMemberAuthDto.Response response = backOfficeService.authMember(id, request);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(memberService).setMemberAuth(member, MemberRole.ADMIN);
+    }
+
+    @Test
+    @DisplayName("회원 권한 부여 시 회원을 찾지 못하면 BusinessException 발생")
+    void authMemberNotFoundTest() {
+        // given
+        Long id = 1L;
+        BoMemberAuthDto.Request request = new BoMemberAuthDto.Request(MemberRole.ADMIN);
+
+        given(memberService.findById(id)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> backOfficeService.authMember(id, request))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", AuthErrorCode.MEMBER_NOT_FOUND);
     }
 }

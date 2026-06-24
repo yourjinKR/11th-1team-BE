@@ -151,4 +151,8 @@ public class Member extends CreatedAtEntity {
         this.isDelete = false;
         this.deletedAt = null;
     }
+
+    public void changeRole(MemberRole memberRole) {
+        this.role = memberRole;
+    }
 }

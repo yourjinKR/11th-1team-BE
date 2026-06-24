@@ -1,5 +1,6 @@
 package org.example.knockin.repository.member.impl;
 
+import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
@@ -9,8 +10,11 @@ import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.dto.BoMemberDetailDto;
+import org.example.knockin.dto.BoMemberListDto;
 import org.example.knockin.dto.MyPreferencesAllDto;
 import org.example.knockin.dto.MyProfileAllDto;
+import org.example.knockin.entity.auth.ApproveType;
 import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.MemberPrivacyType;
@@ -22,6 +26,7 @@ import org.example.knockin.entity.room.RoomSeekerProfile;
 import org.example.knockin.global.auth.dto.AuthResponse;
 import org.example.knockin.repository.member.MemberRepositoryCustom;
 import org.example.knockin.repository.member.row.MatchingBasicInfoRow;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
@@ -47,6 +52,11 @@ import static org.example.knockin.entity.room.QRegion.region;
 import static org.example.knockin.entity.room.QRoomSeekerProfileRegion.roomSeekerProfileRegion;
 import static org.example.knockin.entity.member.QState.state;
 import static org.example.knockin.entity.member.QMemberPrivacy.memberPrivacy;
+import static org.example.knockin.entity.auth.QAuthenticationApprove.authenticationApprove;
+import static org.example.knockin.entity.auth.QAuthentication.authentication;
+import static org.example.knockin.entity.member.QMemberDeclaration.memberDeclaration;
+import static com.querydsl.core.group.GroupBy.groupBy;
+import static com.querydsl.core.group.GroupBy.list;
 
 @Repository
 @RequiredArgsConstructor
@@ -309,6 +319,52 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                 .leftJoin(basicInformationFile.file, file)
                 .on(file.isDeleted.isFalse())
                 .fetchOne());
+    }
+
+    @Override
+    public List<BoMemberListDto.Response.MemberInfo> findBackOfficeMemberList(Pageable pageable) {
+        return jpaQueryFactory.select(Projections.fields(BoMemberListDto.Response.MemberInfo.class,
+                    member.id,
+                    basicInformation.name,
+                    basicInformation.email,
+                    member.createdAt,
+                    member.role,
+                    state.states.as("state"),
+                    new CaseBuilder().when(JPAExpressions.selectOne()
+                                            .from(authenticationApprove)
+                                            .join(authenticationApprove.authentication, authentication)
+                                            .where(authentication.member.eq(member), authenticationApprove.status.eq(ApproveType.ACCEPTED))
+                                            .exists())
+                            .then("인증").otherwise("미인증").as("authenticationStatus")
+                )).from(member)
+                .leftJoin(basicInformation).on(basicInformation.member.eq(member))
+                .leftJoin(state).on(state.member.eq(member))
+                .offset(pageable.getOffset()).limit(pageable.getPageSize()).fetch();
+    }
+
+    @Override
+    public BoMemberDetailDto.Response findBackOfficeMember(Long id) {
+        return jpaQueryFactory
+                .from(member)
+                .leftJoin(basicInformation).on(basicInformation.member.eq(member))
+                .leftJoin(state).on(state.member.eq(member))
+                .leftJoin(authentication).on(authentication.member.eq(member))
+                .where(member.id.eq(id))
+                .transform(groupBy(member.id).as(Projections.fields(BoMemberDetailDto.Response.class,
+                        member.id,
+                        basicInformation.name,
+                        basicInformation.email,
+                        member.createdAt,
+                        member.role,
+                        basicInformation.gender,
+                        basicInformation.birth,
+                        state.states.as("state"),
+                        ExpressionUtils.as(JPAExpressions
+                                .select(memberDeclaration.count().intValue())
+                                .from(memberDeclaration).where(memberDeclaration.reported.id.eq(member.id)), "reportCount"),
+                        list(Projections.fields(BoMemberDetailDto.Response.AuthenticationInfo.class,
+                                authentication.type.as("authenticationType"),
+                                authentication.email.as("authenticationEmail"))).as("authenticationInfoList")))).get(id);
     }
 
     private BooleanExpression providerIdEq(String providerId) {

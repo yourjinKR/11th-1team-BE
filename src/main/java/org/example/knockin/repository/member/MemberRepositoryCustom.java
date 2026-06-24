@@ -3,6 +3,8 @@ package org.example.knockin.repository.member;
 import java.util.List;
 import java.util.Optional;
 
+import org.example.knockin.dto.BoMemberDetailDto;
+import org.example.knockin.dto.BoMemberListDto;
 import org.example.knockin.dto.MyPreferencesAllDto;
 import org.example.knockin.dto.MyProfileAllDto;
 import org.example.knockin.entity.auth.LoginProviderType;
@@ -12,6 +14,7 @@ import org.example.knockin.entity.room.RoomProfile;
 import org.example.knockin.entity.room.RoomSeekerProfile;
 import org.example.knockin.global.auth.dto.AuthResponse;
 import org.example.knockin.repository.member.row.MatchingBasicInfoRow;
+import org.springframework.data.domain.Pageable;
 
 public interface MemberRepositoryCustom {
     Optional<Member> findMemberByProvider(String providerId, LoginProviderType providerType);
@@ -27,4 +30,6 @@ public interface MemberRepositoryCustom {
     List<MyPreferencesAllDto.Response.Condition> findPreferenceCondition(Member member);
     List<MatchingBasicInfoRow> findMatchingBasicRow(List<Long> excludeMemberIds, Integer size);
     Optional<MatchingBasicInfoRow> findMatchingBasicRowById(Long memberId);
+    List<BoMemberListDto.Response.MemberInfo> findBackOfficeMemberList(Pageable pageable);
+    BoMemberDetailDto.Response findBackOfficeMember(Long id);
 }

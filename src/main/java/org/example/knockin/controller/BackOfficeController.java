@@ -269,5 +269,29 @@ public class BackOfficeController {
     public CommonResponse<AuthEmailModifyDto.Response> modifyAuthEmail(AuthEmailModifyDto.Request request) {
         return CommonResponse.status(HttpStatus.OK).body(authEmailService.modifyAuthEmail(request));
     }
+
+    @GetMapping("/member")
+    @Operation(summary = "회원 관리 목록 조회")
+    public CommonResponse<BoMemberListDto.Response> findMemberList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findMemberList(pageable));
+    }
+
+    @GetMapping("/member/{id}")
+    @Operation(summary = "회원 관리 상세 조회")
+    public CommonResponse<BoMemberDetailDto.Response> findMember(@PathVariable Long id) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findMember(id));
+    }
+
+    @PatchMapping("/member/cancel/{id}")
+    @Operation(summary = "회원 정지")
+    public CommonResponse<BoMemberCancelDto.Response> deleteMember(@PathVariable Long id) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.deleteMember(id));
+    }
+
+    @PatchMapping("/member/auth/{id}")
+    @Operation(summary = "회원 권한 수정")
+    public CommonResponse<BoMemberAuthDto.Response> authMember(@PathVariable Long id, @RequestBody BoMemberAuthDto.Request request) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.authMember(id, request));
+    }
 }
 

@@ -1,12 +1,9 @@
 package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.example.knockin.dto.DeleteUserDto;
-import org.example.knockin.dto.MyPreferencesAllDto;
-import org.example.knockin.dto.MyProfileAllDto;
+import org.example.knockin.dto.*;
 import org.example.knockin.entity.alarm.AlarmSetting;
 import org.example.knockin.entity.alarm.AlarmSettingType;
-import org.example.knockin.entity.alarm.AlarmType;
 import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.MemberRole;
@@ -24,6 +21,7 @@ import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.StateRepository;
 import org.example.knockin.repository.room.RoomProfileRepository;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -186,5 +184,26 @@ public class MemberServiceImpl {
         }
 
         return String.join(" ", regionNames);
+    }
+
+    public BoMemberListDto.Response findBackOfficeMemberList(Pageable pageable) {
+        return BoMemberListDto.Response.builder().memberInfoList(memberRepository.findBackOfficeMemberList(pageable)).build();
+    }
+
+    public BoMemberDetailDto.Response findBackOfficeMember(Long id) {
+        return memberRepository.findBackOfficeMember(id);
+    }
+
+    @Transactional
+    public State setMemberState(Member member, MemberState memberState) {
+        State state = stateRepository.findByMember(member).getFirst();
+        state.changeState(memberState);
+        return state;
+    }
+
+    @Transactional
+    public Member setMemberAuth(Member member, MemberRole memberRole) {
+        member.changeRole(memberRole);
+        return member;
     }
 }
