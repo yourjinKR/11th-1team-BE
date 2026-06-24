@@ -14,6 +14,7 @@ import org.example.knockin.entity.member.MemberState;
 import org.example.knockin.entity.room.RoomType;
 import org.example.knockin.global.auth.exception.AuthErrorCode;
 import org.example.knockin.global.exception.BusinessException;
+import org.example.knockin.global.util.ReportType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,6 +63,9 @@ class BackOfficeServiceImplTest {
 
     @Mock
     private InquirieServiceImpl inquirieService;
+
+    @Mock
+    private DeclarationServiceImpl declarationService;
 
     @InjectMocks
     private BackOfficeServiceImpl backOfficeService;
@@ -804,7 +808,7 @@ class BackOfficeServiceImplTest {
     }
 
     @Test
-    @DisplayName("회원 권한 부여 시 회원을 찾지 못하면 BusinessException 발생")
+    @DisplayName("회원 권한 부여 시 회원을 찾을 수 없으면 BusinessException 발생")
     void authMemberNotFoundTest() {
         // given
         Long id = 1L;
@@ -816,5 +820,98 @@ class BackOfficeServiceImplTest {
         assertThatThrownBy(() -> backOfficeService.authMember(id, request))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", AuthErrorCode.MEMBER_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("신고 대기 목록 조회 성공 테스트 (findReportWaitList)")
+    void findReportWaitListSuccessTest() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        BoReportWaitListDto.Response.ReportInfo info = new BoReportWaitListDto.Response.ReportInfo();
+        info.setId(100L);
+
+        given(declarationService.findReportWaitList(pageable)).willReturn(List.of(info));
+
+        // when
+        BoReportWaitListDto.Response response = backOfficeService.findReportWaitList(pageable);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getReportInfoList()).hasSize(1);
+        assertThat(response.getReportInfoList().get(0).getId()).isEqualTo(100L);
+        verify(declarationService).findReportWaitList(pageable);
+    }
+
+    @Test
+    @DisplayName("신고 완료 목록 조회 성공 테스트 (findReportDoneList)")
+    void findReportDoneListSuccessTest() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        BoReportDoneListDto.Response.ReportInfo info = new BoReportDoneListDto.Response.ReportInfo();
+        info.setId(100L);
+
+        given(declarationService.findReportDoneList(pageable)).willReturn(List.of(info));
+
+        // when
+        BoReportDoneListDto.Response response = backOfficeService.findReportDoneList(pageable);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getReportInfoList()).hasSize(1);
+        assertThat(response.getReportInfoList().get(0).getId()).isEqualTo(100L);
+        verify(declarationService).findReportDoneList(pageable);
+    }
+
+    @Test
+    @DisplayName("신고 숨김 처리 성공 테스트 (reportHidden)")
+    void reportHiddenSuccessTest() {
+        // given
+        BoReportHiddenDto.Request request = new BoReportHiddenDto.Request();
+        request.setId(100L);
+        request.setType(ReportType.BOARD);
+        request.setReason("사유");
+
+        // when
+        BoReportHiddenDto.Response response = backOfficeService.reportHidden(request);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(declarationService).reportHidden(100L, ReportType.BOARD, "사유");
+    }
+
+    @Test
+    @DisplayName("신고 무조치 처리 성공 테스트 (reportNoAction)")
+    void reportNoActionSuccessTest() {
+        // given
+        BoReportNoActionDto.Request request = new BoReportNoActionDto.Request();
+        request.setId(100L);
+        request.setType(ReportType.MEMBER);
+
+        // when
+        BoReportNoActionDto.Response response = backOfficeService.reportNoAction(request);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(declarationService).reportNoAction(100L, ReportType.MEMBER);
+    }
+
+    @Test
+    @DisplayName("신고 정지 처리 성공 테스트 (reportSuspended)")
+    void reportSuspendedSuccessTest() {
+        // given
+        BoReportSuspendedDto.Request request = new BoReportSuspendedDto.Request();
+        request.setId(100L);
+        request.setType(ReportType.BOARD);
+        request.setReason("사유");
+
+        // when
+        BoReportSuspendedDto.Response response = backOfficeService.reportSuspended(request);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(declarationService).reportSuspended(100L, ReportType.BOARD, "사유");
     }
 }

@@ -32,6 +32,7 @@ public class BackOfficeServiceImpl {
     private final NotificationServiceImpl notificationService;
     private final MemberServiceImpl memberService;
     private final InquirieServiceImpl inquirieService;
+    private final DeclarationServiceImpl declarationService;
 
     @Transactional
     public BoTermsDto.Response saveTerms(BoTermsDto.Request request) {
@@ -227,5 +228,31 @@ public class BackOfficeServiceImpl {
         Member member = memberService.findById(id).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
         memberService.setMemberAuth(member, request.getMemberRole());
         return BoMemberAuthDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    public BoReportWaitListDto.Response findReportWaitList(Pageable pageable) {
+        return BoReportWaitListDto.Response.builder().reportInfoList(declarationService.findReportWaitList(pageable)).build();
+    }
+
+    public BoReportDoneListDto.Response findReportDoneList(Pageable pageable) {
+        return BoReportDoneListDto.Response.builder().reportInfoList(declarationService.findReportDoneList(pageable)).build();
+    }
+
+    @Transactional
+    public BoReportHiddenDto.Response reportHidden(BoReportHiddenDto.Request request) {
+        declarationService.reportHidden(request.getId(), request.getType(), request.getReason());
+        return BoReportHiddenDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public BoReportNoActionDto.Response reportNoAction(BoReportNoActionDto.Request request) {
+        declarationService.reportNoAction(request.getId(), request.getType());
+        return BoReportNoActionDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    @Transactional
+    public BoReportSuspendedDto.Response reportSuspended(BoReportSuspendedDto.Request request) {
+        declarationService.reportSuspended(request.getId(), request.getType(), request.getReason());
+        return BoReportSuspendedDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 }

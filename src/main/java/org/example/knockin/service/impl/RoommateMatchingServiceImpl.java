@@ -19,6 +19,7 @@ import org.example.knockin.entity.member.MemberInterest;
 import org.example.knockin.entity.room.RoomProfileType;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.MemberErrorCode;
+import org.example.knockin.global.jpa.DeclarationType;
 import org.example.knockin.global.util.DateUtils;
 import org.example.knockin.global.util.HasMemberId;
 import org.example.knockin.global.util.StringUtils;
@@ -388,6 +389,7 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
                 .reporter(reporter)
                 .reported(reported)
                 .reason(reason)
+                .declarationType(DeclarationType.PENDING)
                 .build();
 
         memberDeclarationRepository.save(memberDeclaration);

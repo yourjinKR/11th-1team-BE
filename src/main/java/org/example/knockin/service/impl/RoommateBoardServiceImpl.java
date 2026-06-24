@@ -49,6 +49,7 @@ import org.example.knockin.global.exception.FileErrorCode;
 import org.example.knockin.global.exception.MemberErrorCode;
 import org.example.knockin.global.exception.MetaErrorCode;
 import org.example.knockin.global.exception.RoommateBoardErrorCode;
+import org.example.knockin.global.jpa.DeclarationType;
 import org.example.knockin.global.util.DateUtils;
 import org.example.knockin.global.util.StringUtils;
 import org.example.knockin.repository.auth.AuthenticationRepository;
@@ -610,6 +611,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
                 .member(member)
                 .roommateBoard(roommateBoard)
                 .reason(request.getContents())
+                .declarationType(DeclarationType.PENDING)
                 .build();
 
         roommateBoardDeclarationRepository.save(roommateBoardDeclaration);
