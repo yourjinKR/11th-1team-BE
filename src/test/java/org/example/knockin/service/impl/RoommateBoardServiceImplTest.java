@@ -19,16 +19,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.StreamSupport;
-import org.example.knockin.dto.BoardDetailDto;
-import org.example.knockin.dto.BoardDto;
+import org.example.knockin.dto.*;
 import org.example.knockin.dto.BoardDto.Request.FileDto;
-import org.example.knockin.dto.BoardEditDto;
 import org.example.knockin.dto.BoardEditDto.Response.BoardOptionInfo;
-import org.example.knockin.dto.BoardListDto;
-import org.example.knockin.dto.BoardModifyDto;
 import org.example.knockin.dto.BoardModifyDto.Request.ExistingFileDto;
 import org.example.knockin.dto.BoardModifyDto.Request.NewFileDto;
-import org.example.knockin.dto.ReportDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.board.RoommateBoardDeclaration;
@@ -1506,5 +1501,75 @@ class RoommateBoardServiceImplTest {
 
     private <T> List<T> toList(Iterable<T> iterable) {
         return StreamSupport.stream(iterable.spliterator(), false).toList();
+    }
+
+    @Test
+    @DisplayName("백오피스 게시글 목록 조회 성공 테스트 (findBackOfficeBoardList)")
+    void findBackOfficeBoardListSuccessTest() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        BoBoardListDto.Response.BoardInfo boardInfo = new BoBoardListDto.Response.BoardInfo();
+        boardInfo.setId(100L);
+        boardInfo.setTitle("백오피스 게시글");
+
+        when(roommateBoardRepository.findBackOfficeBoardList(pageable)).thenReturn(List.of(boardInfo));
+
+        // when
+        List<BoBoardListDto.Response.BoardInfo> result = roommateBoardService.findBackOfficeBoardList(pageable);
+
+        // then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo(100L);
+        assertThat(result.get(0).getTitle()).isEqualTo("백오피스 게시글");
+        verify(roommateBoardRepository).findBackOfficeBoardList(pageable);
+    }
+
+    @Test
+    @DisplayName("백오피스 게시글 상세 조회 성공 테스트 (findBackOffcieBoard)")
+    void findBackOfficeBoardDetailSuccessTest() {
+        // given
+        Long boardId = 100L;
+        BoBoardDetailDto.Response detail = new BoBoardDetailDto.Response();
+        detail.setTitle("상세 제목");
+
+        when(roommateBoardRepository.findBackOffcieBoard(boardId)).thenReturn(detail);
+
+        // when
+        BoBoardDetailDto.Response result = roommateBoardService.findBackOffcieBoard(boardId);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.getTitle()).isEqualTo("상세 제목");
+        verify(roommateBoardRepository).findBackOffcieBoard(boardId);
+    }
+
+    @Test
+    @DisplayName("백오피스 게시글 삭제 성공 테스트 (deleteBackOfficeBoard)")
+    void deleteBackOfficeBoardSuccessTest() {
+        // given
+        Long boardId = 100L;
+        RoommateBoard board = org.mockito.Mockito.spy(createRoommateBoard(10L));
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(board));
+
+        // when
+        RoommateBoard result = roommateBoardService.deleteBackOfficeBoard(boardId);
+
+        // then
+        assertThat(result).isSameAs(board);
+        assertThat(board.getIsDeleted()).isTrue();
+        verify(roommateBoardRepository).findById(boardId);
+    }
+
+    @Test
+    @DisplayName("백오피스 게시글 삭제 시 게시글이 없으면 BusinessException 발생")
+    void deleteBackOfficeBoardNotFoundTest() {
+        // given
+        Long boardId = 100L;
+        when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> roommateBoardService.deleteBackOfficeBoard(boardId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND);
     }
 }

@@ -2,15 +2,11 @@ package org.example.knockin.service;
 
 import java.io.IOException;
 import java.util.List;
-import org.example.knockin.dto.BoardDetailDto;
-import org.example.knockin.dto.BoardDto;
-import org.example.knockin.dto.BoardEditDto;
-import org.example.knockin.dto.BoardListDto;
+
+import org.example.knockin.dto.*;
 import org.example.knockin.dto.BoardListDto.Response;
-import org.example.knockin.dto.BoardModifyDto;
-import org.example.knockin.dto.ReportDto;
+import org.example.knockin.entity.board.RoommateBoard;
 import org.jspecify.annotations.Nullable;
-import org.example.knockin.dto.MyBoardListDto;
 import org.example.knockin.entity.member.Member;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,4 +28,10 @@ public interface RoommateBoardService {
     BoardDto.Response deleteBoard(Long boardId, Long memberId);
 
     ReportDto.Response reportBoard(ReportDto.Request request, Long boardId, Long memberId);
+
+    List<BoBoardListDto.Response.BoardInfo> findBackOfficeBoardList(Pageable pageable);
+
+    BoBoardDetailDto.Response findBackOffcieBoard(Long id);
+
+    RoommateBoard deleteBackOfficeBoard(Long id);
 }

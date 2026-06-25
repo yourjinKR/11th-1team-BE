@@ -33,6 +33,7 @@ public class BackOfficeServiceImpl {
     private final MemberServiceImpl memberService;
     private final InquirieServiceImpl inquirieService;
     private final DeclarationServiceImpl declarationService;
+    private final RoommateBoardServiceImpl roommateBoardService;
 
     @Transactional
     public BoTermsDto.Response saveTerms(BoTermsDto.Request request) {
@@ -254,5 +255,19 @@ public class BackOfficeServiceImpl {
     public BoReportSuspendedDto.Response reportSuspended(BoReportSuspendedDto.Request request) {
         declarationService.reportSuspended(request.getId(), request.getType(), request.getReason());
         return BoReportSuspendedDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    public BoBoardListDto.Response findBoardList(Pageable pageable) {
+        return BoBoardListDto.Response.builder().boardInfoList(roommateBoardService.findBackOfficeBoardList(pageable)).build();
+    }
+
+    public BoBoardDetailDto.Response findBoard(Long id) {
+        return roommateBoardService.findBackOffcieBoard(id);
+    }
+
+    @Transactional
+    public BoBoardDeleteDto.Response deleteBoard(Long id) {
+        roommateBoardService.deleteBackOfficeBoard(id);
+        return BoBoardDeleteDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 }
