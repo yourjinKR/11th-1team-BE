@@ -1,0 +1,52 @@
+package org.example.knockin.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.example.knockin.global.util.ReportType;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Data
+public class BoBoardListDto {
+    @Data
+    public static class Request {
+    }
+
+    @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class Response {
+        @Schema(description = "게시글 목록")
+        private List<BoardInfo> boardInfoList;
+
+        @Data
+        @Builder
+        @AllArgsConstructor
+        @NoArgsConstructor
+        public static class BoardInfo {
+            @Schema(description = "수정 일시")
+            private Long id;
+            @Schema(description = "제목")
+            private String title;
+            @Schema(description = "작성자")
+            private String writer;
+            @Schema(description = "지역")
+            private String region;
+            @Schema(description = "입주가능일")
+            private LocalDate comeableDate;
+            @Schema(description = "삭제 여부")
+            private boolean isDeleted;
+            @Schema(description = "등록일")
+            private LocalDate createdAt;
+            @Schema(description = "즉시 입주 여부")
+            private boolean comeableDateNegotiable;
+        }
+    }
+}

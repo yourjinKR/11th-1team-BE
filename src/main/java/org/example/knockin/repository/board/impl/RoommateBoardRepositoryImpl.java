@@ -10,11 +10,9 @@ import static org.example.knockin.entity.member.QMember.member;
 import static org.example.knockin.entity.room.QRegion.region;
 import static org.example.knockin.entity.room.QRoomType.roomType;
 
-import com.querydsl.core.types.Order;
-import com.querydsl.core.types.OrderSpecifier;
-import com.querydsl.core.types.Predicate;
-import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.*;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDateTime;
@@ -27,6 +25,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.dto.BoBoardDetailDto;
+import org.example.knockin.dto.BoBoardListDto;
 import org.example.knockin.dto.MyBoardListDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.file.QFile;
@@ -395,6 +395,60 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                 .leftJoin(boardRegion.parent, parentRegion)
                 .leftJoin(parentRegion.parent, grandParentRegion)
                 .fetchOne());
+    }
+
+    @Override
+    public List<BoBoardListDto.Response.BoardInfo> findBackOfficeBoardList(Pageable pageable) {
+        QRegion parent = new QRegion("parent");
+        QRegion grandParent = new QRegion("grandParent");
+        return jpaQueryFactory.select(Projections.fields(BoBoardListDto.Response.BoardInfo.class,
+                        roommateBoard.id,
+                        roommateBoard.title,
+                        basicInformation.name.as("writer"),
+                        roommateBoard.comeableDate,
+                        roommateBoard.isDeleted,
+                        roommateBoard.createdAt,
+                        roommateBoard.comeableDateNegotiable,
+                        Expressions.stringTemplate("concat(coalesce({0}, ''), ' ', coalesce({1}, ''), ' ', coalesce({2}, ''))",
+                                grandParent.name, parent.name, region.name).as("region")
+                )).from(roommateBoard).join(roommateBoard.member, member)
+                .leftJoin(basicInformation).on(basicInformation.member.eq(member))
+                .leftJoin(roommateBoard.region, region)
+                .leftJoin(region.parent, parent)
+                .leftJoin(parent.parent, grandParent)
+                .fetch();
+    }
+
+    @Override
+    public BoBoardDetailDto.Response findBackOffcieBoard(Long id) {
+        QRegion parent = new QRegion("parent");
+        QRegion grandParent = new QRegion("grandParent");
+        return jpaQueryFactory.select(Projections.fields(BoBoardDetailDto.Response.class,
+                        file.savedFileName.as("thumbnailImage"),
+                        roommateBoard.title,
+                        basicInformation.name.as("writer"),
+                        member.id.as("writerId"),
+                        Expressions.stringTemplate("concat(coalesce({0}, ''), ' ', coalesce({1}, ''), ' ', coalesce({2}, ''))",
+                                grandParent.name, parent.name, region.name).as("region"),
+                        roommateBoard.deposit.longValue().as("deposit"),
+                        roommateBoard.monthlyRent.longValue().as("monthlyRent"),
+                        roommateBoard.comeableDateNegotiable,
+                        roommateBoard.comeableDate,
+                        roommateBoard.createdAt,
+                        roommateBoard.hits,
+                        roommateBoard.isDeleted
+                ))
+                .from(roommateBoard)
+                .join(roommateBoard.member, member)
+                .leftJoin(basicInformation)
+                .on(basicInformation.member.eq(member))
+                .leftJoin(roommateBoard.region, region)
+                .leftJoin(region.parent, parent)
+                .leftJoin(parent.parent, grandParent)
+                .leftJoin(roommateBoardFile).on(roommateBoardFile.roommateBoard.eq(roommateBoard).and(roommateBoardFile.isThumbnail.isTrue()))
+                .leftJoin(roommateBoardFile.file, file)
+                .where(roommateBoard.id.eq(id))
+                .fetchOne();
     }
 
     private BooleanExpression regionIn(List<Long> regionIds, QRegion boardRegion, QRegion parentRegion, QRegion grandParentRegion) {

@@ -67,6 +67,9 @@ class BackOfficeServiceImplTest {
     @Mock
     private DeclarationServiceImpl declarationService;
 
+    @Mock
+    private RoommateBoardServiceImpl roommateBoardService;
+
     @InjectMocks
     private BackOfficeServiceImpl backOfficeService;
 
@@ -913,5 +916,61 @@ class BackOfficeServiceImplTest {
         assertThat(response).isNotNull();
         assertThat(response.getUpdatedAt()).isNotNull();
         verify(declarationService).reportSuspended(100L, ReportType.BOARD, "사유");
+    }
+
+    @Test
+    @DisplayName("백오피스 게시글 목록 조회 성공 테스트 (findBoardList)")
+    void findBoardListSuccessTest() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        BoBoardListDto.Response.BoardInfo boardInfo = new BoBoardListDto.Response.BoardInfo();
+        boardInfo.setId(100L);
+        boardInfo.setTitle("게시글 제목");
+
+        given(roommateBoardService.findBackOfficeBoardList(pageable)).willReturn(List.of(boardInfo));
+
+        // when
+        BoBoardListDto.Response response = backOfficeService.findBoardList(pageable);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getBoardInfoList()).hasSize(1);
+        assertThat(response.getBoardInfoList().get(0).getId()).isEqualTo(100L);
+        assertThat(response.getBoardInfoList().get(0).getTitle()).isEqualTo("게시글 제목");
+        verify(roommateBoardService).findBackOfficeBoardList(pageable);
+    }
+
+    @Test
+    @DisplayName("백오피스 게시글 상세 조회 성공 테스트 (findBoard)")
+    void findBoardSuccessTest() {
+        // given
+        Long id = 100L;
+        BoBoardDetailDto.Response expected = new BoBoardDetailDto.Response();
+        expected.setTitle("게시글 제목");
+
+        given(roommateBoardService.findBackOffcieBoard(id)).willReturn(expected);
+
+        // when
+        BoBoardDetailDto.Response response = backOfficeService.findBoard(id);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getTitle()).isEqualTo("게시글 제목");
+        verify(roommateBoardService).findBackOffcieBoard(id);
+    }
+
+    @Test
+    @DisplayName("백오피스 게시글 삭제 성공 테스트 (deleteBoard)")
+    void deleteBoardSuccessTest() {
+        // given
+        Long id = 100L;
+
+        // when
+        BoBoardDeleteDto.Response response = backOfficeService.deleteBoard(id);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(roommateBoardService).deleteBackOfficeBoard(id);
     }
 }
