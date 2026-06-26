@@ -260,7 +260,7 @@ public class BackOfficeController {
 
     @PostMapping("/auth-email")
     @Operation(summary = "인증 이메일 정보 삽입")
-    public CommonResponse<AuthEmailSaveDto.Response> saveAuthEmail(AuthEmailSaveDto.Request request) {
+    public CommonResponse<AuthEmailSaveDto.Response> saveAuthEmail(@RequestBody AuthEmailSaveDto.Request request) {
         return CommonResponse.status(HttpStatus.OK).body(authEmailService.saveAuthEmail(request));
     }
 

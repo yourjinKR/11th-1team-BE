@@ -22,6 +22,8 @@ public class Agreement extends CreatedAtEntity {
     @Column(name = "id")
     private Long id;
 
+    private Long type;
+
     @Column(name = "title", length = 50)
     private String title;
 

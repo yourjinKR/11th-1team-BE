@@ -101,13 +101,15 @@ class BackOfficeServiceImplTest {
         request.setContents("임시 약관 내용");
         request.setIsRequired(false);
 
+        given(agreementService.findMaxAgreementType(termsId)).willReturn(1L);
+
         // when
         BoTermsDto.Response response = backOfficeService.modifyTerms(request, termsId);
 
         // then
         assertThat(response).isNotNull();
         assertThat(response.getUpdatedAt()).isNotNull();
-        verify(agreementService).modifyTemporaryAgreement(any(Agreement.class), eq(termsId));
+        verify(agreementService).modifyTemporaryAgreement(any(Agreement.class));
     }
 
     @Test

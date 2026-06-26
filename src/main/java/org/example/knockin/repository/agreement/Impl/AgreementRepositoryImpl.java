@@ -1,8 +1,11 @@
 package org.example.knockin.repository.agreement.Impl;
 
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.entity.agreement.Agreement;
+import org.example.knockin.entity.agreement.QAgreement;
+import org.example.knockin.entity.agreement.QAgreementLog;
 import org.example.knockin.repository.agreement.AgreementRepositoryCustom;
 import org.springframework.stereotype.Repository;
 
@@ -22,6 +25,13 @@ public class AgreementRepositoryImpl implements AgreementRepositoryCustom {
 
     @Override
     public List<Agreement> findByAgreementsIsCurrentAndIsDeleted() {
-        return jpaQueryFactory.selectFrom(agreement).join(agreementLog).on(agreementLog.agreement.eq(agreement), agreementLog.isCurrent.eq(true)).where(agreement.isDeleted.eq(false)).fetch();
+        QAgreement subAgreement = new QAgreement("subAgreement");
+
+        return jpaQueryFactory
+                .selectFrom(agreement)
+                .where(agreement.isDeleted.isFalse(),
+                        agreement.id.eq(JPAExpressions.select(subAgreement.id)
+                                        .from(agreementLog).join(agreementLog.agreement, subAgreement)
+                                        .where(subAgreement.type.eq(agreement.type), agreementLog.isCurrent.isTrue()).orderBy(agreementLog.id.desc()).limit(1))).fetch();
     }
 }

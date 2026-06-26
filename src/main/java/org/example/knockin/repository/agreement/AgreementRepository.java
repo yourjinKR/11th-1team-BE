@@ -8,4 +8,6 @@ import java.util.Optional;
 
 public interface AgreementRepository extends JpaRepository<Agreement, Long>, AgreementRepositoryCustom {
     List<Agreement> findAllByIsDeleted(Boolean isDeleted);
+
+    List<Agreement> findByType(Long type);
 }

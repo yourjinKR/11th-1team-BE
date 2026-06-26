@@ -45,10 +45,9 @@ class AgreementServiceImplTest {
                 .title("약관 제목")
                 .contents("약관 내용")
                 .isRequired(true)
+                .type(1L)
                 .build();
 
-        AgreementLog oldLog = spy(AgreementLog.builder().isCurrent(true).build());
-        given(agreementLogRepository.findAll()).willReturn(List.of(oldLog));
         given(agreementRepository.save(agreement)).willReturn(agreement);
 
         // when
@@ -57,7 +56,6 @@ class AgreementServiceImplTest {
         // then
         assertThat(result).isNotNull();
         assertThat(result.getTitle()).isEqualTo("약관 제목");
-        verify(oldLog).clearCurrent();
         verify(agreementLogRepository).save(any(AgreementLog.class));
         verify(agreementRepository).save(agreement);
     }
@@ -66,15 +64,15 @@ class AgreementServiceImplTest {
     @DisplayName("임시 약관 등록 성공 테스트")
     void modifyTemporaryAgreementSuccessTest() {
         // given
-        Long agreementId = 1L;
         Agreement agreement = Agreement.builder()
                 .title("임시 약관")
                 .contents("임시 내용")
+                .type(1L)
                 .build();
         given(agreementRepository.save(agreement)).willReturn(agreement);
 
         // when
-        Agreement result = agreementService.modifyTemporaryAgreement(agreement, agreementId);
+        Agreement result = agreementService.modifyTemporaryAgreement(agreement);
 
         // then
         assertThat(result).isNotNull();
@@ -93,14 +91,18 @@ class AgreementServiceImplTest {
                 .title("이전 제목")
                 .contents("이전 내용")
                 .isRequired(false)
+                .type(1L)
                 .build());
         Agreement newAgreement = Agreement.builder()
                 .title("새로운 제목")
                 .contents("새로운 내용")
                 .isRequired(true)
+                .type(1L)
                 .build();
 
         given(agreementRepository.findById(agreementId)).willReturn(Optional.of(existingAgreement));
+        given(agreementRepository.findByType(1L)).willReturn(List.of(existingAgreement));
+        given(agreementLogRepository.findByAgreementIn(any())).willReturn(List.of(mock(AgreementLog.class)));
 
         // when
         Agreement result = agreementService.modifyAgreement(newAgreement, agreementId);
@@ -108,6 +110,7 @@ class AgreementServiceImplTest {
         // then
         assertThat(result).isNotNull();
         verify(existingAgreement).modifyAgreement(newAgreement);
+        verify(agreementLogRepository).findByAgreementIn(any());
     }
 
     @Test
@@ -132,7 +135,7 @@ class AgreementServiceImplTest {
         Agreement agreement = Agreement.builder().id(100L).title("약관").build();
         AgreementLog log = AgreementLog.builder().agreement(agreement).isCurrent(true).build();
 
-        given(agreementLogRepository.findByIsCurrent(true, pageable)).willReturn(List.of(log));
+        given(agreementLogRepository.findByAgreemnetIsCurrent(true, pageable)).willReturn(List.of(log));
 
         // when
         List<Agreement> result = agreementService.findAgreementList(pageable);
@@ -188,5 +191,33 @@ class AgreementServiceImplTest {
         // then
         assertThat(result).isNotNull();
         verify(agreement).deleteAgreement();
+    }
+
+    @Test
+    @DisplayName("약관 유형 조회 성공 테스트")
+    void findMaxAgreementTypeSuccessTest() {
+        // given
+        Long id = 100L;
+        Agreement agreement = Agreement.builder().id(id).type(3L).build();
+        given(agreementRepository.findById(id)).willReturn(Optional.of(agreement));
+
+        // when
+        Long result = agreementService.findMaxAgreementType(id);
+
+        // then
+        assertThat(result).isEqualTo(3L);
+    }
+
+    @Test
+    @DisplayName("약관 유형 조회 시 대상을 찾지 못하면 BusinessException 발생")
+    void findMaxAgreementTypeNotFoundTest() {
+        // given
+        Long id = 100L;
+        given(agreementRepository.findById(id)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> agreementService.findMaxAgreementType(id))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", AgreementErrorCode.AGREEMENT_NOT_FOUNT);
     }
 }

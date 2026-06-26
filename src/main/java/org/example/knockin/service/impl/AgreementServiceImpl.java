@@ -21,14 +21,17 @@ public class AgreementServiceImpl {
 
     @Transactional
     public Agreement saveAgreement(Agreement agreement) {
-        agreementLogRepository.findAll().forEach(AgreementLog::clearCurrent);
         Agreement agreementEntity = agreementRepository.save(agreement);
         agreementLogRepository.save(AgreementLog.builder().agreement(agreementEntity).isCurrent(true).build());
         return agreementEntity;
     }
 
+    public Long findMaxAgreementType(Long agreementId) {
+        return agreementRepository.findById(agreementId).orElseThrow(() -> new BusinessException(AgreementErrorCode.AGREEMENT_NOT_FOUNT)).getType();
+    }
+
     @Transactional
-    public Agreement modifyTemporaryAgreement(Agreement agreement, Long agreementId) {
+    public Agreement modifyTemporaryAgreement(Agreement agreement) {
         Agreement agreementEntity = agreementRepository.save(agreement);
         agreementLogRepository.save(AgreementLog.builder().agreement(agreement).isCurrent(false).build());
         return agreementEntity;
@@ -37,12 +40,13 @@ public class AgreementServiceImpl {
     @Transactional
     public Agreement modifyAgreement(Agreement agreement, Long agreementId) {
         Agreement agreementEntity = agreementRepository.findById(agreementId).orElseThrow(() -> new BusinessException(AgreementErrorCode.AGREEMENT_NOT_FOUNT));
+        agreementLogRepository.findByAgreementIn(agreementRepository.findByType(agreementEntity.getType())).forEach(AgreementLog::clearCurrent);
         agreementEntity.modifyAgreement(agreement);
         return agreementEntity;
     }
 
     public List<Agreement> findAgreementList(Pageable pageable) {
-        return agreementLogRepository.findByIsCurrent(true, pageable).stream().map(AgreementLog::getAgreement).toList();
+        return agreementLogRepository.findByAgreemnetIsCurrent(true, pageable).stream().map(AgreementLog::getAgreement).toList();
     }
 
     public Agreement findAgreement(Long id) {

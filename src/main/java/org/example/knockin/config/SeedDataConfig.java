@@ -47,13 +47,17 @@ public class SeedDataConfig implements CommandLineRunner {
             return;
         }
 
-        Agreement termsOfService = Agreement.builder().title("서비스 이용약관").contents("상세 내용...").isDeleted(false).isRequired(true).build();
-        Agreement privacyPolicy = Agreement.builder().title("개인정보 처리방침").contents("상세 내용...").isDeleted(false).isRequired(true).build();
-        agreementRepository.saveAll(List.of(termsOfService, privacyPolicy));
+        Agreement termsOfService1 = Agreement.builder().title("서비스 이용약관").contents("상세 내용...").isDeleted(false).isRequired(true).type(1L).build();
+        Agreement termsOfService2 = Agreement.builder().title("서비스 이용약관").contents("상세 내용... 수정1").isDeleted(false).isRequired(true).type(1L).build();
+        Agreement termsOfService3 = Agreement.builder().title("서비스 이용약관").contents("상세 내용... 수정2").isDeleted(false).isRequired(true).type(1L).build();
+        Agreement privacyPolicy = Agreement.builder().title("개인정보 처리방침").contents("상세 내용...").isDeleted(false).isRequired(true).type(2L).build();
+        agreementRepository.saveAll(List.of(termsOfService1, termsOfService2, termsOfService3, privacyPolicy));
 
-        AgreementLog termsLog = AgreementLog.builder().agreement(termsOfService).isCurrent(true).build();
+        AgreementLog termsLog1 = AgreementLog.builder().agreement(termsOfService1).isCurrent(true).build();
+        AgreementLog termsLog2 = AgreementLog.builder().agreement(termsOfService2).isCurrent(false).build();
+        AgreementLog termsLog3 = AgreementLog.builder().agreement(termsOfService3).isCurrent(false).build();
         AgreementLog privacyLog = AgreementLog.builder().agreement(privacyPolicy).isCurrent(true).build();
-        agreementLogRepository.saveAll(List.of(termsLog, privacyLog));
+        agreementLogRepository.saveAll(List.of(termsLog1, termsLog2, termsLog3, privacyLog));
 
         LifePattern cleanScale = LifePattern.builder().name("청소 깔끔도").dtype(LifePatternType.SCALE).isDeleted(false).sort(1).build();
         LifePattern smokeYn = LifePattern.builder().name("흡연 여부").dtype(LifePatternType.SINGLE_CHOICE).isDeleted(false).sort(2).build();

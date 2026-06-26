@@ -37,13 +37,14 @@ public class BackOfficeServiceImpl {
 
     @Transactional
     public BoTermsDto.Response saveTerms(BoTermsDto.Request request) {
-        agreementService.saveAgreement(Agreement.builder().title(request.getTitle()).contents(request.getContents()).isRequired(request.getIsRequired()).build());
+        agreementService.saveAgreement(Agreement.builder().title(request.getTitle()).contents(request.getContents()).isRequired(request.getIsRequired()).type(1L).build());
         return BoTermsDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 
     @Transactional
     public BoTermsDto.Response modifyTerms(BoTermsDto.Request request, Long termsId) {
-        agreementService.modifyTemporaryAgreement(Agreement.builder().title(request.getTitle()).contents(request.getContents()).isRequired(request.getIsRequired()).build(), termsId);
+        Long type = agreementService.findMaxAgreementType(termsId);
+        agreementService.modifyTemporaryAgreement(Agreement.builder().title(request.getTitle()).contents(request.getContents()).isRequired(request.getIsRequired()).type(type).build());
         return BoTermsDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 
