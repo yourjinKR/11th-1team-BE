@@ -2,34 +2,42 @@ package org.example.knockin.entity.room;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.example.knockin.global.jpa.CreatedAtEntity;
-import org.hibernate.annotations.ColumnDefault;
 
 @Getter
 @Entity
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "roommate_calendar_type")
-public class RoommateCalendarType extends CreatedAtEntity {
+@Table(name = "repeat_roommate_calendar")
+public class RepeatRoommateCalendar {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "name", nullable = false, length = 50)
-    private String name;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "roommate_calendar_id")
+    private RoommateCalendar roommateCalendar;
 
-    @ColumnDefault("false")
-    @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted;
+    @Column(name = "end_date")
+    private LocalDateTime endDate;
+
+    @Column(name = "repeat_type")
+    @Enumerated(EnumType.STRING)
+    private RepeatType repeatType;
 }

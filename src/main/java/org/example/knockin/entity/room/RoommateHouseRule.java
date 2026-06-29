@@ -19,17 +19,21 @@ import org.hibernate.annotations.ColumnDefault;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "roommate_calendar_type")
-public class RoommateCalendarType extends CreatedAtEntity {
+@Table(name = "roommate_house_rule")
+public class RoommateHouseRule extends CreatedAtEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "name", nullable = false, length = 50)
-    private String name;
+    @Column(name = "title", length = 50)
+    private String title;
+
+    @Column(name = "contents", length = 500)
+    private String contents;
 
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted;
+    @Builder.Default
+    private Boolean isDeleted = false;
 }
