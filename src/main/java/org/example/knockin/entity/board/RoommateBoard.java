@@ -106,4 +106,9 @@ public class RoommateBoard extends BaseEntity {
     public void softDelete() {
         this.isDeleted = true;
     }
+
+    public void softDelete(String rejectReason) {
+        this.isDeleted = true;
+        this.rejectReason = rejectReason;
+    }
 }

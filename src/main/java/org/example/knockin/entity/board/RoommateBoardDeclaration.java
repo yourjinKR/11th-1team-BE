@@ -40,4 +40,9 @@ public class RoommateBoardDeclaration extends CreatedAtEntity {
     public void changeDeclarationType(DeclarationType declarationType) {
         this.declarationType = declarationType;
     }
+
+    public void changeDeclarationType(DeclarationType declarationType, String reason) {
+        this.declarationType = declarationType;
+        this.reason = reason;
+    }
 }

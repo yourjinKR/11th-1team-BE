@@ -671,9 +671,9 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
 
     @Transactional
     @Override
-    public RoommateBoard deleteBackOfficeBoard(Long id) {
+    public RoommateBoard deleteBackOfficeBoard(Long id, String rejectReason) {
         RoommateBoard roommateBoard = roommateBoardRepository.findById(id).orElseThrow(() -> new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
-        roommateBoard.softDelete();
+        roommateBoard.softDelete(rejectReason);
         return roommateBoard;
     }
 

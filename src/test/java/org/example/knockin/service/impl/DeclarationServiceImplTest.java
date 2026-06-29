@@ -175,14 +175,14 @@ class DeclarationServiceImplTest {
         Long id = 1L;
         RoommateBoardDeclaration boardDeclaration = spy(RoommateBoardDeclaration.builder().id(id).build());
         given(roommateBoardDeclarationRepository.findById(id)).willReturn(Optional.of(boardDeclaration));
-
+ 
         // when
         declarationService.reportSuspended(id, ReportType.BOARD, "사유");
-
+ 
         // then
-        verify(boardDeclaration).changeDeclarationType(DeclarationType.SUSPENDED);
+        verify(boardDeclaration).changeDeclarationType(DeclarationType.SUSPENDED, "사유");
     }
-
+ 
     @Test
     @DisplayName("신고 정지(SUSPENDED) 처리 성공 테스트 - 사용자 신고")
     void reportSuspendedMemberSuccessTest() {
@@ -190,11 +190,11 @@ class DeclarationServiceImplTest {
         Long id = 1L;
         MemberDeclaration memberDeclaration = spy(MemberDeclaration.builder().id(id).build());
         given(memberDeclarationRepository.findById(id)).willReturn(Optional.of(memberDeclaration));
-
+ 
         // when
         declarationService.reportSuspended(id, ReportType.MEMBER, "사유");
-
+ 
         // then
-        verify(memberDeclaration).changeDeclarationType(DeclarationType.SUSPENDED);
+        verify(memberDeclaration).changeDeclarationType(DeclarationType.SUSPENDED, "사유");
     }
 }

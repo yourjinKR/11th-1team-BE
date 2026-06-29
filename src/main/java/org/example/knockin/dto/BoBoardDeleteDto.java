@@ -13,7 +13,11 @@ import java.time.LocalDateTime;
 @Data
 public class BoBoardDeleteDto {
     @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class Request {
+        @Schema(description = "삭제 사유")
+        private String rejectReason;
     }
 
     @Data

@@ -343,7 +343,7 @@ public class BackOfficeController {
     }
 
     @PostMapping("/report/suspended")
-    @Operation(summary = "신고 관리 무혐의")
+    @Operation(summary = "신고 관리 정지")
     public CommonResponse<BoReportSuspendedDto.Response> reportSuspended(@RequestBody BoReportSuspendedDto.Request request) {
         return CommonResponse.status(HttpStatus.OK).body(backOfficeService.reportSuspended(request));
     }
@@ -362,8 +362,8 @@ public class BackOfficeController {
 
     @DeleteMapping("/board/{id}")
     @Operation(summary = "게시글 삭제")
-    public CommonResponse<BoBoardDeleteDto.Response> deleteBoard(@PathVariable Long id) {
-        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.deleteBoard(id));
+    public CommonResponse<BoBoardDeleteDto.Response> deleteBoard(@PathVariable Long id, @RequestBody BoBoardDeleteDto.Request request) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.deleteBoard(id, request));
     }
 }
 

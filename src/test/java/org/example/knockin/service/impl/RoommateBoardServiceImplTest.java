@@ -1561,27 +1561,30 @@ class RoommateBoardServiceImplTest {
     void deleteBackOfficeBoardSuccessTest() {
         // given
         Long boardId = 100L;
+        String rejectReason = "삭제 사유";
         RoommateBoard board = org.mockito.Mockito.spy(createRoommateBoard(10L));
         when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(board));
-
+ 
         // when
-        RoommateBoard result = roommateBoardService.deleteBackOfficeBoard(boardId);
-
+        RoommateBoard result = roommateBoardService.deleteBackOfficeBoard(boardId, rejectReason);
+ 
         // then
         assertThat(result).isSameAs(board);
         assertThat(board.getIsDeleted()).isTrue();
+        verify(board).softDelete(rejectReason);
         verify(roommateBoardRepository).findById(boardId);
     }
-
+ 
     @Test
     @DisplayName("백오피스 게시글 삭제 시 게시글이 없으면 BusinessException 발생")
     void deleteBackOfficeBoardNotFoundTest() {
         // given
         Long boardId = 100L;
+        String rejectReason = "삭제 사유";
         when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.empty());
-
+ 
         // when & then
-        assertThatThrownBy(() -> roommateBoardService.deleteBackOfficeBoard(boardId))
+        assertThatThrownBy(() -> roommateBoardService.deleteBackOfficeBoard(boardId, rejectReason))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND);
     }

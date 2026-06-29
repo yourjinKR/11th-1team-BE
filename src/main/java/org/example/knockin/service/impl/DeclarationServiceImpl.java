@@ -56,8 +56,8 @@ public class DeclarationServiceImpl {
     @Transactional
     public void reportSuspended(Long id, ReportType type, String reason) {
         switch (type) {
-            case BOARD -> roommateBoardDeclarationRepository.findById(id).orElseThrow(() -> new BusinessException(DeclarationErrorCode.DECLARATION_NOT_FOUND)).changeDeclarationType(DeclarationType.SUSPENDED);
-            case MEMBER -> memberDeclarationRepository.findById(id).orElseThrow(() -> new BusinessException(DeclarationErrorCode.DECLARATION_NOT_FOUND)).changeDeclarationType(DeclarationType.SUSPENDED);
+            case BOARD -> roommateBoardDeclarationRepository.findById(id).orElseThrow(() -> new BusinessException(DeclarationErrorCode.DECLARATION_NOT_FOUND)).changeDeclarationType(DeclarationType.SUSPENDED, reason);
+            case MEMBER -> memberDeclarationRepository.findById(id).orElseThrow(() -> new BusinessException(DeclarationErrorCode.DECLARATION_NOT_FOUND)).changeDeclarationType(DeclarationType.SUSPENDED, reason);
         }
     }
 }

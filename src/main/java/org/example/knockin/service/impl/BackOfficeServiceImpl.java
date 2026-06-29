@@ -268,8 +268,8 @@ public class BackOfficeServiceImpl {
     }
 
     @Transactional
-    public BoBoardDeleteDto.Response deleteBoard(Long id) {
-        roommateBoardService.deleteBackOfficeBoard(id);
+    public BoBoardDeleteDto.Response deleteBoard(Long id, BoBoardDeleteDto.Request request) {
+        roommateBoardService.deleteBackOfficeBoard(id, request.getRejectReason());
         return BoBoardDeleteDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 

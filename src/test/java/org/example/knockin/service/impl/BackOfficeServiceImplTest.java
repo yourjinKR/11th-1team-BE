@@ -976,12 +976,14 @@ class BackOfficeServiceImplTest {
         Long id = 100L;
  
         // when
-        BoBoardDeleteDto.Response response = backOfficeService.deleteBoard(id);
+        BoBoardDeleteDto.Request request = new BoBoardDeleteDto.Request();
+        request.setRejectReason("삭제 사유");
+        BoBoardDeleteDto.Response response = backOfficeService.deleteBoard(id, request);
  
         // then
         assertThat(response).isNotNull();
         assertThat(response.getUpdatedAt()).isNotNull();
-        verify(roommateBoardService).deleteBackOfficeBoard(id);
+        verify(roommateBoardService).deleteBackOfficeBoard(id, "삭제 사유");
     }
 
     @Test
