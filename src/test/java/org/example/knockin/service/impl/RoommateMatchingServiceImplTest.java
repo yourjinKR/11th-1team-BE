@@ -12,7 +12,9 @@ import static org.mockito.Mockito.when;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import org.example.knockin.dto.Compatibility;
 import org.example.knockin.dto.MatchDetailDto;
 import org.example.knockin.dto.MatchDto;
 import org.example.knockin.dto.MatchListDto;
@@ -44,6 +46,7 @@ import org.example.knockin.repository.room.row.MatchingOfferProfileRow;
 import org.example.knockin.repository.room.row.MatchingSeekerProfileRow;
 import org.example.knockin.repository.room.row.MatchingSeekerRegionRow;
 import org.example.knockin.repository.room.row.MatchingSeekerRoomTypeRow;
+import org.example.knockin.service.RoommateScoreService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -83,6 +86,9 @@ class RoommateMatchingServiceImplTest {
 
     @Mock
     private AuthenticationRepository authenticationRepository;
+
+    @Mock
+    private RoommateScoreService roommateScoreService;
 
     @InjectMocks
     private RoommateMatchingServiceImpl roommateMatchingService;
@@ -319,15 +325,20 @@ class RoommateMatchingServiceImplTest {
                 .thenReturn(List.of(new MatchingSeekerRoomTypeRow(2L, "투룸")));
         when(memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(1L, 2L)))
                 .thenReturn(List.of(
-                        new MatchingLifestyleRow(1L, 11L, "청결", "4", "깔끔함", LifePatternType.SCALE),
-                        new MatchingLifestyleRow(2L, 12L, "흡연", "2", "비흡연자", LifePatternType.SINGLE_CHOICE)
+                        new MatchingLifestyleRow(1L, 11L, 101L, 1001L, "청결", "4", "깔끔함", LifePatternType.SCALE),
+                        new MatchingLifestyleRow(2L, 12L, 102L, 1002L, "흡연", "2", "비흡연자", LifePatternType.SINGLE_CHOICE)
                 ));
         when(preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(List.of(1L, 2L)))
-                .thenReturn(List.of(new MatchingPreferenceConditionRow(2L, 21L, "소음", "1", "조용함", LifePatternType.SCALE)));
+                .thenReturn(List.of(new MatchingPreferenceConditionRow(2L, 21L, 103L, 1003L, "소음", "1", "조용함", LifePatternType.SCALE)));
         when(preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(List.of(1L, 2L)))
-                .thenReturn(List.of(new MatchingPreferenceConditionWeightRow(2L, 31L, "흡연")));
+                .thenReturn(List.of(new MatchingPreferenceConditionWeightRow(2L, 31L, 102L, "흡연")));
         when(memberInterestRepository.findActiveReceiverIdsBySenderIdAndReceiverIds(viewerId, List.of(1L, 2L)))
                 .thenReturn(List.of(2L));
+        when(roommateScoreService.calculateScores(any(), anyList()))
+                .thenReturn(Map.of(
+                        1L, new Compatibility(80, List.of()),
+                        2L, new Compatibility(60, List.of())
+                ));
 
         // When
         Slice<MatchListDto.Response> response = roommateMatchingService.findMatchingList(viewerId, request);
@@ -341,7 +352,7 @@ class RoommateMatchingServiceImplTest {
         assertThat(offer.getMemberName()).isEqualTo("오퍼");
         assertThat(offer.getMemberAge()).isEqualTo(DateUtils.calculateAge(offerBirth));
         assertThat(offer.getIsLike()).isFalse();
-        assertThat(offer.getScore()).isNull();
+        assertThat(offer.getScore()).isEqualTo(80);
         assertThat(offer.getOfferProfile().getDeposit()).isEqualTo(500);
         assertThat(offer.getOfferProfile().getMonthlyRent()).isEqualTo(45);
         assertThat(offer.getOfferProfile().getRegionFullName()).isEqualTo("서울특별시 강남구 역삼동");
@@ -452,12 +463,14 @@ class RoommateMatchingServiceImplTest {
         when(roomOfferProfileRepository.findAllOfferProfileByMemberIdIn(List.of(targetMemberId)))
                 .thenReturn(List.of(new MatchingOfferProfileRow(targetMemberId, 500, 45, "역삼동", "강남구", "서울특별시", "원룸")));
         when(memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(targetMemberId)))
-                .thenReturn(List.of(new MatchingLifestyleRow(targetMemberId, 11L, "청결", "4", "깔끔함", LifePatternType.SCALE)));
+                .thenReturn(List.of(new MatchingLifestyleRow(targetMemberId, 11L, 101L, 1001L, "청결", "4", "깔끔함", LifePatternType.SCALE)));
         when(preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(List.of(targetMemberId)))
-                .thenReturn(List.of(new MatchingPreferenceConditionRow(targetMemberId, 21L, "소음", "1", "조용함", LifePatternType.SCALE)));
+                .thenReturn(List.of(new MatchingPreferenceConditionRow(targetMemberId, 21L, 103L, 1003L, "소음", "1", "조용함", LifePatternType.SCALE)));
         when(preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(List.of(targetMemberId)))
-                .thenReturn(List.of(new MatchingPreferenceConditionWeightRow(targetMemberId, 31L, "흡연")));
+                .thenReturn(List.of(new MatchingPreferenceConditionWeightRow(targetMemberId, 31L, 102L, "흡연")));
         when(memberInterestRepository.existsBySenderIdAndReceiverId(requesterId, targetMemberId)).thenReturn(true);
+        when(roommateScoreService.calculateScore(any(), any()))
+                .thenReturn(new Compatibility(87, List.of()));
 
         // When
         MatchDetailDto.Response response = roommateMatchingService.findMatchingDetail(targetMemberId, requesterId);
@@ -479,7 +492,7 @@ class RoommateMatchingServiceImplTest {
         assertThat(response.getConditions()).extracting(MatchListDto.Condition::getName).containsExactly("소음");
         assertThat(response.getConditionWeights()).extracting(MatchListDto.ConditionWeight::getName).containsExactly("흡연");
         assertThat(response.getAuthentications()).containsExactly(AuthenticationType.STUDENT);
-        assertThat(response.getCompatibility()).isNull();
+        assertThat(response.getCompatibility().getScore()).isEqualTo(87);
         verifyNoInteractions(roomSeekerProfileRepository);
     }
 

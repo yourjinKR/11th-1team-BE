@@ -58,6 +58,7 @@ import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.row.ChattingRoomBasicInfoRow;
 import org.example.knockin.repository.room.RoommateMatchingRequiredRepository;
 import org.example.knockin.service.FileService;
+import org.example.knockin.service.RoommateScoreService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -116,6 +117,9 @@ class ChatServiceImplTest {
 
     @Mock
     private MemberRepository memberRepository;
+
+    @Mock
+    private RoommateScoreService roommateScoreService;
 
     @InjectMocks
     private ChatServiceImpl chatService;
@@ -207,6 +211,7 @@ class ChatServiceImplTest {
                 )));
         when(chatRoomMessageRepository.findChatMessageDto(chatRoomId)).thenReturn(messages);
         when(roommateMatchingRequiredRepository.findRequiredDto(chattingRoom)).thenReturn(matchingRequiredList);
+        when(roommateScoreService.calculateSimpleScore(memberId, opponent.getId())).thenReturn(100);
 
         // When
         ChatRoomDetailDto.Response response = chatService.getChatRoomDetail(chatRoomId, memberId);

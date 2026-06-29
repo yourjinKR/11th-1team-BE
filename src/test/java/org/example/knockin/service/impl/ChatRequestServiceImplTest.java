@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.example.knockin.dto.ChatRequestDetailDto;
 import org.example.knockin.dto.ChatRequestListDto;
@@ -43,6 +44,7 @@ import org.example.knockin.repository.life.row.MatchingLifestyleRow;
 import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.row.ChattingRoomBasicInfoRow;
+import org.example.knockin.service.RoommateScoreService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -83,6 +85,9 @@ class ChatRequestServiceImplTest {
     @Mock
     private MemberLifePatternRepository memberLifePatternRepository;
 
+    @Mock
+    private RoommateScoreService roommateScoreService;
+
     @InjectMocks
     private ChatRequestServiceImpl chatRequestService;
 
@@ -106,6 +111,7 @@ class ChatRequestServiceImplTest {
 
         when(memberRepository.findById(memberId)).thenReturn(Optional.of(requestee));
         when(chattingRequiredRepository.findAllPendingByRequestee(requestee)).thenReturn(List.of(row));
+        when(roommateScoreService.calculateSimpleScores(memberId, List.of(row.memberId()))).thenReturn(Map.of(row.memberId(), 100));
 
         // When
         List<ChatRequestListDto.Response> responses = chatRequestService.getPendingChatRequestList(memberId);
@@ -185,6 +191,7 @@ class ChatRequestServiceImplTest {
                         lifestyleRow(requesteeId, 11L, "청결", "4", "깔끔한 편", LifePatternType.SCALE),
                         lifestyleRow(requesterId, 12L, "흡연", "비흡연", "흡연하지 않음", LifePatternType.SINGLE_CHOICE)
                 ));
+        when(roommateScoreService.calculateSimpleScore(requesteeId, requesterId)).thenReturn(100);
 
         // When
         ChatRequestDetailDto.Response response = chatRequestService.getChatRequestDetail(requesteeId, requestId);
@@ -235,6 +242,7 @@ class ChatRequestServiceImplTest {
                 ));
         when(memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(requesterId, requesteeId)))
                 .thenReturn(List.of());
+        when(roommateScoreService.calculateSimpleScore(requesterId, requesteeId)).thenReturn(100);
 
         // When
         ChatRequestDetailDto.Response response = chatRequestService.getChatRequestDetail(requesterId, requestId);
@@ -708,7 +716,7 @@ class ChatRequestServiceImplTest {
             String description,
             LifePatternType type
     ) {
-        return new MatchingLifestyleRow(memberId, lifestyleId, name, value, description, type);
+        return new MatchingLifestyleRow(memberId, lifestyleId, lifestyleId, lifestyleId, name, value, description, type);
     }
 
     private BasicInformation basicInformation(Member member, String name) {

@@ -32,6 +32,7 @@ import org.example.knockin.repository.life.row.MatchingLifestyleRow;
 import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.row.ChattingRoomBasicInfoRow;
+import org.example.knockin.service.RoommateScoreService;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +56,7 @@ public class ChatRequestServiceImpl {
     private final ChattingRequiredAlarmRepository chattingRequiredAlarmRepository;
     private final BasicInformationRepository basicInformationRepository;
     private final MemberLifePatternRepository memberLifePatternRepository;
+    private final RoommateScoreService roommateScoreService;
 
     @Transactional(readOnly = true)
     public List<ChatRequestListDto.Response> getPendingChatRequestList(Long memberId) {
@@ -62,8 +64,16 @@ public class ChatRequestServiceImpl {
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         List<ChatRequestListRow> requestListRows = chattingRequiredRepository.findAllPendingByRequestee(member);
+        List<Long> requesterIds = requestListRows.stream()
+                .map(ChatRequestListRow::memberId)
+                .distinct()
+                .toList();
+        Map<Long, Integer> scoresByMemberId = requesterIds.isEmpty()
+                ? Map.of()
+                : roommateScoreService.calculateSimpleScores(memberId, requesterIds);
+
         return requestListRows.stream()
-                .map(row -> toResponse(row, 100))
+                .map(row -> toResponse(row, scoresByMemberId.get(row.memberId())))
                 .toList();
     }
 
@@ -75,7 +85,6 @@ public class ChatRequestServiceImpl {
                 .memberName(row.memberName())
                 .memberAge(DateUtils.calculateAge(row.birth()))
                 .gender(row.gender())
-                // TODO: 점수 계산식 확정 후 적용
                 .score(score)
                 .createdAt(row.createdAt())
                 .build();
@@ -101,12 +110,13 @@ public class ChatRequestServiceImpl {
         MemberInfo meInfo = toMemberInfo(myId, basicInfoRowMap.get(myId), lifeStyleRowMap.get(myId));
         MemberInfo opponentInfo = toMemberInfo(opponentId, basicInfoRowMap.get(opponentId), lifeStyleRowMap.get(opponentId));
 
+        Integer score = roommateScoreService.calculateSimpleScore(myId, opponentId);
+
         return ChatRequestDetailDto.Response.builder()
                 .requiredId(chattingRequired.getId())
                 .status(chattingRequired.getStatus())
                 .createdAt(chattingRequired.getCreatedAt())
-                // TODO: 점수 계산식 확정 후 적용
-                .score(100)
+                .score(score)
                 .me(meInfo)
                 .opponent(opponentInfo)
                 .isRequester(isRequester)

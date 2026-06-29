@@ -23,22 +23,6 @@ public class MyRoommateDto {
         private List<Lifestyle> preferences;
 
         @Data
-        public static class Compatibility {
-            @Schema(description = "점수")
-            private Integer score;
-            @Schema(description = "라이프스타일 정보 목록")
-            private List<LifeStyleInfo> lifeStyleInfo;
-        }
-
-        @Data
-        public static class LifeStyleInfo {
-            @Schema(description = "제목")
-            private String title;
-            @Schema(description = "백분율")
-            private String percent;
-        }
-
-        @Data
         public static class Lifestyle {
             @Schema(description = "고유 식별 ID")
             private Long lifestyleId;

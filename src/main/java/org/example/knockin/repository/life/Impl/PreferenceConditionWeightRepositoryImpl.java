@@ -42,6 +42,7 @@ public class PreferenceConditionWeightRepositoryImpl implements PreferenceCondit
                         MatchingPreferenceConditionWeightRow.class,
                         preferenceConditionWeight.member.id,
                         preferenceConditionWeight.id,
+                        lifePattern.id,
                         lifePattern.name
                 ))
                 .from(preferenceConditionWeight)

@@ -45,6 +45,7 @@ import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.row.ChattingRoomBasicInfoRow;
 import org.example.knockin.repository.room.RoommateMatchingRequiredRepository;
 import org.example.knockin.service.FileService;
+import org.example.knockin.service.RoommateScoreService;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
@@ -77,6 +78,7 @@ public class ChatServiceImpl {
     private final RoommateBoardRepository roommateBoardRepository;
     private final ChattingRequiredRepository chattingRequiredRepository;
     private final MemberRepository memberRepository;
+    private final RoommateScoreService roommateScoreService;
 
     public List<ChatRoomListDto.Response> getChatRoomList(Long memberId) {
         return chattingRoomRepository.findByMemberId(memberId);
@@ -230,6 +232,7 @@ public class ChatServiceImpl {
         Member opponentMember = chatRoomMemberRepository.findPartnerMember(me, chatRoomId);
         ChattingRoomBasicInfoRow row = basicInformationRepository.findChattingRoomBasicInfoRow(opponentMember)
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.BASIC_INFO_NOT_FOUND));
+        Integer score = roommateScoreService.calculateSimpleScore(me.getMember().getId(), opponentMember.getId());
 
         return ChatRoomDetailDto.ProfileInfo.builder()
                 .id(row.memberId())
@@ -237,8 +240,7 @@ public class ChatServiceImpl {
                 .age(DateUtils.calculateAge(row.birth()))
                 .gender(row.gender())
                 .profileImageUrl(row.profileImageUrl())
-                // TODO: 점수 적용
-                .score(100)
+                .score(score)
                 .build();
     }
 

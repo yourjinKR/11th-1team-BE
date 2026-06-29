@@ -52,7 +52,9 @@ public class MemberLifePatternRepositoryImpl implements MemberLifePatternReposit
                 .select(Projections.constructor(
                         MatchingLifestyleRow.class,
                         memberLifePattern.member.id,
+                        memberLifePattern.id,
                         lifePattern.id,
+                        lifePatternInformation.id,
                         lifePattern.name,
                         lifePatternInformation.dvalue,
                         lifePatternInformation.description,

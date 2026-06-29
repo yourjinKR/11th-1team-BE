@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.dto.Compatibility;
 import org.example.knockin.dto.MatchDetailDto;
 import org.example.knockin.dto.MatchDto;
 import org.example.knockin.dto.MatchListDto;
@@ -41,6 +42,7 @@ import org.example.knockin.repository.room.row.MatchingSeekerProfileRow;
 import org.example.knockin.repository.room.row.MatchingSeekerRegionRow;
 import org.example.knockin.repository.room.row.MatchingSeekerRoomTypeRow;
 import org.example.knockin.service.RoommateMatchingService;
+import org.example.knockin.service.RoommateScoreService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
@@ -59,6 +61,7 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
     private final PreferenceConditionWeightRepository preferenceConditionWeightRepository;
     private final AuthenticationRepository authenticationRepository;
     private final MemberDeclarationRepository memberDeclarationRepository;
+    private final RoommateScoreService roommateScoreService;
 
     @Override
     @Transactional(readOnly = true)
@@ -84,6 +87,8 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
         List<MatchingLifestyleRow> matchingLifestyleRows = memberLifePatternRepository.findAllLifestyleByMemberIdIn(memberIds);
         List<MatchingPreferenceConditionRow> matchingPreferenceConditionRows = preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(memberIds);
         List<MatchingPreferenceConditionWeightRow> matchingPreferenceConditionWeightRows = preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(memberIds);
+        Map<Long, Compatibility> scoresByMemberId = Optional.ofNullable(roommateScoreService.calculateScores(memberId, memberIds))
+                .orElse(Map.of());
 
         Map<Long, MatchingOfferProfileRow> offerMap = HasMemberId.toMapByMemberId(matchingOfferProfileRows);
         Map<Long, MatchingSeekerProfileRow> seekerMap = HasMemberId.toMapByMemberId(matchingSeekerProfileRows);
@@ -129,7 +134,8 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
                         lifestyleMap,
                         conditionMap,
                         conditionWeightMap,
-                        likedMemberIds
+                        likedMemberIds,
+                        scoresByMemberId
                 ))
                 .toList();
 
@@ -201,7 +207,8 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
             Map<Long, List<MatchListDto.Lifestyle>> lifestyleMap,
             Map<Long, List<MatchListDto.Condition>> conditionMap,
             Map<Long, List<MatchListDto.ConditionWeight>> conditionWeightMap,
-            Set<Long> likedMemberIds
+            Set<Long> likedMemberIds,
+            Map<Long, Compatibility> scoresByMemberId
     ) {
         Long candidateId = row.memberId();
 
@@ -230,8 +237,7 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
                 .roomProfileType(row.roomProfileType())
                 .offerProfile(offerProfile)
                 .seekerProfile(seekerProfile)
-                // TODO: 계산식 확정 후 변경
-                .score(null)
+                .score(extractScore(scoresByMemberId.get(candidateId)))
                 .lifeStyles(lifestyleMap.getOrDefault(candidateId, List.of()))
                 .conditions(conditionMap.getOrDefault(candidateId, List.of()))
                 .conditionWeights(conditionWeightMap.getOrDefault(candidateId, List.of()))
@@ -305,6 +311,7 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
         List<MatchingLifestyleRow> lifestyleRows = memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(targetMemberId));
         List<MatchingPreferenceConditionRow> preferenceConditionRows = preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(List.of(targetMemberId));
         List<MatchingPreferenceConditionWeightRow> preferenceConditionWeightRows = preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(List.of(targetMemberId));
+        Compatibility compatibility = roommateScoreService.calculateScore(requesterId, targetMemberId);
 
         boolean isLike = requesterId != null && memberInterestRepository.existsBySenderIdAndReceiverId(requesterId, targetMemberId);
 
@@ -327,13 +334,25 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
                 .roomProfileType(roomProfileType)
                 .offerProfile(roomProfileType == RoomProfileType.OFFER ? toOfferProfile(offerProfileRow) : null)
                 .seekerProfile(roomProfileType == RoomProfileType.SEEKER ? toSeekerProfile(seekerProfileRow, roomTypeNames, regionFullNames) : null)
-                .lifeStyles(lifestyleRows.stream().map(this::toLifestyle).toList())
-                .conditions(preferenceConditionRows.stream().map(this::toCondition).toList())
-                .conditionWeights(preferenceConditionWeightRows.stream().map(this::toConditionWeight).toList())
+                .lifeStyles(lifestyleRows.stream()
+                        .filter(row -> Objects.equals(row.memberId(), targetMemberId))
+                        .map(this::toLifestyle)
+                        .toList())
+                .conditions(preferenceConditionRows.stream()
+                        .filter(row -> Objects.equals(row.memberId(), targetMemberId))
+                        .map(this::toCondition)
+                        .toList())
+                .conditionWeights(preferenceConditionWeightRows.stream()
+                        .filter(row -> Objects.equals(row.memberId(), targetMemberId))
+                        .map(this::toConditionWeight)
+                        .toList())
                 .authentications(authenticationTypes)
-                // TODO: 계산식 확정 후 변경
-                .compatibility(null)
+                .compatibility(compatibility)
                 .build();
+    }
+
+    private Integer extractScore(Compatibility compatibility) {
+        return compatibility == null ? null : compatibility.getScore();
     }
 
     @Override

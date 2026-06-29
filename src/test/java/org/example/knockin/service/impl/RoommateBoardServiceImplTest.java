@@ -3,6 +3,7 @@ package org.example.knockin.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -24,6 +25,8 @@ import org.example.knockin.dto.BoardDto.Request.FileDto;
 import org.example.knockin.dto.BoardEditDto.Response.BoardOptionInfo;
 import org.example.knockin.dto.BoardModifyDto.Request.ExistingFileDto;
 import org.example.knockin.dto.BoardModifyDto.Request.NewFileDto;
+import org.example.knockin.dto.Compatibility;
+import org.example.knockin.dto.ReportDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.board.RoommateBoardDeclaration;
@@ -57,7 +60,11 @@ import org.example.knockin.repository.file.FileRepository;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
 import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
+import org.example.knockin.repository.life.row.MatchingLifestyleRow;
+import org.example.knockin.repository.life.row.MatchingPreferenceConditionRow;
+import org.example.knockin.repository.life.row.MatchingPreferenceConditionWeightRow;
 import org.example.knockin.service.FileService;
+import org.example.knockin.service.RoommateScoreService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -120,6 +127,9 @@ class RoommateBoardServiceImplTest {
 
     @Mock
     private TransactionTemplate transactionTemplate;
+
+    @Mock
+    private RoommateScoreService roommateScoreService;
 
     @InjectMocks
     private RoommateBoardServiceImpl roommateBoardService;
@@ -716,25 +726,25 @@ class RoommateBoardServiceImplTest {
                 new BoardDetailDto.Response.FileDetailDto(102L, "room.jpg")
         );
         List<String> roomExtraOptionNames = List.of("풀옵션", "주차 가능");
-        BoardDetailDto.Response.Lifestyle sleep = new BoardDetailDto.Response.Lifestyle(
-                1L, "취침", "23:00", "일찍 자요", LifePatternType.SCALE);
-        BoardDetailDto.Response.Lifestyle visitor = new BoardDetailDto.Response.Lifestyle(
-                2L, "방문객", "가끔", "가끔 방문해요", LifePatternType.SINGLE_CHOICE);
-        List<BoardDetailDto.Response.Condition> conditions = List.of(
-                new BoardDetailDto.Response.Condition(3L, "흡연", "비흡연", "비흡연 선호", LifePatternType.BOOLEAN)
-        );
-        List<BoardDetailDto.Response.ConditionWeight> conditionWeights = List.of(
-                new BoardDetailDto.Response.ConditionWeight(4L, "청결")
-        );
+        MatchingLifestyleRow visitor = new MatchingLifestyleRow(
+                ownerId, 2L, 201L, 2001L, "방문객", "가끔", "가끔 방문해요", LifePatternType.SINGLE_CHOICE);
+        MatchingLifestyleRow sleep = new MatchingLifestyleRow(
+                ownerId, 1L, 202L, 2002L, "취침", "23:00", "일찍 자요", LifePatternType.SCALE);
+        MatchingPreferenceConditionRow condition = new MatchingPreferenceConditionRow(
+                ownerId, 3L, 203L, 2003L, "흡연", "비흡연", "비흡연 선호", LifePatternType.BOOLEAN);
+        MatchingPreferenceConditionWeightRow conditionWeight = new MatchingPreferenceConditionWeightRow(
+                ownerId, 4L, 202L, "청결");
         List<AuthenticationType> authenticationTypes = List.of(AuthenticationType.STUDENT);
 
         when(roommateBoardRepository.increaseHitsById(boardId)).thenReturn(1);
         when(roommateBoardRepository.getBasicInfo(boardId)).thenReturn(Optional.of(basicInfoRow));
         when(roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId)).thenReturn(images);
         when(roommateBoardOptionRepository.getExtraOptionsNameByBoardId(boardId)).thenReturn(roomExtraOptionNames);
-        when(memberLifePatternRepository.getLifeStyleDto(ownerId)).thenReturn(List.of(visitor, sleep));
-        when(preferenceConditionRepository.getConditionDtoByMemberId(ownerId)).thenReturn(conditions);
-        when(preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(ownerId)).thenReturn(conditionWeights);
+        when(memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(ownerId))).thenReturn(List.of(visitor, sleep));
+        when(preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(List.of(ownerId))).thenReturn(List.of(condition));
+        when(preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(List.of(ownerId))).thenReturn(List.of(conditionWeight));
+        when(roommateScoreService.calculateScore(any(), any()))
+                .thenReturn(new Compatibility(76, List.of()));
         when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(ownerId)).thenReturn(authenticationTypes);
         when(roommateBoardInterestRepository.existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, viewerId))
                 .thenReturn(true);
@@ -756,25 +766,28 @@ class RoommateBoardServiceImplTest {
         assertThat(response.getHits()).isEqualTo(3L);
         assertThat(response.getContents()).isEqualTo("상세 내용");
         assertThat(response.getRoomExtraOptionNames()).isSameAs(roomExtraOptionNames);
-        assertThat(response.getLifeStyles()).containsExactly(visitor, sleep);
-        assertThat(response.getConditions()).isSameAs(conditions);
-        assertThat(response.getConditionWeights()).isSameAs(conditionWeights);
+        assertThat(response.getLifeStyles()).extracting(BoardDetailDto.Response.Lifestyle::getName)
+                .containsExactly("방문객", "취침");
+        assertThat(response.getConditions()).extracting(BoardDetailDto.Response.Condition::getName)
+                .containsExactly("흡연");
+        assertThat(response.getConditionWeights()).extracting(BoardDetailDto.Response.ConditionWeight::getName)
+                .containsExactly("청결");
         assertThat(response.getMemberId()).isEqualTo(ownerId);
         assertThat(response.getMemberName()).isEqualTo("상세작성자");
         assertThat(response.getMemberProfileImageUrl()).isEqualTo("profile.jpg");
         assertThat(response.getMemberAge()).isEqualTo(Period.between(birth, LocalDate.now()).getYears());
         assertThat(response.getGender()).isEqualTo(Gender.FEMALE);
         assertThat(response.getAuthentications()).isSameAs(authenticationTypes);
-        assertThat(response.getCompatibility()).isNotNull();
+        assertThat(response.getCompatibility().getScore()).isEqualTo(76);
         assertThat(response.isInterested()).isTrue();
         InOrder inOrder = inOrder(roommateBoardRepository);
         inOrder.verify(roommateBoardRepository).increaseHitsById(boardId);
         inOrder.verify(roommateBoardRepository).getBasicInfo(boardId);
         verify(roommateBoardFileRepository).getFileDetailDtoByBoardId(boardId);
         verify(roommateBoardOptionRepository).getExtraOptionsNameByBoardId(boardId);
-        verify(memberLifePatternRepository).getLifeStyleDto(ownerId);
-        verify(preferenceConditionRepository).getConditionDtoByMemberId(ownerId);
-        verify(preferenceConditionWeightRepository).getConditionWeightDtoByMemberId(ownerId);
+        verify(memberLifePatternRepository).findAllLifestyleByMemberIdIn(List.of(ownerId));
+        verify(preferenceConditionRepository).findAllPreferenceConditionByMemberIdIn(List.of(ownerId));
+        verify(preferenceConditionWeightRepository).findAllPreferenceConditionWeightByMemberIdIn(List.of(ownerId));
         verify(authenticationRepository).getAcceptedAuthenticationTypeByMemberId(ownerId);
         verify(roommateBoardInterestRepository).existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, viewerId);
     }
@@ -791,9 +804,9 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardRepository.getBasicInfo(boardId)).thenReturn(Optional.of(basicInfoRow));
         when(roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId)).thenReturn(List.of());
         when(roommateBoardOptionRepository.getExtraOptionsNameByBoardId(boardId)).thenReturn(List.of());
-        when(memberLifePatternRepository.getLifeStyleDto(ownerId)).thenReturn(List.of());
-        when(preferenceConditionRepository.getConditionDtoByMemberId(ownerId)).thenReturn(List.of());
-        when(preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(ownerId)).thenReturn(List.of());
+        when(memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
+        when(preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
+        when(preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
         when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(ownerId)).thenReturn(List.of());
         when(roommateBoardInterestRepository.existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, viewerId))
                 .thenReturn(false);
@@ -820,9 +833,9 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardRepository.getBasicInfo(boardId)).thenReturn(Optional.of(basicInfoRow));
         when(roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId)).thenReturn(List.of());
         when(roommateBoardOptionRepository.getExtraOptionsNameByBoardId(boardId)).thenReturn(List.of());
-        when(memberLifePatternRepository.getLifeStyleDto(ownerId)).thenReturn(List.of());
-        when(preferenceConditionRepository.getConditionDtoByMemberId(ownerId)).thenReturn(List.of());
-        when(preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(ownerId)).thenReturn(List.of());
+        when(memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
+        when(preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
+        when(preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
         when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(ownerId)).thenReturn(List.of());
         when(roommateBoardInterestRepository.existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, viewerId))
                 .thenReturn(false);

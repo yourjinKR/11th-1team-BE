@@ -13,7 +13,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.*;
-import org.example.knockin.dto.BoardDetailDto.Response.Compatibility;
 import org.example.knockin.dto.BoardDetailDto.Response.Condition;
 import org.example.knockin.dto.BoardDetailDto.Response.ConditionWeight;
 import org.example.knockin.dto.BoardDetailDto.Response.FileDetailDto;
@@ -25,6 +24,9 @@ import org.example.knockin.dto.BoardEditDto.Response.RegionInfo;
 import org.example.knockin.dto.BoardEditDto.Response.RoomTypeInfo;
 import org.example.knockin.dto.BoardModifyDto.Request.ExistingFileDto;
 import org.example.knockin.dto.BoardModifyDto.Request.NewFileDto;
+import org.example.knockin.dto.Compatibility;
+import org.example.knockin.dto.MyBoardListDto;
+import org.example.knockin.dto.ReportDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.board.RoommateBoardDeclaration;
@@ -61,8 +63,12 @@ import org.example.knockin.repository.file.FileRepository;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
 import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
+import org.example.knockin.repository.life.row.MatchingLifestyleRow;
+import org.example.knockin.repository.life.row.MatchingPreferenceConditionRow;
+import org.example.knockin.repository.life.row.MatchingPreferenceConditionWeightRow;
 import org.example.knockin.service.FileService;
 import org.example.knockin.service.RoommateBoardService;
+import org.example.knockin.service.RoommateScoreService;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.domain.Page;
@@ -91,6 +97,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     private final FileRepository fileRepository;
     private final RoommateBoardInterestRepository roommateBoardInterestRepository;
     private final RoommateBoardDeclarationRepository roommateBoardDeclarationRepository;
+    private final RoommateScoreService roommateScoreService;
 
     @Override
     public BoardDto.Response save(BoardDto.Request request, Long memberId, @Nullable List<MultipartFile> files) {
@@ -227,16 +234,55 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
 
         List<BoardDetailDto.Response.FileDetailDto> images = roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId);
         List<String> roomExtraOptionNames = roommateBoardOptionRepository.getExtraOptionsNameByBoardId(boardId);
-        List<Lifestyle> lifestyles = memberLifePatternRepository.getLifeStyleDto(ownerId);
-        List<Condition> conditions = preferenceConditionRepository.getConditionDtoByMemberId(ownerId);
-        List<ConditionWeight> conditionWeights = preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(
-                ownerId);
+        List<Long> scoreLookupMemberIds = List.of(ownerId);
+        List<MatchingLifestyleRow> lifestyleRows =
+                memberLifePatternRepository.findAllLifestyleByMemberIdIn(scoreLookupMemberIds);
+        List<MatchingPreferenceConditionRow> conditionRows =
+                preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(scoreLookupMemberIds);
+        List<MatchingPreferenceConditionWeightRow> conditionWeightRows =
+                preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(scoreLookupMemberIds);
+
+        List<Lifestyle> lifestyles = lifestyleRows.stream()
+                .filter(row -> Objects.equals(row.memberId(), ownerId))
+                .map(this::toLifestyle)
+                .toList();
+        List<Condition> conditions = conditionRows.stream()
+                .filter(row -> Objects.equals(row.memberId(), ownerId))
+                .map(this::toCondition)
+                .toList();
+        List<ConditionWeight> conditionWeights = conditionWeightRows.stream()
+                .filter(row -> Objects.equals(row.memberId(), ownerId))
+                .map(this::toConditionWeight)
+                .toList();
+        Compatibility compatibility = roommateScoreService.calculateScore(memberId, ownerId);
         List<AuthenticationType> authenticationTypes = authenticationRepository.getAcceptedAuthenticationTypeByMemberId(
                 ownerId);
         boolean interested = roommateBoardInterestRepository.existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(
                 boardId, memberId);
 
-        return toResponse(basicInfoRow, images, roomExtraOptionNames, lifestyles, conditions, conditionWeights, authenticationTypes, new Compatibility(), interested);
+        return toResponse(
+                basicInfoRow,
+                images,
+                roomExtraOptionNames,
+                lifestyles,
+                conditions,
+                conditionWeights,
+                authenticationTypes,
+                compatibility,
+                interested
+        );
+    }
+
+    private Lifestyle toLifestyle(MatchingLifestyleRow row) {
+        return new Lifestyle(row.lifestyleId(), row.name(), row.value(), row.description(), row.type());
+    }
+
+    private Condition toCondition(MatchingPreferenceConditionRow row) {
+        return new Condition(row.conditionId(), row.name(), row.value(), row.description(), row.type());
+    }
+
+    private ConditionWeight toConditionWeight(MatchingPreferenceConditionWeightRow row) {
+        return new ConditionWeight(row.conditionWeightId(), row.name());
     }
 
     private BoardDetailDto.Response toResponse(

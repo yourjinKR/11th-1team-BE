@@ -47,6 +47,8 @@ public class PreferenceConditionRepositoryImpl implements PreferenceConditionRep
                         MatchingPreferenceConditionRow.class,
                         preferenceCondition.member.id,
                         preferenceCondition.id,
+                        lifePattern.id,
+                        lifePatternInformation.id,
                         lifePattern.name,
                         lifePatternInformation.dvalue,
                         lifePatternInformation.description,
