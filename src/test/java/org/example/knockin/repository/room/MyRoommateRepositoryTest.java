@@ -77,6 +77,25 @@ class MyRoommateRepositoryTest {
         assertThat(result).isEmpty();
     }
 
+    @Test
+    @DisplayName("삭제된 내 룸메이트는 회원 ID로 조회되지 않고 존재하지 않는 것으로 판단한다")
+    void findWithFetchedByMemberIdAndExistsExcludeDeletedMyRoommate() {
+        // Given
+        Member requester = persistMember("my-roommate-deleted-requester");
+        Member requestee = persistMember("my-roommate-deleted-requestee");
+        persistMyRoommate(requester, requestee, true);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        Optional<MyRoommate> result = myRoommateRepository.findWithFetchedByMemberId(requester.getId());
+        boolean exists = myRoommateRepository.isExistRoomMate(requester);
+
+        // Then
+        assertThat(result).isEmpty();
+        assertThat(exists).isFalse();
+    }
+
     private Member persistMember(String providerId) {
         Member member = Member.builder()
                 .providerType(LoginProviderType.KAKAO)
@@ -89,6 +108,10 @@ class MyRoommateRepositoryTest {
     }
 
     private MyRoommate persistMyRoommate(Member requester, Member requestee) {
+        return persistMyRoommate(requester, requestee, false);
+    }
+
+    private MyRoommate persistMyRoommate(Member requester, Member requestee, Boolean isDeleted) {
         ChattingRequired chattingRequired = ChattingRequired.builder()
                 .requester(requester)
                 .requestee(requestee)
@@ -111,7 +134,7 @@ class MyRoommateRepositoryTest {
 
         MyRoommate myRoommate = MyRoommate.builder()
                 .roommateMatchingRequired(matchingRequired)
-                .isDeleted(false)
+                .isDeleted(isDeleted)
                 .build();
         entityManager.persist(myRoommate);
         return myRoommate;

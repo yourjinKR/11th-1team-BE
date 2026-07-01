@@ -24,6 +24,8 @@ import org.example.knockin.entity.chat.ChattingRoom;
 import org.example.knockin.entity.member.BasicInformation;
 import org.example.knockin.entity.member.Gender;
 import org.example.knockin.entity.member.Member;
+import org.example.knockin.entity.member.MemberPrivacy;
+import org.example.knockin.entity.member.MemberPrivacyType;
 import org.example.knockin.entity.room.MyRoommate;
 import org.example.knockin.entity.room.RoommateMatchingRequired;
 import org.example.knockin.entity.room.RoommateMatchingRequiredAlarm;
@@ -75,6 +77,9 @@ class RoommateRequestServiceImplTest {
 
     @Mock
     private MyRoommateRepository myRoommateRepository;
+
+    @Mock
+    private MemberPrivacyServiceImpl memberPrivacyService;
 
     @InjectMocks
     private RoommateRequestServiceImpl roommateRequestService;
@@ -257,6 +262,10 @@ class RoommateRequestServiceImplTest {
                 .thenReturn(Optional.of(basicInformation(requestee, "이수현")));
         when(roommateMatchingRequiredAlarmRepository.save(any(RoommateMatchingRequiredAlarm.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+        MemberPrivacy requesteePrivacy = MemberPrivacy.builder()
+                .type(MemberPrivacyType.PUBLIC)
+                .build();
+        when(memberPrivacyService.findByMemberId(requesteeId)).thenReturn(List.of(requesteePrivacy));
 
         // When
         RoommateRequestDto.Response response = roommateRequestService.acceptRequired(requesteeId, requestId);
@@ -273,6 +282,8 @@ class RoommateRequestServiceImplTest {
         verify(myRoommateRepository).save(myRoommateCaptor.capture());
         assertThat(myRoommateCaptor.getValue().getRoommateMatchingRequired()).isSameAs(roommateRequest);
         assertThat(myRoommateCaptor.getValue().getIsDeleted()).isFalse();
+        assertThat(requesteePrivacy.getType()).isEqualTo(MemberPrivacyType.PRIVATE);
+        verify(memberPrivacyService).findByMemberId(requesteeId);
 
         ArgumentCaptor<RoommateMatchingRequiredAlarm> alarmCaptor = ArgumentCaptor.forClass(RoommateMatchingRequiredAlarm.class);
         verify(roommateMatchingRequiredAlarmRepository).save(alarmCaptor.capture());

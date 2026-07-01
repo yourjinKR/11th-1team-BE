@@ -7,8 +7,9 @@ import org.example.knockin.dto.CalendarDto;
 import org.example.knockin.dto.CalendarTypesDto;
 import org.example.knockin.dto.MyRoommateCalendarDetailDto;
 import org.example.knockin.dto.MyRoommateCalendarListDto;
+import org.example.knockin.dto.MyRoommateCardDto;
+import org.example.knockin.dto.MyRoommateCardDto.Response;
 import org.example.knockin.dto.MyRoommateDto;
-import org.example.knockin.dto.MyRoommateDto.Response;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.global.auth.dto.PrincipalDetails;
 import org.example.knockin.service.impl.MyRoomMateServiceImpl;
@@ -25,17 +26,19 @@ public class RoomMatesController {
 
     @GetMapping("/me")
     @Operation(summary = "내 룸메이트 조회")
-    public CommonResponse<MyRoommateDto.Response> findMyRoomMate(
-            @AuthenticationPrincipal PrincipalDetails details
-    ) {
-        MyRoommateDto.Response response = myRoomMateService.findMyRoommate(details.getMember().getId());
+    public CommonResponse<MyRoommateCardDto.Response> findMyRoomMate(@AuthenticationPrincipal PrincipalDetails details) {
+        MyRoommateCardDto.Response response = myRoomMateService.findMyRoommate(details.getMember().getId());
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
-    @DeleteMapping("/me/{roommateId}")
+    @DeleteMapping("/me/{id}")
     @Operation(summary = "내 룸메이트 삭제")
-    public CommonResponse<MyRoommateDto.Response> deleteMyRoomMate(@PathVariable Long roommateId) {
-        return CommonResponse.status(HttpStatus.OK).body(new MyRoommateDto.Response());
+    public CommonResponse<MyRoommateDto.Response> deleteMyRoomMate(
+            @AuthenticationPrincipal PrincipalDetails details,
+            @PathVariable Long id
+    ) {
+        MyRoommateDto.Response response = myRoomMateService.deleteMyRoommate(id, details.getMember().getId());
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @GetMapping("/me/calendar")
