@@ -1,0 +1,83 @@
+package org.example.knockin.service.impl;
+ 
+import org.example.knockin.entity.agreement.AgreementLog;
+import org.example.knockin.entity.agreement.MemberAgreement;
+import org.example.knockin.entity.member.Member;
+import org.example.knockin.repository.agreement.MemberAgreementRepository;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+ 
+import java.util.List;
+ 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+ 
+@ExtendWith(MockitoExtension.class)
+class MemberAgreementServiceImplTest {
+ 
+    @Mock
+    private MemberAgreementRepository memberAgreementRepository;
+ 
+    @InjectMocks
+    private MemberAgreementServiceImpl memberAgreementService;
+ 
+    @Test
+    @DisplayName("동의 내역 모두 저장 테스트")
+    void saveAllTest() {
+        MemberAgreement agreement = mock(MemberAgreement.class);
+        List<MemberAgreement> list = List.of(agreement);
+        given(memberAgreementRepository.saveAll(list)).willReturn(list);
+ 
+        List<MemberAgreement> result = memberAgreementService.saveAll(list);
+ 
+        assertThat(result).hasSize(1);
+        verify(memberAgreementRepository).saveAll(list);
+    }
+ 
+    @Test
+    @DisplayName("동의 내역 저장 테스트")
+    void saveTest() {
+        MemberAgreement agreement = mock(MemberAgreement.class);
+        given(memberAgreementRepository.save(any(MemberAgreement.class))).willReturn(agreement);
+ 
+        MemberAgreement result = memberAgreementService.save(agreement);
+ 
+        assertThat(result).isEqualTo(agreement);
+        verify(memberAgreementRepository).save(agreement);
+    }
+ 
+    @Test
+    @DisplayName("회원별 동의 내역 조회 테스트")
+    void findByMemberTest() {
+        Member member = mock(Member.class);
+        MemberAgreement agreement = mock(MemberAgreement.class);
+        given(memberAgreementRepository.findByMember(member)).willReturn(List.of(agreement));
+ 
+        List<MemberAgreement> result = memberAgreementService.findByMember(member);
+ 
+        assertThat(result).hasSize(1);
+        verify(memberAgreementRepository).findByMember(member);
+    }
+ 
+    @Test
+    @DisplayName("제외 리스트 외 회원별 동의 내역 조회 테스트")
+    void findByMemberAndAgreementLogNotInTest() {
+        Member member = mock(Member.class);
+        AgreementLog log = mock(AgreementLog.class);
+        List<AgreementLog> skipList = List.of(log);
+        MemberAgreement agreement = mock(MemberAgreement.class);
+        given(memberAgreementRepository.findByMemberAndAgreementLogNotIn(member, skipList)).willReturn(List.of(agreement));
+ 
+        List<MemberAgreement> result = memberAgreementService.findByMemberAndAgreementLogNotIn(member, skipList);
+ 
+        assertThat(result).hasSize(1);
+        verify(memberAgreementRepository).findByMemberAndAgreementLogNotIn(member, skipList);
+    }
+}
