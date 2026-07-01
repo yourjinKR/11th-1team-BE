@@ -2,15 +2,19 @@ package org.example.knockin.entity.room;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.jpa.CreatedAtEntity;
 import org.hibernate.annotations.ColumnDefault;
 
@@ -26,6 +30,14 @@ public class RoommateHouseRule extends CreatedAtEntity {
     @Column(name = "id")
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id")
+    private Member member;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "my_roommate_id")
+    private MyRoommate myRoommate;
+
     @Column(name = "title", length = 50)
     private String title;
 
@@ -36,4 +48,13 @@ public class RoommateHouseRule extends CreatedAtEntity {
     @Column(name = "is_deleted", nullable = false)
     @Builder.Default
     private Boolean isDeleted = false;
+
+    public void modify(String title, String contents) {
+        this.title = title;
+        this.contents = contents;
+    }
+
+    public void softDelete() {
+        this.isDeleted = true;
+    }
 }

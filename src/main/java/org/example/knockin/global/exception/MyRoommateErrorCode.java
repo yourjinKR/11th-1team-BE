@@ -8,6 +8,9 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum MyRoommateErrorCode implements ErrorCode {
     NOT_FOUND(19000, HttpStatus.NOT_FOUND, "지역 조회에 실패하였습니다."),
+    HOUSE_RULE_NOT_FOUND(19001, HttpStatus.NOT_FOUND, "하우스룰 조회에 실패하였습니다."),
+    HOUSE_RULE_ACCESS_DENIED(19002, HttpStatus.FORBIDDEN, "접근할 수 없는 하우스룰 입니다."),
+    HOUSE_RULE_DELETED(19003, HttpStatus.GONE, "삭제된 하우스룰 입니다."),
     ;
 
     private final Integer no;
