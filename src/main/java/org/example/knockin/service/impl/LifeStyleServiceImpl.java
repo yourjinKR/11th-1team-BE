@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -72,5 +73,13 @@ public class LifeStyleServiceImpl {
 
     public List<MetaLifestylePatternsDto.Response.PatternItem> findLifeStylePatterns() {
         return lifePatternRepository.findLifeStylePatterns();
+    }
+
+    public List<LifePatternInformation> findLifePatternInformationAllById(List<Long> lifestyleIds) {
+        return lifePatternInformationRepository.findAllById(lifestyleIds);
+    }
+
+    public LifePatternInformation findLifePatternInformationById(Long lifestyleId) {
+        return lifePatternInformationRepository.findById(lifestyleId).orElse(null);
     }
 }

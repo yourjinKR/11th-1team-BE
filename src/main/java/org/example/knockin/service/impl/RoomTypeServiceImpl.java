@@ -2,10 +2,12 @@ package org.example.knockin.service.impl;
 
 
 import lombok.RequiredArgsConstructor;
-import org.example.knockin.entity.room.RoomType;
+import org.example.knockin.entity.room.*;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.RoomTypeErrorCode;
+import org.example.knockin.repository.room.OfferRoomTypeRepository;
 import org.example.knockin.repository.room.RoomTypeRepository;
+import org.example.knockin.repository.room.SeekerRoomTypeRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +18,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RoomTypeServiceImpl {
     private final RoomTypeRepository roomTypeRepository;
+    private final OfferRoomTypeRepository offerRoomTypeRepository;
+    private final SeekerRoomTypeRepository seekerRoomTypeRepository;
 
     @Transactional
     public RoomType saveRoomType(RoomType roomType) {
@@ -50,5 +54,27 @@ public class RoomTypeServiceImpl {
 
     public List<RoomType> findAllByIsDeleted(boolean isDeleted) {
         return roomTypeRepository.findAllByIsDeleted(isDeleted);
+    }
+
+    @Transactional
+    public List<OfferRoomType> saveOfferRoomTypeAll(List<OfferRoomType> offerRoomTypeList) {
+        return offerRoomTypeRepository.saveAll(offerRoomTypeList);
+    }
+
+    @Transactional
+    public List<SeekerRoomType> saveSeekerRoomTypeAll(List<SeekerRoomType> seekerRoomTypes) {
+        return seekerRoomTypeRepository.saveAll(seekerRoomTypes);
+    }
+
+    @Transactional
+    public RoomOfferProfile deleteByRoomOfferProfile(RoomOfferProfile roomOfferProfile) {
+        offerRoomTypeRepository.deleteByRoomOfferProfile(roomOfferProfile);
+        return roomOfferProfile;
+    }
+
+    @Transactional
+    public RoomSeekerProfile deleteByRoomSeekerProfile(RoomSeekerProfile seekerProfile) {
+        seekerRoomTypeRepository.deleteByRoomSeekerProfile(seekerProfile);
+        return seekerProfile;
     }
 }

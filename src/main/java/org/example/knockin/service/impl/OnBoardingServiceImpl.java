@@ -36,30 +36,24 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class OnBoardingServiceImpl {
-    private final BasicInformationRepository basicInformationRepository;
+    private final BasicInformationServiceImpl basicInformationService;
     private final MemberServiceImpl memberService;
-    private final MemberAgreementRepository memberAgreementRepository;
-    private final MemberLifePatternRepository memberLifePatternRepository;
-    private final MemberLifePatternLogRepository memberLifePatternLogRepository;
-    private final RoomProfileRepository roomProfileRepository;
-    private final OfferRoomTypeRepository offerRoomTypeRepository;
-    private final SeekerRoomTypeRepository seekerRoomTypeRepository;
-    private final RoomSeekerProfileRegionRepository roomSeekerProfileRegionRepository;
+    private final MemberAgreementServiceImpl memberAgreementService;
+    private final MemberLifePatternService memberLifePatternService;
+    private final RoomProfileServiceImpl roomProfileService;
+    private final RoomTypeServiceImpl roomTypeService;
+    private final RoomSeekerProfileRegionServiceImpl roomSeekerProfileRegionService;
     private final MetaServiceImpl metaService;
-    private final LifePatternInformationRepository lifePatternInformationRepository;
-    private final PreferenceConditionRepository preferenceConditionRepository;
-    private final PreferenceConditionLogRepository preferenceConditionLogRepository;
-    private final PreferenceConditionWeightRepository preferenceConditionWeightRepository;
-    private final PreferenceConditionWeightLogRepository preferenceConditionWeightLogRepository;
-    private final LifePatternRepository lifePatternRepository;
-    private final MemberPrivacyRepository memberPrivacyRepository;
+    private final PreferenceConditionServiceImpl preferenceConditionService;
+    private final LifeStyleServiceImpl lifeStyleService;
+    private final MemberPrivacyServiceImpl memberPrivacyService;
     private final MyRoomMateServiceImpl myRoomMateService;
     private final RoommateBoardService roommateBoardService;
 
     @Transactional
     public BasicInformation saveBasicInfo(SaveProfileBasicDto.Request request, Member member) {
         BasicInformation basicInformation = BasicInformation.builder().member(member).name(request.getName()).birth(request.getBirth()).gender(request.getGender()).email(request.getEmail()).build();
-        return basicInformationRepository.save(basicInformation);
+        return basicInformationService.save(basicInformation);
     }
 
     @Transactional
@@ -70,7 +64,7 @@ public class OnBoardingServiceImpl {
             memberAgreementList.add(MemberAgreement.builder().member(member).agreementLog(item).isAgreed(true).build());
         });
 
-        return memberAgreementRepository.saveAll(memberAgreementList);
+        return memberAgreementService.saveAll(memberAgreementList);
     }
 
     @Transactional
@@ -93,8 +87,8 @@ public class OnBoardingServiceImpl {
         });
 
 
-        memberLifePatternLogRepository.saveAll(memberLifePatternLogList);
-        return memberLifePatternRepository.saveAll(memberLifePatternList);
+        memberLifePatternService.saveMemberLifePatternLogAll(memberLifePatternLogList);
+        return memberLifePatternService.saveMemberLifePatternAll(memberLifePatternList);
     }
 
     @Transactional
@@ -114,7 +108,7 @@ public class OnBoardingServiceImpl {
                 List<OfferRoomType> offerRoomTypeList = new ArrayList<>();
 
                 Region region = metaService.findByRegionId(request.getRegion().getFirst()).orElseThrow(() -> new BusinessException(MetaErrorCode.REGION_NOT_FOUND));
-                RoomOfferProfile roomOfferProfile = roomProfileRepository.save(RoomOfferProfile.builder()
+                RoomOfferProfile roomOfferProfile = roomProfileService.save(RoomOfferProfile.builder()
                         .member(member)
                         .region(region)
                         .deposit(request.getDeposit())
@@ -126,13 +120,13 @@ public class OnBoardingServiceImpl {
                 metaService.findByRoomTypes(request.getRoomProfile()).forEach(item -> {
                     offerRoomTypeList.add(OfferRoomType.builder().roomType(item).roomOfferProfile(roomOfferProfile).build());
                 });
-                offerRoomTypeRepository.saveAll(offerRoomTypeList);
+                roomTypeService.saveOfferRoomTypeAll(offerRoomTypeList);
             }
             case SEEKER -> {
                 List<SeekerRoomType> seekerRoomTypes = new ArrayList<>();
                 List<RoomSeekerProfileRegion> roomSeekerProfileRegionList = new ArrayList<>();
 
-                RoomSeekerProfile roomSeekerProfile = roomProfileRepository.save(RoomSeekerProfile.builder()
+                RoomSeekerProfile roomSeekerProfile = roomProfileService.save(RoomSeekerProfile.builder()
                         .member(member)
                         .minDeposit(request.getMinDeposit())
                         .maxDeposit(request.getMaxDeposit())
@@ -145,12 +139,12 @@ public class OnBoardingServiceImpl {
                 metaService.findByRegions(request.getRegion()).forEach(item -> {
                     roomSeekerProfileRegionList.add(RoomSeekerProfileRegion.builder().roomSeekerProfile(roomSeekerProfile).region(item).build());
                 });
-                roomSeekerProfileRegionRepository.saveAll(roomSeekerProfileRegionList);
+                roomSeekerProfileRegionService.saveAll(roomSeekerProfileRegionList);
 
                 metaService.findByRoomTypes(request.getRoomProfile()).forEach(item -> {
                     seekerRoomTypes.add(SeekerRoomType.builder().roomType(item).roomSeekerProfile(roomSeekerProfile).build());
                 });
-                seekerRoomTypeRepository.saveAll(seekerRoomTypes);
+                roomTypeService.saveSeekerRoomTypeAll(seekerRoomTypes);
             }
         }
 
@@ -206,29 +200,29 @@ public class OnBoardingServiceImpl {
 
     @Transactional
     public void modifyBasicInfo(ModifyProfileBasicDto.Request request, Member member) {
-        BasicInformation basicInformation = basicInformationRepository.findByMember(member).getFirst();
+        BasicInformation basicInformation = basicInformationService.findByMember(member).getFirst();
         basicInformation.modifyBasicInformation(request);
     }
 
     @Transactional
     public void modifyAgreement(ModifyProfileBasicDto.Request request, Member member) {
         List<AgreementLog> requestAgreementList = metaService.findByAgreementLogIsCurrent(request.getTerms());
-        List<AgreementLog> memberAgreementList = memberAgreementRepository.findByMember(member).stream().map(MemberAgreement::getAgreementLog).toList();
+        List<AgreementLog> memberAgreementList = memberAgreementService.findByMember(member).stream().map(MemberAgreement::getAgreementLog).toList();
 
         Set<Long> memberAgreementIds = memberAgreementList.stream().map(AgreementLog::getId).collect(Collectors.toSet());
         List<AgreementLog> skipList = requestAgreementList.stream().filter(reqLog -> memberAgreementIds.contains(reqLog.getId())).toList();
 
         if (skipList.isEmpty()) {
-            memberAgreementRepository.findByMember(member).forEach(MemberAgreement::disableAgree);
+            memberAgreementService.findByMember(member).forEach(MemberAgreement::disableAgree);
         } else {
-            memberAgreementRepository.findByMemberAndAgreementLogNotIn(member, skipList).forEach(MemberAgreement::disableAgree);
+            memberAgreementService.findByMemberAndAgreementLogNotIn(member, skipList).forEach(MemberAgreement::disableAgree);
         }
 
         requestAgreementList.forEach(item -> {
             boolean isNotInSkipList = skipList.stream().noneMatch(skipItem -> Objects.equals(skipItem.getId(), item.getId()));
 
             if (isNotInSkipList) {
-                memberAgreementRepository.save(MemberAgreement.builder()
+                memberAgreementService.save(MemberAgreement.builder()
                         .member(member)
                         .agreementLog(item)
                         .isAgreed(true)
@@ -257,10 +251,10 @@ public class OnBoardingServiceImpl {
                 .map(ModifyProfileLifeStyleDto.Request.LifeStyleInfo::getLifestyleId)
                 .toList();
 
-        Map<Long, LifePatternInformation> newInfoMap = lifePatternInformationRepository.findAllById(newLifestyleIds).stream()
+        Map<Long, LifePatternInformation> newInfoMap = lifeStyleService.findLifePatternInformationAllById(newLifestyleIds).stream()
                 .collect(Collectors.toMap(LifePatternInformation::getId, info -> info));
 
-        List<MemberLifePattern> memberLifePatternList = memberLifePatternRepository.findByMember(member);
+        List<MemberLifePattern> memberLifePatternList = memberLifePatternService.findByMember(member);
         List<MemberLifePattern> modifyMemberLifePatternList = memberLifePatternList.stream()
                 .filter(item -> memberLifePatternIds.contains(item.getId()))
                 .toList();
@@ -282,12 +276,12 @@ public class OnBoardingServiceImpl {
 
     @Transactional
     public void modifyLifeStyleLog(Member member) {
-        List<MemberLifePattern> memberLifePatternList = memberLifePatternRepository.findByMember(member);
+        List<MemberLifePattern> memberLifePatternList = memberLifePatternService.findByMember(member);
         List<MemberLifePatternLog> logList = memberLifePatternList.stream().map(pattern ->
                 MemberLifePatternLog.builder().member(member).lifePatternInformation(pattern.getLifePatternInformation()).build()).toList();
 
         if (!logList.isEmpty()) {
-            memberLifePatternLogRepository.saveAll(logList);
+            memberLifePatternService.saveMemberLifePatternLogAll(logList);
         }
     }
 
@@ -301,22 +295,21 @@ public class OnBoardingServiceImpl {
 
     @Transactional
     public void modifyRoomInfo(ModifyProfileRoomInfoDto.Request request, Member member) {
-        RoomProfile roomProfile = roomProfileRepository.findByMember(member).getFirst();
+        RoomProfile roomProfile = roomProfileService.findByMember(member).getFirst();
         RoomProfileType targetType = request.getType();
 
         if (roomProfile.getType() != targetType) {
             if (roomProfile instanceof RoomOfferProfile roomOfferProfile) {
-                offerRoomTypeRepository.deleteByRoomOfferProfile(roomOfferProfile);
+                roomTypeService.deleteByRoomOfferProfile(roomOfferProfile);
             } else if (roomProfile instanceof RoomSeekerProfile seekerProfile) {
-                seekerRoomTypeRepository.deleteByRoomSeekerProfile(seekerProfile);
-                roomSeekerProfileRegionRepository.deleteByRoomSeekerProfile(seekerProfile);
+                roomTypeService.deleteByRoomSeekerProfile(seekerProfile);
+                roomSeekerProfileRegionService.deleteByRoomSeekerProfile(seekerProfile);
             }
 
-            roomProfileRepository.delete(roomProfile);
-            roomProfileRepository.flush();
+            roomProfileService.delete(roomProfile);
 
             if (targetType == RoomProfileType.SEEKER) {
-                RoomSeekerProfile newSeekerProfile = roomProfileRepository.save(RoomSeekerProfile.builder()
+                RoomSeekerProfile newSeekerProfile = roomProfileService.save(RoomSeekerProfile.builder()
                         .member(member)
                         .minDeposit(request.getMinDeposit())
                         .maxDeposit(request.getMaxDeposit())
@@ -327,15 +320,15 @@ public class OnBoardingServiceImpl {
                         .build());
 
                 List<RoomSeekerProfileRegion> seekerRegions = metaService.findByRegions(request.getRegion()).stream().map(region -> RoomSeekerProfileRegion.builder().roomSeekerProfile(newSeekerProfile).region(region).build()).toList();
-                roomSeekerProfileRegionRepository.saveAll(seekerRegions);
+                roomSeekerProfileRegionService.saveAll(seekerRegions);
 
                 List<SeekerRoomType> seekerRoomTypes = metaService.findByRoomTypes(request.getRoomProfile()).stream().map(roomType -> SeekerRoomType.builder().roomSeekerProfile(newSeekerProfile).roomType(roomType).build()).toList();
-                seekerRoomTypeRepository.saveAll(seekerRoomTypes);
+                roomTypeService.saveSeekerRoomTypeAll(seekerRoomTypes);
             } else if (targetType == RoomProfileType.OFFER) {
                 Region region = metaService.findByRegionId(request.getRegion().getFirst())
                         .orElseThrow(() -> new BusinessException(MetaErrorCode.REGION_NOT_FOUND));
 
-                RoomOfferProfile newOfferProfile = roomProfileRepository.save(RoomOfferProfile.builder()
+                RoomOfferProfile newOfferProfile = roomProfileService.save(RoomOfferProfile.builder()
                         .member(member)
                         .region(region)
                         .deposit(request.getDeposit())
@@ -345,7 +338,7 @@ public class OnBoardingServiceImpl {
                         .build());
 
                 List<OfferRoomType> offerRoomTypes = metaService.findByRoomTypes(request.getRoomProfile()).stream().map(roomType -> OfferRoomType.builder().roomOfferProfile(newOfferProfile).roomType(roomType).build()).toList();
-                offerRoomTypeRepository.saveAll(offerRoomTypes);
+                roomTypeService.saveOfferRoomTypeAll(offerRoomTypes);
             }
         } else {
             List<RoomType> roomTypeList = metaService.findByRoomTypes(request.getRoomProfile());
@@ -354,23 +347,23 @@ public class OnBoardingServiceImpl {
                 Region region = metaService.findByRegionId(request.getRegion().getFirst()).orElseThrow(() -> new BusinessException(MetaErrorCode.REGION_NOT_FOUND));
 
                 roomOfferProfile.updateOffer(request, region);
-                offerRoomTypeRepository.deleteByRoomOfferProfile(roomOfferProfile);
+                roomTypeService.deleteByRoomOfferProfile(roomOfferProfile);
 
                 List<OfferRoomType> offerRoomTypeList = roomTypeList.stream().map(item -> OfferRoomType.builder().roomType(item).roomOfferProfile(roomOfferProfile).build()).toList();
-                offerRoomTypeRepository.saveAll(offerRoomTypeList);
+                roomTypeService.saveOfferRoomTypeAll(offerRoomTypeList);
             } else if (roomProfile instanceof RoomSeekerProfile seekerProfile) {
                 List<Region> regionList = metaService.findByRegions(request.getRegion());
 
                 seekerProfile.updateSeeker(request);
-                seekerRoomTypeRepository.deleteByRoomSeekerProfile(seekerProfile);
+                roomTypeService.deleteByRoomSeekerProfile(seekerProfile);
 
                 List<SeekerRoomType> seekerRoomTypes = roomTypeList.stream().map(item -> SeekerRoomType.builder().roomType(item).roomSeekerProfile(seekerProfile).build()).toList();
-                seekerRoomTypeRepository.saveAll(seekerRoomTypes);
+                roomTypeService.saveSeekerRoomTypeAll(seekerRoomTypes);
 
-                roomSeekerProfileRegionRepository.deleteByRoomSeekerProfile(seekerProfile);
+                roomSeekerProfileRegionService.deleteByRoomSeekerProfile(seekerProfile);
 
                 List<RoomSeekerProfileRegion> roomSeekerProfileRegionList = regionList.stream().map(item -> RoomSeekerProfileRegion.builder().roomSeekerProfile(seekerProfile).region(item).build()).toList();
-                roomSeekerProfileRegionRepository.saveAll(roomSeekerProfileRegionList);
+                roomSeekerProfileRegionService.saveAll(roomSeekerProfileRegionList);
             } else {
                 throw new BusinessException(OnBoardErrorCode.ONBOARD_ROOM_INFO_VAILDATION_FAIL);
             }
@@ -436,7 +429,7 @@ public class OnBoardingServiceImpl {
         List<PreferenceCondition> preferenceConditionList = new ArrayList<>();
         metaService.findByLifeStyle(request.getLifestyles()).forEach(item ->
                 preferenceConditionList.add(PreferenceCondition.builder().member(member).lifePatternInformation(item).build()));
-        return preferenceConditionRepository.saveAll(preferenceConditionList);
+        return preferenceConditionService.preferenceConditionSaveAll(preferenceConditionList);
     }
 
     @Transactional
@@ -444,7 +437,7 @@ public class OnBoardingServiceImpl {
         List<PreferenceConditionLog> preferenceConditionLogList = new ArrayList<>();
         metaService.findByLifeStyle(request.getLifestyles()).forEach(item ->
                 preferenceConditionLogList.add(PreferenceConditionLog.builder().member(member).lifePatternInformation(item).build()));
-        return preferenceConditionLogRepository.saveAll(preferenceConditionLogList);
+        return preferenceConditionService.preferenceConditionLogSaveAll(preferenceConditionLogList);
     }
 
     @Transactional
@@ -462,7 +455,7 @@ public class OnBoardingServiceImpl {
         List<PreferenceConditionWeight> preferenceConditionWeightList = new ArrayList<>();
         metaService.findLifePatternByLifeStyle(request.getConditions()).forEach(item ->
                 preferenceConditionWeightList.add(PreferenceConditionWeight.builder().member(member).lifePattern(item).build()));
-        return preferenceConditionWeightRepository.saveAll(preferenceConditionWeightList);
+        return preferenceConditionService.preferenceConditionWeightSaveAll(preferenceConditionWeightList);
     }
 
     @Transactional
@@ -470,7 +463,7 @@ public class OnBoardingServiceImpl {
         List<PreferenceConditionWeightLog> preferenceConditionWeightLogList = new ArrayList<>();
         metaService.findLifePatternByLifeStyle(request.getConditions()).forEach(item ->
                 preferenceConditionWeightLogList.add(PreferenceConditionWeightLog.builder().member(member).lifePattern(item).build()));
-        return preferenceConditionWeightLogRepository.saveAll(preferenceConditionWeightLogList);
+        return preferenceConditionService.preferenceConditionWeightLogSaveAll(preferenceConditionWeightLogList);
     }
 
     @Transactional
@@ -500,8 +493,8 @@ public class OnBoardingServiceImpl {
 
     @Transactional
     public void modifyPreferenceLifeStyle(ModifyPreferencesLifeStyleDto.Request request, Member member) {
-        Map<Long, LifePatternInformation> newInfoMap = request.getLifestyles().stream().collect(Collectors.toMap(ModifyPreferencesLifeStyleDto.Request.LifeStyleInfo::getId, item -> lifePatternInformationRepository.findById(item.getLifestyleId()).orElse(null)));
-        preferenceConditionRepository.findByMember(member).forEach(item -> {
+        Map<Long, LifePatternInformation> newInfoMap = request.getLifestyles().stream().collect(Collectors.toMap(ModifyPreferencesLifeStyleDto.Request.LifeStyleInfo::getId, item -> lifeStyleService.findLifePatternInformationById(item.getLifestyleId())));
+        preferenceConditionService.findPreferenceConditionByMember(member).forEach(item -> {
             request.getLifestyles().forEach(data -> {
                 if(Objects.equals(data.getId(), item.getId())) {
                     LifePatternInformation newInfo = newInfoMap.get(data.getId());
@@ -518,12 +511,12 @@ public class OnBoardingServiceImpl {
 
     @Transactional
     public void modifyPreferenceLifeStyleLog(Member member) {
-        List<PreferenceCondition> preferenceConditionList = preferenceConditionRepository.findByMember(member);
+        List<PreferenceCondition> preferenceConditionList = preferenceConditionService.findPreferenceConditionByMember(member);
         List<PreferenceConditionLog> logList = preferenceConditionList.stream().map(pattern ->
                 PreferenceConditionLog.builder().member(member).lifePatternInformation(pattern.getLifePatternInformation()).build()).toList();
 
         if (!logList.isEmpty()) {
-            preferenceConditionLogRepository.saveAll(logList);
+            preferenceConditionService.preferenceConditionLogSaveAll(logList);
         }
     }
 
@@ -539,22 +532,21 @@ public class OnBoardingServiceImpl {
 
     @Transactional
     public void modifyPreCondition(ModifyPreferencesConditionsDto.Request request, Member member) {
-        preferenceConditionWeightRepository.deleteByMember(member);
-        preferenceConditionWeightRepository.flush();
+        preferenceConditionService.deletePreferenceConditionWeightByMember(member);
 
         List<PreferenceConditionWeight> preferenceConditionWeightList = new ArrayList<>();
-        lifePatternRepository.findAllById(request.getConditions()).forEach(item -> preferenceConditionWeightList.add(PreferenceConditionWeight.builder().member(member).lifePattern(item).build()));
-        preferenceConditionWeightRepository.saveAll(preferenceConditionWeightList);
+        lifeStyleService.findAllById(request.getConditions()).forEach(item -> preferenceConditionWeightList.add(PreferenceConditionWeight.builder().member(member).lifePattern(item).build()));
+        preferenceConditionService.preferenceConditionWeightSaveAll(preferenceConditionWeightList);
     }
 
     @Transactional
     public void modifyPreConditionLog(Member member) {
-        List<PreferenceConditionWeight> preferenceConditionWeightList = preferenceConditionWeightRepository.findByMember(member);
+        List<PreferenceConditionWeight> preferenceConditionWeightList = preferenceConditionService.findPreferenceConditionWeightByMember(member);
         List<PreferenceConditionWeightLog> logList = preferenceConditionWeightList.stream().map(patternWeight ->
                 PreferenceConditionWeightLog.builder().member(member).lifePattern(patternWeight.getLifePattern()).build()).toList();
 
         if (!logList.isEmpty()) {
-            preferenceConditionWeightLogRepository.saveAll(logList);
+            preferenceConditionService.preferenceConditionWeightLogSaveAll(logList);
         }
     }
 
@@ -598,7 +590,7 @@ public class OnBoardingServiceImpl {
         Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
 
         if(myRoomMateService.isExistRoomMate(member)) throw new BusinessException(OnBoardErrorCode.ONBOARD_PROFILE_STATE_CHANGE_ERROR);
-        memberPrivacyRepository.findByMember(member).getFirst().changeState(request.getStatus());
+        memberPrivacyService.findByMember(member).getFirst().changeState(request.getStatus());
 
         return ProfileVisibilityDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
@@ -613,12 +605,12 @@ public class OnBoardingServiceImpl {
     public void saveOrUpdateState(Member member) {
         MemberPrivacyType targetType = memberService.isOnBoarding(member) ? MemberPrivacyType.PUBLIC : MemberPrivacyType.PRIVATE;
 
-        List<MemberPrivacy> privacyList = memberPrivacyRepository.findByMember(member);
+        List<MemberPrivacy> privacyList = memberPrivacyService.findByMember(member);
         if (!privacyList.isEmpty()) {
             privacyList.getFirst().changeState(targetType);
         }
         else {
-            memberPrivacyRepository.save(MemberPrivacy.builder().member(member).type(targetType).build());
+            memberPrivacyService.save(MemberPrivacy.builder().member(member).type(targetType).build());
         }
     }
 }
