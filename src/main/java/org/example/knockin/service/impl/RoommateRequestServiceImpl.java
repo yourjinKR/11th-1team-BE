@@ -13,6 +13,8 @@ import org.example.knockin.entity.chat.ChatRoomMember;
 import org.example.knockin.entity.chat.ChattingRoom;
 import org.example.knockin.entity.member.BasicInformation;
 import org.example.knockin.entity.member.Member;
+import org.example.knockin.entity.member.MemberPrivacy;
+import org.example.knockin.entity.member.MemberPrivacyType;
 import org.example.knockin.entity.room.MyRoommate;
 import org.example.knockin.entity.room.RoommateMatchingRequired;
 import org.example.knockin.entity.room.RoommateMatchingRequiredAlarm;
@@ -46,6 +48,7 @@ public class RoommateRequestServiceImpl {
     private final AlarmServiceImpl alarmService;
     private final BasicInformationRepository basicInformationRepository;
     private final MyRoommateRepository myRoommateRepository;
+    private final MemberPrivacyServiceImpl memberPrivacyService;
 
     @Transactional
     public RoommateRequestDto.Response saveRoommateRequest(Long requesterId, RoommateRequestDto.Request request) {
@@ -144,6 +147,10 @@ public class RoommateRequestServiceImpl {
 
         Response response = toDto(roommateMatchingRequired);
         sendRequestMessage(roommateMatchingRequired.getChattingRoom().getId(), response);
+
+        MemberPrivacy memberPrivacy = memberPrivacyService.findByMemberId(memberId).getFirst();
+        memberPrivacy.changeState(MemberPrivacyType.PRIVATE);
+
         return response;
     }
 

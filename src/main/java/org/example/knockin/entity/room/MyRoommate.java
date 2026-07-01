@@ -36,4 +36,8 @@ public class MyRoommate extends CreatedAtEntity {
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted;
+
+    public void softDelete() {
+        this.isDeleted = true;
+    }
 }

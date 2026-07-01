@@ -18,6 +18,10 @@ public class MemberPrivacyServiceImpl {
         return memberPrivacyRepository.findByMember(member);
     }
 
+    public List<MemberPrivacy> findByMemberId(Long memberId) {
+        return memberPrivacyRepository.findByMemberId(memberId);
+    }
+
     @Transactional
     public MemberPrivacy save(MemberPrivacy memberPrivacy) {
         return memberPrivacyRepository.save(memberPrivacy);

@@ -24,7 +24,10 @@ public class MyRoommateRepositoryImpl implements MyRoommateRepositoryCustom {
                 .join(myRoommate.roommateMatchingRequired, roommateMatchingRequired)
                 .join(roommateMatchingRequired.chattingRoom, chattingRoom)
                 .join(chattingRoom.chattingRequired, chattingRequired)
-                .where(chattingRequired.requestee.eq(member).or(chattingRequired.requester.eq(member)))
+                .where(
+                        chattingRequired.requestee.eq(member).or(chattingRequired.requester.eq(member)),
+                        myRoommate.isDeleted.isFalse()
+                )
                 .fetchFirst();
 
         return fetchOne != null;
@@ -37,8 +40,11 @@ public class MyRoommateRepositoryImpl implements MyRoommateRepositoryCustom {
                         .select(myRoommate)
                         .from(myRoommate)
                         .join(myRoommate.roommateMatchingRequired, roommateMatchingRequired).fetchJoin()
-                        .where(roommateMatchingRequired.requestee.id.eq(memberId)
-                                .or(roommateMatchingRequired.requester.id.eq(memberId)))
+                        .where(
+                                roommateMatchingRequired.requestee.id.eq(memberId)
+                                        .or(roommateMatchingRequired.requester.id.eq(memberId)),
+                                myRoommate.isDeleted.isFalse()
+                        )
                         .fetchFirst()
         );
     }

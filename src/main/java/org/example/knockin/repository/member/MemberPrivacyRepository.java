@@ -9,4 +9,6 @@ import java.util.SequencedCollection;
 
 public interface MemberPrivacyRepository extends JpaRepository<MemberPrivacy, Long> {
     List<MemberPrivacy> findByMember(Member member);
+
+    List<MemberPrivacy> findByMemberId(Long memberId);
 }

@@ -12,15 +12,18 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.example.knockin.dto.Compatibility;
-import org.example.knockin.dto.MyRoommateDto;
+import org.example.knockin.dto.MyRoommateCardDto;
 import org.example.knockin.entity.chat.ChattingRoom;
 import org.example.knockin.entity.member.Gender;
 import org.example.knockin.entity.member.Member;
+import org.example.knockin.entity.member.MemberPrivacy;
+import org.example.knockin.entity.member.MemberPrivacyType;
 import org.example.knockin.entity.room.MyRoommate;
 import org.example.knockin.entity.room.RoommateMatchingRequired;
 import org.example.knockin.entity.room.RoommateRequiredStatus;
 import org.example.knockin.entity.room.RoommateScore;
 import org.example.knockin.global.exception.BusinessException;
+import org.example.knockin.global.exception.CommonErrorCode;
 import org.example.knockin.global.exception.MemberErrorCode;
 import org.example.knockin.global.exception.MyRoommateErrorCode;
 import org.example.knockin.global.util.DateUtils;
@@ -51,6 +54,9 @@ class MyRoomMateServiceImplTest {
 
     @Mock
     private RoommateScoreService roommateScoreService;
+
+    @Mock
+    private MemberPrivacyServiceImpl memberPrivacyService;
 
     @InjectMocks
     private MyRoomMateServiceImpl myRoomMateService;
@@ -93,7 +99,7 @@ class MyRoomMateServiceImplTest {
                 .thenReturn(new Compatibility(92, List.of()));
 
         // When
-        MyRoommateDto.Response response = myRoomMateService.findMyRoommate(memberId);
+        MyRoommateCardDto.Response response = myRoomMateService.findMyRoommate(memberId);
 
         // Then
         assertThat(response.getId()).isEqualTo(10L);
@@ -138,6 +144,60 @@ class MyRoomMateServiceImplTest {
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.BASIC_INFO_NOT_FOUND));
         verifyNoInteractions(roommateScoreRepository, roommateScoreService);
+    }
+
+    @Test
+    @DisplayName("내 룸메이트를 삭제하면 룸메이트를 삭제 처리하고 공개범위를 공개로 변경한다")
+    void deleteMyRoommateSoftDeletesMyRoommateAndChangesPrivacyPublic() {
+        // Given
+        Long myRoommateId = 10L;
+        Long memberId = 1L;
+        MyRoommate myRoommate = myRoommate(myRoommateId, memberId, 2L, 100L);
+        MemberPrivacy memberPrivacy = MemberPrivacy.builder()
+                .type(MemberPrivacyType.PRIVATE)
+                .build();
+
+        when(myRoommateRepository.findWithFetchedByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
+        when(memberPrivacyService.findByMemberId(memberId)).thenReturn(List.of(memberPrivacy));
+
+        // When
+        org.example.knockin.dto.MyRoommateDto.Response response = myRoomMateService.deleteMyRoommate(myRoommateId, memberId);
+
+        // Then
+        assertThat(myRoommate.getIsDeleted()).isTrue();
+        assertThat(memberPrivacy.getType()).isEqualTo(MemberPrivacyType.PUBLIC);
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(memberPrivacyService).findByMemberId(memberId);
+    }
+
+    @Test
+    @DisplayName("삭제하려는 룸메이트 ID가 내 룸메이트와 다르면 삭제 처리와 공개범위 변경을 하지 않는다")
+    void deleteMyRoommateRejectsDifferentMyRoommateId() {
+        // Given
+        Long memberId = 1L;
+        MyRoommate myRoommate = myRoommate(10L, memberId, 2L, 100L);
+        when(myRoommateRepository.findWithFetchedByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
+
+        // When & Then
+        assertThatThrownBy(() -> myRoomMateService.deleteMyRoommate(999L, memberId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(CommonErrorCode.BAD_REQUEST));
+        assertThat(myRoommate.getIsDeleted()).isFalse();
+        verifyNoInteractions(memberPrivacyService);
+    }
+
+    @Test
+    @DisplayName("삭제할 내 룸메이트가 없으면 룸메이트 없음 예외를 던지고 공개범위를 변경하지 않는다")
+    void deleteMyRoommateThrowsWhenMyRoommateDoesNotExist() {
+        // Given
+        Long memberId = 1L;
+        when(myRoommateRepository.findWithFetchedByMemberId(memberId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> myRoomMateService.deleteMyRoommate(10L, memberId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
+        verifyNoInteractions(memberPrivacyService);
     }
 
     private MyRoommate myRoommate(Long myRoommateId, Long requesterId, Long requesteeId, Long chatRoomId) {
