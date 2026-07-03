@@ -20,8 +20,11 @@ public class BoMemberListDto {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class Request {
+        @Schema(description = "이름 또는 이메")
         private String searchName;
+        @Schema(description = "상태")
         private MemberState searchState;
+        @Schema(description = "신원인증")
         private ApproveType searchApproveType;
     }
 

@@ -18,7 +18,9 @@ public class BoBoardListDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Request {
+        @Schema(description = "제목 작성자 지역 검색어")
         private String searchKeyword;
+        @Schema(description = "상형")
         private Boolean isDeleted;
     }
 

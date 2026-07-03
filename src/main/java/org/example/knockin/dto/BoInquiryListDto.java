@@ -15,8 +15,11 @@ public class BoInquiryListDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Request {
+        @Schema(description = "회원명 및 문의 내용")
         private String searchKeyword;
+        @Schema(description = "상태")
         private Boolean isReply;
+        @Schema(description = "유형")
         private Long categoryId;
     }
 

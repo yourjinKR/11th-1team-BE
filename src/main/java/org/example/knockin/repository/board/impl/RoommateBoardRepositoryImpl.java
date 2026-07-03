@@ -46,6 +46,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 @Repository
 @RequiredArgsConstructor
@@ -508,7 +509,16 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
     }
 
     private BooleanExpression searchRegion(String regionName) {
-        return regionName != null ? region.name.contains(regionName) : null;
+        if (!StringUtils.hasText(regionName)) return null;
+        QRegion rChild = new QRegion("rChild");
+        QRegion rParent = new QRegion("rParent");
+        QRegion rGrandParent = new QRegion("rGrandParent");
+
+        return roommateBoard.region.id.in(JPAExpressions.select(rChild.id)
+                        .from(rChild)
+                        .leftJoin(rChild.parent, rParent)
+                        .leftJoin(rParent.parent, rGrandParent)
+                        .where(rChild.name.contains(regionName).or(rParent.name.contains(regionName)).or(rGrandParent.name.contains(regionName))));
     }
 
     private BooleanExpression searchState(Boolean isDeleted) {
