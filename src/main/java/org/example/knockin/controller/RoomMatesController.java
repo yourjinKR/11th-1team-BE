@@ -111,23 +111,33 @@ public class RoomMatesController {
     }
 
     @PostMapping("/me/calendar")
-    @Operation(summary = "내 룸메이트 캘린더 저장")
+    @Operation(summary = "내 룸메이트 캘린더 일정 저장")
     public CommonResponse<CalendarDto.Response> saveMyRoomMateCalendar(
             @AuthenticationPrincipal PrincipalDetails principalDetails,
             @Valid @RequestBody CalendarDto.Request request
     ) {
-        CalendarDto.Response response = calendarServiceImpl.saveCalendar(principalDetails.getMember().getId(), request);
+        CalendarDto.Response response = calendarServiceImpl.saveBasicCalendar(principalDetails.getMember().getId(), request);
+        return CommonResponse.status(HttpStatus.OK).body(response);
+    }
+
+    @PostMapping("/me/calendar/repeat")
+    @Operation(summary = "내 룸메이트 캘린더 반복 일정 저장")
+    public CommonResponse<RepeatCalendarDto.Response> saveMyRepeatRoomMateCalendar(
+            @AuthenticationPrincipal PrincipalDetails principalDetails,
+            @Valid @RequestBody RepeatCalendarDto.Request request
+    ) {
+        RepeatCalendarDto.Response response = calendarServiceImpl.saveRepeatCalendar(principalDetails.getMember().getId(), request);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @PutMapping("/me/calendar/{id}")
-    @Operation(summary = "내 룸메이트 캘린더 수정")
+    @Operation(summary = "내 룸메이트 캘린더 일정 수정")
     public CommonResponse<CalendarDto.Response> modifyMyRoomMateCalendar(@PathVariable Long id, @RequestBody CalendarDto.Request request) {
         return CommonResponse.status(HttpStatus.OK).body(new CalendarDto.Response());
     }
 
     @DeleteMapping("/me/calendar/{id}")
-    @Operation(summary = "내 룸메이트 캘린더 삭제")
+    @Operation(summary = "내 룸메이트 캘린더 일정 삭제")
     public CommonResponse<CalendarDto.Response> deleteMyRoomMateCalendar(@PathVariable Long id) {
         return CommonResponse.status(HttpStatus.OK).body(new CalendarDto.Response());
     }
