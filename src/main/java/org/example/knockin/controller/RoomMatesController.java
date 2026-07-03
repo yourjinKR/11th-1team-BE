@@ -9,6 +9,7 @@ import org.example.knockin.dto.*;
 import org.example.knockin.dto.HouseRuleDto.Response;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.global.auth.dto.PrincipalDetails;
+import org.example.knockin.service.impl.CalendarServiceImpl;
 import org.example.knockin.service.impl.HouseRuleServiceImpl;
 import org.example.knockin.service.impl.MyRoomMateServiceImpl;
 import org.springframework.http.HttpStatus;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class RoomMatesController {
     private final MyRoomMateServiceImpl myRoomMateService;
     private final HouseRuleServiceImpl houseRuleService;
+    private final CalendarServiceImpl calendarServiceImpl;
 
     @GetMapping("/me")
     @Operation(summary = "내 룸메이트 조회")
@@ -110,8 +112,12 @@ public class RoomMatesController {
 
     @PostMapping("/me/calendar")
     @Operation(summary = "내 룸메이트 캘린더 저장")
-    public CommonResponse<CalendarDto.Response> saveMyRoomMateCalendar(@RequestBody CalendarDto.Request request) {
-        return CommonResponse.status(HttpStatus.OK).body(new CalendarDto.Response());
+    public CommonResponse<CalendarDto.Response> saveMyRoomMateCalendar(
+            @AuthenticationPrincipal PrincipalDetails principalDetails,
+            @Valid @RequestBody CalendarDto.Request request
+    ) {
+        CalendarDto.Response response = calendarServiceImpl.saveCalendar(principalDetails.getMember().getId(), request);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @PutMapping("/me/calendar/{id}")

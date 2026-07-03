@@ -19,8 +19,8 @@ import org.hibernate.annotations.ColumnDefault;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "roommate_calendar_type")
-public class RoommateCalendarType extends CreatedAtEntity {
+@Table(name = "roommate_calendar_category")
+public class RoommateCalendarCategory extends CreatedAtEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")

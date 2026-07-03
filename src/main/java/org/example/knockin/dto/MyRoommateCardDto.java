@@ -18,7 +18,7 @@ public class MyRoommateCardDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Response {
-        @Schema(description = "고유 식별 ID")
+        @Schema(description = "내 룸메 고유 식별 ID")
         private Long id;
 
         @Schema(description = "내 룸메 정보")
