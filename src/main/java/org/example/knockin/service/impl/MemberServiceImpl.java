@@ -186,8 +186,8 @@ public class MemberServiceImpl {
         return String.join(" ", regionNames);
     }
 
-    public BoMemberListDto.Response findBackOfficeMemberList(Pageable pageable) {
-        return BoMemberListDto.Response.builder().memberInfoList(memberRepository.findBackOfficeMemberList(pageable)).build();
+    public BoMemberListDto.Response findBackOfficeMemberList(Pageable pageable, BoMemberListDto.Request request) {
+        return BoMemberListDto.Response.builder().memberInfoList(memberRepository.findBackOfficeMemberList(pageable, request)).build();
     }
 
     public BoMemberDetailDto.Response findBackOfficeMember(Long id) {

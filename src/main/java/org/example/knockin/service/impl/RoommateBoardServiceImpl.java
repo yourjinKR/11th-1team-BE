@@ -658,8 +658,8 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     }
 
     @Override
-    public List<BoBoardListDto.Response.BoardInfo> findBackOfficeBoardList(Pageable pageable) {
-        return roommateBoardRepository.findBackOfficeBoardList(pageable);
+    public List<BoBoardListDto.Response.BoardInfo> findBackOfficeBoardList(Pageable pageable, BoBoardListDto.Request request) {
+        return roommateBoardRepository.findBackOfficeBoardList(pageable, request);
     }
 
     @Override

@@ -12,7 +12,12 @@ import java.util.List;
 @Data
 public class BoInquiryListDto {
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Request {
+        private String searchKeyword;
+        private Boolean isReply;
+        private Long categoryId;
     }
 
     @Data

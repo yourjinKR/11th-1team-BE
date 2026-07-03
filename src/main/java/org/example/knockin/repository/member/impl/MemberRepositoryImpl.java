@@ -322,7 +322,7 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
     }
 
     @Override
-    public List<BoMemberListDto.Response.MemberInfo> findBackOfficeMemberList(Pageable pageable) {
+    public List<BoMemberListDto.Response.MemberInfo> findBackOfficeMemberList(Pageable pageable, BoMemberListDto.Request request) {
         return jpaQueryFactory.select(Projections.fields(BoMemberListDto.Response.MemberInfo.class,
                     member.id,
                     basicInformation.name,
@@ -330,15 +330,13 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                     member.createdAt,
                     member.role,
                     state.states.as("state"),
-                    new CaseBuilder().when(JPAExpressions.selectOne()
-                                            .from(authenticationApprove)
-                                            .join(authenticationApprove.authentication, authentication)
-                                            .where(authentication.member.eq(member), authenticationApprove.status.eq(ApproveType.ACCEPTED))
-                                            .exists())
-                            .then("인증").otherwise("미인증").as("authenticationStatus")
+                    authenticationApprove.status.as("authenticationType")
                 )).from(member)
                 .leftJoin(basicInformation).on(basicInformation.member.eq(member))
                 .leftJoin(state).on(state.member.eq(member))
+                .leftJoin(authentication).on(authentication.member.eq(member))
+                .leftJoin(authenticationApprove).on(authenticationApprove.authentication.eq(authentication))
+                .where(searchName(request.getSearchName()), searchState(request.getSearchState()), searchApproveType(request.getSearchApproveType()))
                 .offset(pageable.getOffset()).limit(pageable.getPageSize()).fetch();
     }
 
@@ -394,5 +392,17 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                 .from(block)
                 .where(block.member.id.eq(member.id), block.isDeleted.isFalse())
                 .notExists();
+    }
+
+    private BooleanExpression searchName(String name) {
+        return StringUtils.hasText(name) ? basicInformation.name.contains(name) : null;
+    }
+
+    private BooleanExpression searchState(MemberState stateInfo) {
+        return stateInfo != null ? state.states.eq(stateInfo) : null;
+    }
+
+    private BooleanExpression searchApproveType(ApproveType approveType) {
+        return approveType != null ? authenticationApprove.status.eq(approveType) : null;
     }
 }

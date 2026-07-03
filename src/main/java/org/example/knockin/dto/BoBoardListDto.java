@@ -15,7 +15,11 @@ import java.util.List;
 @Data
 public class BoBoardListDto {
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Request {
+        private String searchKeyword;
+        private Boolean isDeleted;
     }
 
     @Data

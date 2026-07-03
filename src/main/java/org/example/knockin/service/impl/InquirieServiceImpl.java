@@ -65,8 +65,8 @@ public class InquirieServiceImpl {
         return inquiryRepository.findByIdAndIsDeleted(inquiryId, false).orElseThrow(() -> new BusinessException(InquiryErrorCode.INQUIRY_NOT_FOUND));
     }
 
-    public List<BoInquiryListDto.Response.InquiryItem> findBackOfficeInquirieList(Pageable pageable) {
-        return inquiryRepository.findBackOfficeInquirieList(pageable);
+    public List<BoInquiryListDto.Response.InquiryItem> findBackOfficeInquirieList(Pageable pageable, BoInquiryListDto.Request request) {
+        return inquiryRepository.findBackOfficeInquirieList(pageable, request);
     }
 
     public BoInquiryDetailDto.Response.InquiryDetail findBackOfficeInquirie(Long id) {

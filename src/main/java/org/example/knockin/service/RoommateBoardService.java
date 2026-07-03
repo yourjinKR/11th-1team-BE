@@ -29,7 +29,7 @@ public interface RoommateBoardService {
 
     ReportDto.Response reportBoard(ReportDto.Request request, Long boardId, Long memberId);
 
-    List<BoBoardListDto.Response.BoardInfo> findBackOfficeBoardList(Pageable pageable);
+    List<BoBoardListDto.Response.BoardInfo> findBackOfficeBoardList(Pageable pageable, BoBoardListDto.Request request);
 
     BoBoardDetailDto.Response findBackOffcieBoard(Long id);
 

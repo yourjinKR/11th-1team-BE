@@ -27,7 +27,6 @@ import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.BoBoardDetailDto;
 import org.example.knockin.dto.BoBoardListDto;
-import org.example.knockin.dto.MyBoardListDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.file.QFile;
 import org.example.knockin.entity.member.Gender;
@@ -398,7 +397,7 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
     }
 
     @Override
-    public List<BoBoardListDto.Response.BoardInfo> findBackOfficeBoardList(Pageable pageable) {
+    public List<BoBoardListDto.Response.BoardInfo> findBackOfficeBoardList(Pageable pageable, BoBoardListDto.Request request) {
         QRegion parent = new QRegion("parent");
         QRegion grandParent = new QRegion("grandParent");
         return jpaQueryFactory.select(Projections.fields(BoBoardListDto.Response.BoardInfo.class,
@@ -416,6 +415,7 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                 .leftJoin(roommateBoard.region, region)
                 .leftJoin(region.parent, parent)
                 .leftJoin(parent.parent, grandParent)
+                .where(searchTitle(request.getSearchKeyword()).or(searchWriter(request.getSearchKeyword())).or(searchRegion(request.getSearchKeyword())), searchState(request.getIsDeleted()))
                 .fetch();
     }
 
@@ -497,6 +497,22 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
         if (endDate == null) return null;
         return roommateBoard.comeableDateNegotiable.isTrue()
                 .or(roommateBoard.comeableDate.goe(endDate));
+    }
+
+    private BooleanExpression searchTitle(String title) {
+        return title != null ? roommateBoard.title.contains(title) : null;
+    }
+
+    private BooleanExpression searchWriter(String writer) {
+        return writer != null ? basicInformation.name.contains(writer) : null;
+    }
+
+    private BooleanExpression searchRegion(String regionName) {
+        return regionName != null ? region.name.contains(regionName) : null;
+    }
+
+    private BooleanExpression searchState(Boolean isDeleted) {
+        return isDeleted != null ? roommateBoard.isDeleted.eq(isDeleted) : null;
     }
 
     public record BoardBaseRow(

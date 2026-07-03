@@ -688,15 +688,16 @@ class BackOfficeServiceImplTest {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         BoMemberListDto.Response expected = BoMemberListDto.Response.builder().build();
+        BoMemberListDto.Request request = new BoMemberListDto.Request();
 
-        given(memberService.findBackOfficeMemberList(pageable)).willReturn(expected);
+        given(memberService.findBackOfficeMemberList(pageable, request)).willReturn(expected);
 
         // when
-        BoMemberListDto.Response response = backOfficeService.findMemberList(pageable);
+        BoMemberListDto.Response response = backOfficeService.findMemberList(pageable, request);
 
         // then
         assertThat(response).isEqualTo(expected);
-        verify(memberService).findBackOfficeMemberList(pageable);
+        verify(memberService).findBackOfficeMemberList(pageable, request);
     }
 
     @Test
@@ -739,11 +740,12 @@ class BackOfficeServiceImplTest {
         BoInquiryListDto.Response.InquiryItem item = new BoInquiryListDto.Response.InquiryItem();
         item.setId(100L);
         item.setTitle("문의 제목");
+        BoInquiryListDto.Request request = new BoInquiryListDto.Request();
 
-        given(inquirieService.findBackOfficeInquirieList(pageable)).willReturn(List.of(item));
+        given(inquirieService.findBackOfficeInquirieList(pageable, request)).willReturn(List.of(item));
 
         // when
-        BoInquiryListDto.Response response = backOfficeService.findInquirieList(pageable);
+        BoInquiryListDto.Response response = backOfficeService.findInquirieList(pageable, request);
 
         // then
         assertThat(response).isNotNull();
@@ -936,18 +938,19 @@ class BackOfficeServiceImplTest {
         BoBoardListDto.Response.BoardInfo boardInfo = new BoBoardListDto.Response.BoardInfo();
         boardInfo.setId(100L);
         boardInfo.setTitle("게시글 제목");
+        BoBoardListDto.Request request = new BoBoardListDto.Request();
 
-        given(roommateBoardService.findBackOfficeBoardList(pageable)).willReturn(List.of(boardInfo));
+        given(roommateBoardService.findBackOfficeBoardList(pageable, request)).willReturn(List.of(boardInfo));
 
         // when
-        BoBoardListDto.Response response = backOfficeService.findBoardList(pageable);
+        BoBoardListDto.Response response = backOfficeService.findBoardList(pageable, request);
 
         // then
         assertThat(response).isNotNull();
         assertThat(response.getBoardInfoList()).hasSize(1);
         assertThat(response.getBoardInfoList().get(0).getId()).isEqualTo(100L);
         assertThat(response.getBoardInfoList().get(0).getTitle()).isEqualTo("게시글 제목");
-        verify(roommateBoardService).findBackOfficeBoardList(pageable);
+        verify(roommateBoardService).findBackOfficeBoardList(pageable, request);
     }
 
     @Test

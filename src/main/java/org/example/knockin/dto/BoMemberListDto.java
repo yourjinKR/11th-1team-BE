@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.example.knockin.entity.auth.ApproveType;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.member.MemberRole;
 import org.example.knockin.entity.member.MemberState;
@@ -16,7 +17,12 @@ import java.util.List;
 @Data
 public class BoMemberListDto {
     @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class Request {
+        private String searchName;
+        private MemberState searchState;
+        private ApproveType searchApproveType;
     }
 
     @Data

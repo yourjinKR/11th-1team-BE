@@ -258,17 +258,18 @@ class InquirieServiceImplTest {
         BoInquiryListDto.Response.InquiryItem item = new BoInquiryListDto.Response.InquiryItem();
         item.setId(100L);
         item.setTitle("백오피스 문의 제목");
+        BoInquiryListDto.Request request = new BoInquiryListDto.Request();
 
-        given(inquiryRepository.findBackOfficeInquirieList(pageable)).willReturn(List.of(item));
+        given(inquiryRepository.findBackOfficeInquirieList(pageable, request)).willReturn(List.of(item));
 
         // when
-        List<BoInquiryListDto.Response.InquiryItem> result = inquiriesService.findBackOfficeInquirieList(pageable);
+        List<BoInquiryListDto.Response.InquiryItem> result = inquiriesService.findBackOfficeInquirieList(pageable, request);
 
         // then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getId()).isEqualTo(100L);
         assertThat(result.get(0).getTitle()).isEqualTo("백오피스 문의 제목");
-        verify(inquiryRepository).findBackOfficeInquirieList(pageable);
+        verify(inquiryRepository).findBackOfficeInquirieList(pageable, request);
     }
 
     @Test
