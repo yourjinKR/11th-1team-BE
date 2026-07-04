@@ -7,6 +7,7 @@ import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.MyRoommate;
 import org.example.knockin.repository.room.MyRoommateRepositoryCustom;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.example.knockin.entity.room.QMyRoommate.myRoommate;
 import static org.example.knockin.entity.room.QRoommateMatchingRequired.roommateMatchingRequired;

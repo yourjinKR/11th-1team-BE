@@ -26,6 +26,7 @@ import org.example.knockin.entity.room.RoomSeekerProfile;
 import org.example.knockin.global.auth.dto.AuthResponse;
 import org.example.knockin.repository.member.MemberRepositoryCustom;
 import org.example.knockin.repository.member.row.MatchingBasicInfoRow;
+import org.example.knockin.repository.member.row.MemberWithNameRow;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
@@ -363,6 +364,26 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                         list(Projections.fields(BoMemberDetailDto.Response.AuthenticationInfo.class,
                                 authentication.type.as("authenticationType"),
                                 authentication.email.as("authenticationEmail"))).as("authenticationInfoList")))).get(id);
+    }
+
+    @Override
+    public List<MemberWithNameRow> findAllWithNameRowById(List<Long> ids) {
+        return jpaQueryFactory
+                .select(Projections.constructor(
+                        MemberWithNameRow.class,
+                        member.id,
+                        basicInformation.name
+                ))
+                .from(member)
+                .leftJoin(basicInformation)
+                .on(basicInformation.id.eq(
+                        JPAExpressions
+                                .select(basicInformation.id.max())
+                                .from(basicInformation)
+                                .where(basicInformation.member.id.eq(member.id))
+                ))
+                .where(member.id.in(ids))
+                .fetch();
     }
 
     private BooleanExpression providerIdEq(String providerId) {
