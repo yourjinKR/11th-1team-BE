@@ -17,7 +17,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.jpa.BaseEntity;
-import org.example.knockin.global.jpa.CreatedAtEntity;
 import org.hibernate.annotations.ColumnDefault;
 
 @Getter
@@ -41,8 +40,8 @@ public class RoommateCalendar extends BaseEntity {
     private Member member;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "roommate_calendar_type_id", nullable = false)
-    private RoommateCalendarType roommateCalendarType;
+    @JoinColumn(name = "roommate_calendar_category_id", nullable = false)
+    private RoommateCalendarCategory roommateCalendarCategory;
 
     @Column(name = "title", nullable = false, length = 50)
     private String title;

@@ -32,4 +32,17 @@ public class RoommateCalendarMember {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
+
+    public static RoommateCalendarMember of(RoommateCalendar roommateCalendar, Member member) {
+        RoommateCalendarMemberId id = RoommateCalendarMemberId.builder()
+                .memberId(member.getId())
+                .roommateCalendarId(roommateCalendar.getId())
+                .build();
+
+        return RoommateCalendarMember.builder()
+                .id(id)
+                .roommateCalendar(roommateCalendar)
+                .member(member)
+                .build();
+    }
 }
