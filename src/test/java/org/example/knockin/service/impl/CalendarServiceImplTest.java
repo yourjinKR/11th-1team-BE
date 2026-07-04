@@ -2,6 +2,7 @@ package org.example.knockin.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.example.knockin.dto.CalendarDto;
+import org.example.knockin.dto.CalendarEditDto;
 import org.example.knockin.dto.RepeatCalendarDto;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.MyRoommate;
@@ -24,6 +26,8 @@ import org.example.knockin.entity.room.RoommateMatchingRequired;
 import org.example.knockin.entity.room.RoommateRequiredStatus;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.MyRoommateErrorCode;
+import org.example.knockin.repository.member.MemberRepository;
+import org.example.knockin.repository.member.row.MemberWithNameRow;
 import org.example.knockin.repository.room.MyRoommateRepository;
 import org.example.knockin.repository.room.RepeatRoommateCalendarRepository;
 import org.example.knockin.repository.room.RoommateCalendarCategoryRepository;
@@ -55,6 +59,9 @@ class CalendarServiceImplTest {
 
     @Mock
     private RepeatRoommateCalendarRepository repeatRoommateCalendarRepository;
+
+    @Mock
+    private MemberRepository memberRepository;
 
     @InjectMocks
     private CalendarServiceImpl calendarService;
@@ -226,6 +233,53 @@ class CalendarServiceImplTest {
         verifyNoInteractions(roommateCalendarCategoryRepository, roommateCalendarRepository);
         verify(roommateCalendarMemberRepository, never()).saveAll(any());
         verify(repeatRoommateCalendarRepository, never()).save(any(RepeatRoommateCalendar.class));
+    }
+
+    @Test
+    @DisplayName("내 룸메이트가 있으면 캘린더 편집 폼에 반복 타입과 담당자 목록과 카테고리명을 반환한다")
+    void getRoommateEditFormReturnsRepeatTypesMembersAndCategoryNamesWhenMyRoommateExists() {
+        // Given
+        Long requesterId = 1L;
+        Long requesteeId = 2L;
+        MyRoommate myRoommate = myRoommate(10L, requesterId, requesteeId);
+
+        given(myRoommateRepository.findWithFetchedByMemberId(requesteeId)).willReturn(Optional.of(myRoommate));
+        given(memberRepository.findAllWithNameRowById(List.of(requesterId, requesteeId)))
+                .willReturn(List.of(
+                        new MemberWithNameRow(requesterId, "요청자"),
+                        new MemberWithNameRow(requesteeId, "요청받은 사람")
+                ));
+
+        // When
+        CalendarEditDto.Response response = calendarService.getRoommateEditForm(requesteeId);
+
+        // Then
+        assertThat(response.getRepeatType()).containsExactly(RepeatType.WEEKLY, RepeatType.BI_WEEKLY, RepeatType.MONTHLY);
+        assertThat(response.getMembers())
+                .extracting(CalendarEditDto.MemberInfo::getMemberId, CalendarEditDto.MemberInfo::getName, CalendarEditDto.MemberInfo::getIsMe)
+                .containsExactly(
+                        tuple(requesterId, "요청자", false),
+                        tuple(requesteeId, "요청받은 사람", true)
+                );
+        assertThat(response.getCategoryNames()).containsExactly("청소", "공과금", "기타");
+        verify(memberRepository).findAllWithNameRowById(List.of(requesterId, requesteeId));
+        verifyNoInteractions(roommateCalendarCategoryRepository, roommateCalendarRepository,
+                roommateCalendarMemberRepository, repeatRoommateCalendarRepository);
+    }
+
+    @Test
+    @DisplayName("캘린더 편집 폼 조회 시 내 룸메이트가 없으면 룸메이트 없음 예외를 던지고 담당자를 조회하지 않는다")
+    void getRoommateEditFormThrowsWhenMyRoommateDoesNotExist() {
+        // Given
+        Long memberId = 1L;
+        given(myRoommateRepository.findWithFetchedByMemberId(memberId)).willReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> calendarService.getRoommateEditForm(memberId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
+        verifyNoInteractions(memberRepository, roommateCalendarCategoryRepository, roommateCalendarRepository,
+                roommateCalendarMemberRepository, repeatRoommateCalendarRepository);
     }
 
     private CalendarDto.Request calendarRequest(
