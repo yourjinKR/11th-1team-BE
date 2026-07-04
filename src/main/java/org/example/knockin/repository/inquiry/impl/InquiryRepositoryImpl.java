@@ -1,6 +1,7 @@
 package org.example.knockin.repository.inquiry.impl;
 
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -66,7 +67,7 @@ public class InquiryRepositoryImpl implements InquiryRepositoryCustom {
     }
 
     @Override
-    public List<BoInquiryListDto.Response.InquiryItem> findBackOfficeInquirieList(Pageable pageable) {
+    public List<BoInquiryListDto.Response.InquiryItem> findBackOfficeInquirieList(Pageable pageable, BoInquiryListDto.Request request) {
         return jpaQueryFactory.select(Projections.fields(BoInquiryListDto.Response.InquiryItem.class,
                 inquiry.id,
                 inquiry.title,
@@ -76,7 +77,7 @@ public class InquiryRepositoryImpl implements InquiryRepositoryCustom {
                 )).from(inquiry).leftJoin(inquiry.inquiryCategory)
                 .leftJoin(inquiryComment).on(inquiryComment.inquiry.eq(inquiry))
                 .leftJoin(basicInformation).on(basicInformation.member.eq(inquiry.member))
-                .where(inquiry.isDeleted.eq(false))
+                .where(inquiry.isDeleted.eq(false), searchTitle(request.getSearchKeyword()).or(searchMemberName(request.getSearchKeyword()).or(searchState(request.getIsReply()).or(searchType(request.getCategoryId())))))
                 .offset(pageable.getOffset()).limit(pageable.getPageSize()).fetch();
     }
 
@@ -109,5 +110,22 @@ public class InquiryRepositoryImpl implements InquiryRepositoryCustom {
                 .join(basicInformation).on(basicInformation.member.eq(inquiryComment.member))
                 .where(inquiry.id.eq(id))
                 .fetch();
+    }
+
+    private BooleanExpression searchMemberName(String name) {
+        return name != null ? basicInformation.name.contains(name) : null;
+    }
+
+    private BooleanExpression searchTitle(String title) {
+        return title != null ? inquiry.title.contains(title) : null;
+    }
+
+    private BooleanExpression searchState(Boolean isReplied) {
+        if (isReplied == null) return null;
+        return isReplied ? inquiryComment.id.isNotNull() : inquiryComment.id.isNull();
+    }
+
+    private BooleanExpression searchType(Long typeId) {
+        return typeId != null ? inquiry.inquiryCategory.id.eq(typeId) : null;
     }
 }

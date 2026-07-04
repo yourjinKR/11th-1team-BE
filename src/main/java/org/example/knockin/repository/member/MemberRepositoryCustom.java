@@ -30,6 +30,6 @@ public interface MemberRepositoryCustom {
     List<MyPreferencesAllDto.Response.Condition> findPreferenceCondition(Member member);
     List<MatchingBasicInfoRow> findMatchingBasicRow(List<Long> excludeMemberIds, Integer size);
     Optional<MatchingBasicInfoRow> findMatchingBasicRowById(Long memberId);
-    List<BoMemberListDto.Response.MemberInfo> findBackOfficeMemberList(Pageable pageable);
+    List<BoMemberListDto.Response.MemberInfo> findBackOfficeMemberList(Pageable pageable, BoMemberListDto.Request request);
     BoMemberDetailDto.Response findBackOfficeMember(Long id);
 }

@@ -12,7 +12,6 @@ import java.util.List;
 public class FaqListDto {
     @Data
     public static class Request {
-
     }
 
     @Data

@@ -218,8 +218,8 @@ public class BackOfficeController {
 
     @GetMapping("/inquiries")
     @Operation(summary = "문의 목록 조회")
-    public CommonResponse<BoInquiryListDto.Response> findInquirieList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findInquirieList(pageable));
+    public CommonResponse<BoInquiryListDto.Response> findInquirieList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable, BoInquiryListDto.Request request) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findInquirieList(pageable, request));
     }
 
     @GetMapping("/inquiries/{id}")
@@ -296,8 +296,8 @@ public class BackOfficeController {
 
     @GetMapping("/member")
     @Operation(summary = "회원 관리 목록 조회")
-    public CommonResponse<BoMemberListDto.Response> findMemberList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findMemberList(pageable));
+    public CommonResponse<BoMemberListDto.Response> findMemberList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable, BoMemberListDto.Request request) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findMemberList(pageable, request));
     }
 
     @GetMapping("/member/{id}")
@@ -350,8 +350,8 @@ public class BackOfficeController {
 
     @GetMapping("/boards")
     @Operation(summary = "게시글 목록 조회")
-    public CommonResponse<BoBoardListDto.Response> findBoardList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findBoardList(pageable));
+    public CommonResponse<BoBoardListDto.Response> findBoardList(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable, BoBoardListDto.Request request) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findBoardList(pageable, request));
     }
 
     @GetMapping("/board/{id}")

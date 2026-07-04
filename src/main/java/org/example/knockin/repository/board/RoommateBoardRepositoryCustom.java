@@ -17,6 +17,6 @@ public interface RoommateBoardRepositoryCustom {
     Optional<BasicInfoRow> getBasicInfo(Long boardId);
     Page<MyRoommateBoardRow> findMyBoardList(Pageable page, Member member);
     Optional<EditFormRow> getEditRow(Long boardId);
-    List<BoBoardListDto.Response.BoardInfo> findBackOfficeBoardList(Pageable pageable);
+    List<BoBoardListDto.Response.BoardInfo> findBackOfficeBoardList(Pageable pageable, BoBoardListDto.Request request);
     BoBoardDetailDto.Response findBackOffcieBoard(Long id);
 }

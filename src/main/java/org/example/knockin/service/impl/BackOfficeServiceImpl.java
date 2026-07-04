@@ -201,8 +201,8 @@ public class BackOfficeServiceImpl {
         return BoInquiryReplyDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 
-    public BoInquiryListDto.Response findInquirieList(Pageable pageable) {
-        List<BoInquiryListDto.Response.InquiryItem> inquiryItemList = inquirieService.findBackOfficeInquirieList(pageable);
+    public BoInquiryListDto.Response findInquirieList(Pageable pageable, BoInquiryListDto.Request request) {
+        List<BoInquiryListDto.Response.InquiryItem> inquiryItemList = inquirieService.findBackOfficeInquirieList(pageable, request);
         return BoInquiryListDto.Response.builder().inquiries(inquiryItemList).build();
     }
 
@@ -210,8 +210,8 @@ public class BackOfficeServiceImpl {
         return BoInquiryDetailDto.Response.builder().inquirie(inquirieService.findBackOfficeInquirie(id)).build();
     }
 
-    public BoMemberListDto.Response findMemberList(Pageable pageable) {
-        return memberService.findBackOfficeMemberList(pageable);
+    public BoMemberListDto.Response findMemberList(Pageable pageable, BoMemberListDto.Request request) {
+        return memberService.findBackOfficeMemberList(pageable, request);
     }
 
     public BoMemberDetailDto.Response findMember(Long id) {
@@ -259,8 +259,8 @@ public class BackOfficeServiceImpl {
         return BoReportSuspendedDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 
-    public BoBoardListDto.Response findBoardList(Pageable pageable) {
-        return BoBoardListDto.Response.builder().boardInfoList(roommateBoardService.findBackOfficeBoardList(pageable)).build();
+    public BoBoardListDto.Response findBoardList(Pageable pageable, BoBoardListDto.Request request) {
+        return BoBoardListDto.Response.builder().boardInfoList(roommateBoardService.findBackOfficeBoardList(pageable, request)).build();
     }
 
     public BoBoardDetailDto.Response findBoard(Long id) {

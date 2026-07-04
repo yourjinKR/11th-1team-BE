@@ -27,7 +27,6 @@ import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.BoBoardDetailDto;
 import org.example.knockin.dto.BoBoardListDto;
-import org.example.knockin.dto.MyBoardListDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.file.QFile;
 import org.example.knockin.entity.member.Gender;
@@ -47,6 +46,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 @Repository
 @RequiredArgsConstructor
@@ -398,7 +398,7 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
     }
 
     @Override
-    public List<BoBoardListDto.Response.BoardInfo> findBackOfficeBoardList(Pageable pageable) {
+    public List<BoBoardListDto.Response.BoardInfo> findBackOfficeBoardList(Pageable pageable, BoBoardListDto.Request request) {
         QRegion parent = new QRegion("parent");
         QRegion grandParent = new QRegion("grandParent");
         return jpaQueryFactory.select(Projections.fields(BoBoardListDto.Response.BoardInfo.class,
@@ -416,6 +416,7 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                 .leftJoin(roommateBoard.region, region)
                 .leftJoin(region.parent, parent)
                 .leftJoin(parent.parent, grandParent)
+                .where(searchTitle(request.getSearchKeyword()).or(searchWriter(request.getSearchKeyword())).or(searchRegion(request.getSearchKeyword())), searchState(request.getIsDeleted()))
                 .fetch();
     }
 
@@ -497,6 +498,31 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
         if (endDate == null) return null;
         return roommateBoard.comeableDateNegotiable.isTrue()
                 .or(roommateBoard.comeableDate.goe(endDate));
+    }
+
+    private BooleanExpression searchTitle(String title) {
+        return title != null ? roommateBoard.title.contains(title) : null;
+    }
+
+    private BooleanExpression searchWriter(String writer) {
+        return writer != null ? basicInformation.name.contains(writer) : null;
+    }
+
+    private BooleanExpression searchRegion(String regionName) {
+        if (!StringUtils.hasText(regionName)) return null;
+        QRegion rChild = new QRegion("rChild");
+        QRegion rParent = new QRegion("rParent");
+        QRegion rGrandParent = new QRegion("rGrandParent");
+
+        return roommateBoard.region.id.in(JPAExpressions.select(rChild.id)
+                        .from(rChild)
+                        .leftJoin(rChild.parent, rParent)
+                        .leftJoin(rParent.parent, rGrandParent)
+                        .where(rChild.name.contains(regionName).or(rParent.name.contains(regionName)).or(rGrandParent.name.contains(regionName))));
+    }
+
+    private BooleanExpression searchState(Boolean isDeleted) {
+        return isDeleted != null ? roommateBoard.isDeleted.eq(isDeleted) : null;
     }
 
     public record BoardBaseRow(

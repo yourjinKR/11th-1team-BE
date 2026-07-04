@@ -1524,17 +1524,18 @@ class RoommateBoardServiceImplTest {
         BoBoardListDto.Response.BoardInfo boardInfo = new BoBoardListDto.Response.BoardInfo();
         boardInfo.setId(100L);
         boardInfo.setTitle("백오피스 게시글");
+        BoBoardListDto.Request request = new BoBoardListDto.Request();
 
-        when(roommateBoardRepository.findBackOfficeBoardList(pageable)).thenReturn(List.of(boardInfo));
+        when(roommateBoardRepository.findBackOfficeBoardList(pageable, request)).thenReturn(List.of(boardInfo));
 
         // when
-        List<BoBoardListDto.Response.BoardInfo> result = roommateBoardService.findBackOfficeBoardList(pageable);
+        List<BoBoardListDto.Response.BoardInfo> result = roommateBoardService.findBackOfficeBoardList(pageable, request);
 
         // then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getId()).isEqualTo(100L);
         assertThat(result.get(0).getTitle()).isEqualTo("백오피스 게시글");
-        verify(roommateBoardRepository).findBackOfficeBoardList(pageable);
+        verify(roommateBoardRepository).findBackOfficeBoardList(pageable, request);
     }
 
     @Test

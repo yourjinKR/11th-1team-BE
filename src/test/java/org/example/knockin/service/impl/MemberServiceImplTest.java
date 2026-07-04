@@ -65,18 +65,19 @@ class MemberServiceImplTest {
         info.setId(1L);
         info.setName("홍길동");
         info.setEmail("test@test.com");
+        BoMemberListDto.Request request = new BoMemberListDto.Request();
 
-        given(memberRepository.findBackOfficeMemberList(pageable)).willReturn(List.of(info));
+        given(memberRepository.findBackOfficeMemberList(pageable, request)).willReturn(List.of(info));
 
         // when
-        BoMemberListDto.Response response = memberService.findBackOfficeMemberList(pageable);
+        BoMemberListDto.Response response = memberService.findBackOfficeMemberList(pageable, request);
 
         // then
         assertThat(response).isNotNull();
         assertThat(response.getMemberInfoList()).hasSize(1);
         assertThat(response.getMemberInfoList().get(0).getId()).isEqualTo(1L);
         assertThat(response.getMemberInfoList().get(0).getName()).isEqualTo("홍길동");
-        verify(memberRepository).findBackOfficeMemberList(pageable);
+        verify(memberRepository).findBackOfficeMemberList(pageable, request);
     }
 
     @Test
