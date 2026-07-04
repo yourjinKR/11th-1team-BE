@@ -42,7 +42,7 @@ public class MyRoomMateServiceImpl {
 
     @Transactional(readOnly = true)
     public MyRoommateCardDto.Response findMyRoommate(Long memberId) {
-        MyRoommate myRoommate = myRoommateRepository.findWithFetchedByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+        MyRoommate myRoommate = myRoommateRepository.findWithRequiredByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
         RoommateMatchingRequired roommateMatchingRequired = myRoommate.getRoommateMatchingRequired();
         Long requesterId = roommateMatchingRequired.getRequester().getId();
         Long requesteeId = roommateMatchingRequired.getRequestee().getId();
@@ -84,7 +84,7 @@ public class MyRoomMateServiceImpl {
 
     @Transactional
     public MyRoommateDto.Response deleteMyRoommate(Long id, Long memberId) {
-        MyRoommate myRoommate = myRoommateRepository.findWithFetchedByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+        MyRoommate myRoommate = myRoommateRepository.findWithRequiredByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
         if (!validateMyRoommate(id, memberId, myRoommate)) throw new BusinessException(CommonErrorCode.BAD_REQUEST);
 
         myRoommate.softDelete();

@@ -10,11 +10,13 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.example.knockin.dto.CalendarDto;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.jpa.BaseEntity;
 import org.hibernate.annotations.ColumnDefault;
@@ -58,4 +60,15 @@ public class RoommateCalendar extends BaseEntity {
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted;
+
+    public void modify(CalendarDto.CalendarInfoDto calendarInfo) {
+        this.title = calendarInfo.getTitle();
+        this.contents = calendarInfo.getContents();
+        this.startDate = calendarInfo.getStartDate();
+        this.endDate = calendarInfo.getEndDate();
+    }
+
+    public boolean isOwner(Long memberId) {
+        return Objects.equals(this.member.getId(), memberId);
+    }
 }

@@ -7,5 +7,7 @@ import org.example.knockin.entity.room.MyRoommate;
 public interface MyRoommateRepositoryCustom {
     boolean isExistRoomMate(Member member);
 
-    Optional<MyRoommate> findWithFetchedByMemberId(Long memberId);
+    Optional<MyRoommate> findWithRequiredByMemberId(Long memberId);
+
+    Optional<MyRoommate> findWithRequiredAndMembersByMemberId(Long memberId);
 }

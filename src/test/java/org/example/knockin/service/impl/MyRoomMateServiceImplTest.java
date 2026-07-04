@@ -92,7 +92,7 @@ class MyRoomMateServiceImplTest {
                 "opponent-profile.jpg"
         );
 
-        when(myRoommateRepository.findWithFetchedByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
+        when(myRoommateRepository.findWithRequiredByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
         when(basicInformationRepository.findChattingRoomBasicInfoRow(opponentId)).thenReturn(Optional.of(basicInfoRow));
         when(roommateScoreRepository.findWithScoreDetailsByMyRoommateId(10L)).thenReturn(roommateScores);
         when(roommateScoreService.calculateRoommateCompatibility(memberId, roommateScores))
@@ -120,7 +120,7 @@ class MyRoomMateServiceImplTest {
     void findMyRoommateThrowsWhenMyRoommateDoesNotExist() {
         // Given
         Long memberId = 1L;
-        when(myRoommateRepository.findWithFetchedByMemberId(memberId)).thenReturn(Optional.empty());
+        when(myRoommateRepository.findWithRequiredByMemberId(memberId)).thenReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> myRoomMateService.findMyRoommate(memberId))
@@ -136,7 +136,7 @@ class MyRoomMateServiceImplTest {
         Long memberId = 1L;
         Long opponentId = 2L;
         MyRoommate myRoommate = myRoommate(10L, memberId, opponentId, 100L);
-        when(myRoommateRepository.findWithFetchedByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
+        when(myRoommateRepository.findWithRequiredByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
         when(basicInformationRepository.findChattingRoomBasicInfoRow(opponentId)).thenReturn(Optional.empty());
 
         // When & Then
@@ -157,7 +157,7 @@ class MyRoomMateServiceImplTest {
                 .type(MemberPrivacyType.PRIVATE)
                 .build();
 
-        when(myRoommateRepository.findWithFetchedByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
+        when(myRoommateRepository.findWithRequiredByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
         when(memberPrivacyService.findByMemberId(memberId)).thenReturn(List.of(memberPrivacy));
 
         // When
@@ -176,7 +176,7 @@ class MyRoomMateServiceImplTest {
         // Given
         Long memberId = 1L;
         MyRoommate myRoommate = myRoommate(10L, memberId, 2L, 100L);
-        when(myRoommateRepository.findWithFetchedByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
+        when(myRoommateRepository.findWithRequiredByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
 
         // When & Then
         assertThatThrownBy(() -> myRoomMateService.deleteMyRoommate(999L, memberId))
@@ -191,7 +191,7 @@ class MyRoomMateServiceImplTest {
     void deleteMyRoommateThrowsWhenMyRoommateDoesNotExist() {
         // Given
         Long memberId = 1L;
-        when(myRoommateRepository.findWithFetchedByMemberId(memberId)).thenReturn(Optional.empty());
+        when(myRoommateRepository.findWithRequiredByMemberId(memberId)).thenReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> myRoomMateService.deleteMyRoommate(10L, memberId))

@@ -45,8 +45,8 @@ class MyRoommateRepositoryTest {
         entityManager.clear();
 
         // When
-        Optional<MyRoommate> requesterResult = myRoommateRepository.findWithFetchedByMemberId(requester.getId());
-        Optional<MyRoommate> requesteeResult = myRoommateRepository.findWithFetchedByMemberId(requestee.getId());
+        Optional<MyRoommate> requesterResult = myRoommateRepository.findWithRequiredByMemberId(requester.getId());
+        Optional<MyRoommate> requesteeResult = myRoommateRepository.findWithRequiredByMemberId(requestee.getId());
 
         // Then
         assertThat(requesterResult).isPresent();
@@ -71,7 +71,7 @@ class MyRoommateRepositoryTest {
         entityManager.clear();
 
         // When
-        Optional<MyRoommate> result = myRoommateRepository.findWithFetchedByMemberId(unrelated.getId());
+        Optional<MyRoommate> result = myRoommateRepository.findWithRequiredByMemberId(unrelated.getId());
 
         // Then
         assertThat(result).isEmpty();
@@ -88,7 +88,7 @@ class MyRoommateRepositoryTest {
         entityManager.clear();
 
         // When
-        Optional<MyRoommate> result = myRoommateRepository.findWithFetchedByMemberId(requester.getId());
+        Optional<MyRoommate> result = myRoommateRepository.findWithRequiredByMemberId(requester.getId());
         boolean exists = myRoommateRepository.isExistRoomMate(requester);
 
         // Then

@@ -1,12 +1,14 @@
 package org.example.knockin.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.CalendarDto;
 import org.example.knockin.dto.CalendarDto.CalendarInfoDto;
-import org.example.knockin.dto.CalendarDto.CalendarMemberDto;
 import org.example.knockin.dto.CalendarEditDto;
 import org.example.knockin.dto.CalendarEditDto.MemberInfo;
 import org.example.knockin.dto.RepeatCalendarDto;
@@ -18,6 +20,7 @@ import org.example.knockin.entity.room.RepeatType;
 import org.example.knockin.entity.room.RoommateCalendar;
 import org.example.knockin.entity.room.RoommateCalendarCategory;
 import org.example.knockin.entity.room.RoommateCalendarMember;
+import org.example.knockin.entity.room.RoommateCalendarMemberId;
 import org.example.knockin.entity.room.RoommateMatchingRequired;
 import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.MyRoommateErrorCode;
@@ -44,11 +47,11 @@ public class CalendarServiceImpl {
 
     @Transactional
     public CalendarDto.Response saveBasicCalendar(Long memberId, CalendarDto.Request request) {
-        MyRoommate myRoommate = myRoommateRepository.findWithFetchedByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+        MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
         RoommateMatchingRequired roommateMatchingRequired = myRoommate.getRoommateMatchingRequired();
         RoommateCalendarCategory roommateCalendarCategory = saveCalendarCategory(request.getCategoryName());
         RoommateCalendar roommateCalendar = saveCalendar(memberId, myRoommate, roommateCalendarCategory, request.getCalendar());
-        saveCalendarMembers(roommateCalendar, roommateMatchingRequired, request.getMembers());
+        saveCalendarMembers(roommateCalendar, roommateMatchingRequired, request.getMemberIds());
         return CalendarDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 
@@ -74,14 +77,34 @@ public class CalendarServiceImpl {
         return roommateCalendarCategoryRepository.save(category);
     }
 
-    private List<RoommateCalendarMember> saveCalendarMembers(RoommateCalendar calendar, RoommateMatchingRequired required, List<CalendarMemberDto> dtos) {
-        List<RoommateCalendarMember> roommateCalendarMembers = dtos.stream()
-                .map(dto -> {
-                    Member member = pickMe(dto.getMemberId(), required);
-                    return RoommateCalendarMember.of(calendar, member);
+    private List<RoommateCalendarMember> saveCalendarMembers(RoommateCalendar calendar, RoommateMatchingRequired required, List<Long> memberIds) {
+        List<Member> members = pickRoommateMembers(memberIds, required);
+        return saveCalendarMembers(calendar, members);
+    }
+
+    private List<RoommateCalendarMember> saveCalendarMembers(RoommateCalendar calendar, List<Member> members) {
+        List<RoommateCalendarMember> calendarMembers = members.stream()
+                .map(member -> RoommateCalendarMember.of(calendar, member))
+                .toList();
+        return roommateCalendarMemberRepository.saveAll(calendarMembers);
+    }
+
+    private List<Member> pickRoommateMembers(List<Long> memberIds, RoommateMatchingRequired required) {
+        Member requester = required.getRequester();
+        Member requestee = required.getRequestee();
+
+        Map<Long, Member> roommateMembers = Map.of(
+                requester.getId(), requester,
+                requestee.getId(), requestee
+        );
+
+        return memberIds.stream()
+                .map(memberId -> {
+                    Member member = roommateMembers.get(memberId);
+                    if (member == null) throw new BusinessException(MyRoommateErrorCode.CALENDER_ACCESS_DENIED);
+                    return member;
                 })
                 .toList();
-        return roommateCalendarMemberRepository.saveAll(roommateCalendarMembers);
     }
 
     private Member pickMe(Long memberId, RoommateMatchingRequired roommateMatchingRequired) {
@@ -92,11 +115,11 @@ public class CalendarServiceImpl {
 
     @Transactional
     public RepeatCalendarDto.Response saveRepeatCalendar(Long memberId, RepeatCalendarDto.Request request) {
-        MyRoommate myRoommate = myRoommateRepository.findWithFetchedByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+        MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
         RoommateMatchingRequired roommateMatchingRequired = myRoommate.getRoommateMatchingRequired();
         RoommateCalendarCategory roommateCalendarCategory = saveCalendarCategory(request.getCategoryName());
         RoommateCalendar roommateCalendar = saveCalendar(memberId, myRoommate, roommateCalendarCategory, request.getCalendar());
-        saveCalendarMembers(roommateCalendar, roommateMatchingRequired, request.getMembers());
+        saveCalendarMembers(roommateCalendar, roommateMatchingRequired, request.getMemberIds());
         saveRepeatRoommateCalendar(roommateCalendar, request.getRepeatInfo());
         return RepeatCalendarDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
@@ -112,7 +135,7 @@ public class CalendarServiceImpl {
 
     @Transactional
     public CalendarEditDto.Response getRoommateEditForm(Long memberId) {
-        MyRoommate myRoommate = myRoommateRepository.findWithFetchedByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+        MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
         RoommateMatchingRequired roommateMatchingRequired = myRoommate.getRoommateMatchingRequired();
         List<MemberInfo> memberInfos = findAllMemberInfo(memberId, roommateMatchingRequired);
         List<String> categoryNames = findCategoryNames();
@@ -142,5 +165,59 @@ public class CalendarServiceImpl {
     // TODO: 스펙 확정 후 수정
     public List<String> findCategoryNames() {
         return List.of("청소", "공과금", "기타");
+    }
+
+    @Transactional
+    public CalendarDto.Response modifyCalendar(Long memberId, Long calendarId, CalendarDto.Request request) {
+        RoommateCalendar roommateCalendar = roommateCalendarRepository.findById(calendarId)
+                .orElseThrow(() -> new BusinessException(MyRoommateErrorCode.CALENDER_NOT_FOUND));
+
+        if (!roommateCalendar.isOwner(memberId)) {
+            throw new BusinessException(MyRoommateErrorCode.CALENDER_ACCESS_DENIED);
+        }
+
+        roommateCalendar.modify(request.getCalendar());
+        modifyCalendarCategory(roommateCalendar, request.getCategoryName());
+        modifyCalendarMember(roommateCalendar, request.getMemberIds());
+
+        return CalendarDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    // TODO: 스펙 확정 후 수정
+    private void modifyCalendarCategory(RoommateCalendar calendar, String categoryName) {
+        RoommateCalendarCategory roommateCalendarCategory = calendar.getRoommateCalendarCategory();
+        roommateCalendarCategory.rename(categoryName);
+    }
+
+    private void modifyCalendarMember(RoommateCalendar calendar, List<Long> requestMemberIds) {
+        List<Member> requestedMembers = pickRoommateMembers(
+                requestMemberIds,
+                calendar.getMyRoommate().getRoommateMatchingRequired()
+        );
+
+        List<RoommateCalendarMember> calendarMembers = roommateCalendarMemberRepository.findByRoommateCalendar(calendar);
+        List<Long> existingMemberIds = calendarMembers.stream().map(RoommateCalendarMember::getMemberId).toList();
+
+        Set<Long> existingIdSet = new HashSet<>(existingMemberIds);
+        Set<Long> requestIdSet = new HashSet<>(requestMemberIds);
+
+        List<Member> membersToAdd = requestedMembers.stream()
+                .filter(member -> !existingIdSet.contains(member.getId()))
+                .toList();
+
+        List<Long> idsToRemove = existingMemberIds.stream()
+                .filter(id -> !requestIdSet.contains(id))
+                .toList();
+
+        saveCalendarMembers(calendar, membersToAdd);
+        idsToRemove.forEach(memberId -> deleteCalendarMember(calendar.getId(), memberId));
+    }
+
+    private void deleteCalendarMember(Long roommateCalendarId, Long memberId) {
+        RoommateCalendarMemberId id = RoommateCalendarMemberId.builder()
+                .memberId(memberId)
+                .roommateCalendarId(roommateCalendarId)
+                .build();
+        roommateCalendarMemberRepository.deleteById(id);
     }
 }

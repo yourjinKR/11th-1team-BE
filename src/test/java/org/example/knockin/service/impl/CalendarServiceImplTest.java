@@ -22,6 +22,7 @@ import org.example.knockin.entity.room.RepeatType;
 import org.example.knockin.entity.room.RoommateCalendar;
 import org.example.knockin.entity.room.RoommateCalendarCategory;
 import org.example.knockin.entity.room.RoommateCalendarMember;
+import org.example.knockin.entity.room.RoommateCalendarMemberId;
 import org.example.knockin.entity.room.RoommateMatchingRequired;
 import org.example.knockin.entity.room.RoommateRequiredStatus;
 import org.example.knockin.global.exception.BusinessException;
@@ -82,7 +83,7 @@ class CalendarServiceImplTest {
                 List.of(requesterId, requesteeId)
         );
 
-        given(myRoommateRepository.findWithFetchedByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
         given(roommateCalendarCategoryRepository.save(any(RoommateCalendarCategory.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
         given(roommateCalendarRepository.save(any(RoommateCalendar.class)))
@@ -131,7 +132,7 @@ class CalendarServiceImplTest {
     void saveBasicCalendarThrowsWhenMyRoommateDoesNotExist() {
         // Given
         Long memberId = 1L;
-        given(myRoommateRepository.findWithFetchedByMemberId(memberId)).willReturn(Optional.empty());
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).willReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> calendarService.saveBasicCalendar(memberId, calendarRequest(
@@ -145,6 +146,32 @@ class CalendarServiceImplTest {
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
         verifyNoInteractions(roommateCalendarCategoryRepository, roommateCalendarRepository);
+        verify(roommateCalendarMemberRepository, never()).saveAll(any());
+        verify(repeatRoommateCalendarRepository, never()).save(any(RepeatRoommateCalendar.class));
+    }
+
+    @Test
+    @DisplayName("일반 일정 저장 시 룸메이트 구성원이 아닌 담당자가 포함되면 접근 거부 예외를 던지고 담당자를 저장하지 않는다")
+    void saveBasicCalendarThrowsWhenMemberIdsContainNonRoommateMember() {
+        // Given
+        Long requesterId = 1L;
+        Long requesteeId = 2L;
+        Long nonRoommateMemberId = 999L;
+        MyRoommate myRoommate = myRoommate(10L, requesterId, requesteeId);
+
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
+
+        // When & Then
+        assertThatThrownBy(() -> calendarService.saveBasicCalendar(requesterId, calendarRequest(
+                "장보기",
+                "저녁 재료 사오기",
+                LocalDateTime.of(2026, 7, 4, 10, 0),
+                LocalDateTime.of(2026, 7, 4, 11, 0),
+                "생활",
+                List.of(requesterId, nonRoommateMemberId)
+        )))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.CALENDER_ACCESS_DENIED));
         verify(roommateCalendarMemberRepository, never()).saveAll(any());
         verify(repeatRoommateCalendarRepository, never()).save(any(RepeatRoommateCalendar.class));
     }
@@ -167,7 +194,7 @@ class CalendarServiceImplTest {
                 List.of(requesterId, requesteeId)
         );
 
-        given(myRoommateRepository.findWithFetchedByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
         given(roommateCalendarCategoryRepository.save(any(RoommateCalendarCategory.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
         given(roommateCalendarRepository.save(any(RoommateCalendar.class)))
@@ -215,7 +242,7 @@ class CalendarServiceImplTest {
     void saveRepeatCalendarThrowsWhenMyRoommateDoesNotExist() {
         // Given
         Long memberId = 1L;
-        given(myRoommateRepository.findWithFetchedByMemberId(memberId)).willReturn(Optional.empty());
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).willReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> calendarService.saveRepeatCalendar(memberId, repeatCalendarRequest(
@@ -236,6 +263,34 @@ class CalendarServiceImplTest {
     }
 
     @Test
+    @DisplayName("반복 일정 저장 시 룸메이트 구성원이 아닌 담당자가 포함되면 접근 거부 예외를 던지고 담당자와 반복 정보를 저장하지 않는다")
+    void saveRepeatCalendarThrowsWhenMemberIdsContainNonRoommateMember() {
+        // Given
+        Long requesterId = 1L;
+        Long requesteeId = 2L;
+        Long nonRoommateMemberId = 999L;
+        MyRoommate myRoommate = myRoommate(10L, requesterId, requesteeId);
+
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
+
+        // When & Then
+        assertThatThrownBy(() -> calendarService.saveRepeatCalendar(requesterId, repeatCalendarRequest(
+                "청소",
+                "거실 청소하기",
+                LocalDateTime.of(2026, 7, 4, 9, 0),
+                LocalDateTime.of(2026, 7, 4, 10, 0),
+                "청소",
+                LocalDateTime.of(2026, 8, 1, 10, 0),
+                RepeatType.WEEKLY,
+                List.of(requesterId, nonRoommateMemberId)
+        )))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.CALENDER_ACCESS_DENIED));
+        verify(roommateCalendarMemberRepository, never()).saveAll(any());
+        verify(repeatRoommateCalendarRepository, never()).save(any(RepeatRoommateCalendar.class));
+    }
+
+    @Test
     @DisplayName("내 룸메이트가 있으면 캘린더 편집 폼에 반복 타입과 담당자 목록과 카테고리명을 반환한다")
     void getRoommateEditFormReturnsRepeatTypesMembersAndCategoryNamesWhenMyRoommateExists() {
         // Given
@@ -243,7 +298,7 @@ class CalendarServiceImplTest {
         Long requesteeId = 2L;
         MyRoommate myRoommate = myRoommate(10L, requesterId, requesteeId);
 
-        given(myRoommateRepository.findWithFetchedByMemberId(requesteeId)).willReturn(Optional.of(myRoommate));
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesteeId)).willReturn(Optional.of(myRoommate));
         given(memberRepository.findAllWithNameRowById(List.of(requesterId, requesteeId)))
                 .willReturn(List.of(
                         new MemberWithNameRow(requesterId, "요청자"),
@@ -272,7 +327,7 @@ class CalendarServiceImplTest {
     void getRoommateEditFormThrowsWhenMyRoommateDoesNotExist() {
         // Given
         Long memberId = 1L;
-        given(myRoommateRepository.findWithFetchedByMemberId(memberId)).willReturn(Optional.empty());
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).willReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> calendarService.getRoommateEditForm(memberId))
@@ -280,6 +335,204 @@ class CalendarServiceImplTest {
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
         verifyNoInteractions(memberRepository, roommateCalendarCategoryRepository, roommateCalendarRepository,
                 roommateCalendarMemberRepository, repeatRoommateCalendarRepository);
+    }
+
+    @Test
+    @DisplayName("작성자가 일반 일정을 수정하면 일정 내용과 카테고리를 변경하고 새 담당자를 추가한다")
+    void modifyCalendarUpdatesCalendarCategoryAndAddsMembersWhenOwnerRequests() {
+        // Given
+        Long calendarId = 100L;
+        Long ownerId = 1L;
+        Long newMemberId = 2L;
+        MyRoommate myRoommate = myRoommate(10L, ownerId, newMemberId);
+        RoommateCalendar calendar = roommateCalendar(
+                calendarId,
+                myRoommate,
+                ownerId,
+                "생활",
+                "기존 제목",
+                "기존 내용",
+                LocalDateTime.of(2026, 7, 4, 9, 0),
+                LocalDateTime.of(2026, 7, 4, 10, 0)
+        );
+        CalendarDto.Request request = calendarRequest(
+                "수정 제목",
+                "수정 내용",
+                LocalDateTime.of(2026, 7, 5, 11, 0),
+                LocalDateTime.of(2026, 7, 5, 12, 0),
+                "청소",
+                List.of(ownerId, newMemberId)
+        );
+
+        given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.of(calendar));
+        given(roommateCalendarMemberRepository.findByRoommateCalendar(calendar))
+                .willReturn(List.of(RoommateCalendarMember.of(calendar, member(ownerId))));
+
+        // When
+        CalendarDto.Response response = calendarService.modifyCalendar(ownerId, calendarId, request);
+
+        // Then
+        assertThat(calendar.getTitle()).isEqualTo("수정 제목");
+        assertThat(calendar.getContents()).isEqualTo("수정 내용");
+        assertThat(calendar.getStartDate()).isEqualTo(LocalDateTime.of(2026, 7, 5, 11, 0));
+        assertThat(calendar.getEndDate()).isEqualTo(LocalDateTime.of(2026, 7, 5, 12, 0));
+        assertThat(calendar.getRoommateCalendarCategory().getName()).isEqualTo("청소");
+        assertThat(response.getUpdatedAt()).isNotNull();
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<RoommateCalendarMember>> membersCaptor = ArgumentCaptor.forClass(List.class);
+        verify(roommateCalendarMemberRepository).saveAll(membersCaptor.capture());
+        assertThat(membersCaptor.getValue())
+                .extracting(RoommateCalendarMember::getMemberId)
+                .containsExactly(newMemberId);
+        assertThat(membersCaptor.getValue())
+                .extracting(member -> member.getRoommateCalendar().getId())
+                .containsExactly(calendarId);
+        verify(roommateCalendarMemberRepository, never()).deleteById(any(RoommateCalendarMemberId.class));
+    }
+
+    @Test
+    @DisplayName("작성자가 일반 일정 담당자를 제외하면 기존 담당자 연결을 삭제한다")
+    void modifyCalendarDeletesRemovedMembersWhenOwnerRequests() {
+        // Given
+        Long calendarId = 100L;
+        Long ownerId = 1L;
+        Long removedMemberId = 2L;
+        MyRoommate myRoommate = myRoommate(10L, ownerId, removedMemberId);
+        RoommateCalendar calendar = roommateCalendar(
+                calendarId,
+                myRoommate,
+                ownerId,
+                "생활",
+                "기존 제목",
+                "기존 내용",
+                LocalDateTime.of(2026, 7, 4, 9, 0),
+                LocalDateTime.of(2026, 7, 4, 10, 0)
+        );
+        CalendarDto.Request request = calendarRequest(
+                "수정 제목",
+                "수정 내용",
+                LocalDateTime.of(2026, 7, 5, 11, 0),
+                LocalDateTime.of(2026, 7, 5, 12, 0),
+                "청소",
+                List.of(ownerId)
+        );
+
+        given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.of(calendar));
+        given(roommateCalendarMemberRepository.findByRoommateCalendar(calendar))
+                .willReturn(List.of(
+                        RoommateCalendarMember.of(calendar, member(ownerId)),
+                        RoommateCalendarMember.of(calendar, member(removedMemberId))
+                ));
+
+        // When
+        CalendarDto.Response response = calendarService.modifyCalendar(ownerId, calendarId, request);
+
+        // Then
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verify(roommateCalendarMemberRepository).saveAll(List.of());
+
+        ArgumentCaptor<RoommateCalendarMemberId> idCaptor = ArgumentCaptor.forClass(RoommateCalendarMemberId.class);
+        verify(roommateCalendarMemberRepository).deleteById(idCaptor.capture());
+        assertThat(idCaptor.getValue().getRoommateCalendarId()).isEqualTo(calendarId);
+        assertThat(idCaptor.getValue().getMemberId()).isEqualTo(removedMemberId);
+    }
+
+    @Test
+    @DisplayName("일반 일정 수정 시 캘린더가 없으면 캘린더 없음 예외를 던지고 수정하지 않는다")
+    void modifyCalendarThrowsWhenCalendarDoesNotExist() {
+        // Given
+        Long memberId = 1L;
+        Long calendarId = 100L;
+        given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> calendarService.modifyCalendar(memberId, calendarId, calendarRequest(
+                "수정 제목",
+                "수정 내용",
+                LocalDateTime.of(2026, 7, 5, 11, 0),
+                LocalDateTime.of(2026, 7, 5, 12, 0),
+                "청소",
+                List.of(memberId)
+        )))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.CALENDER_NOT_FOUND));
+        verifyNoInteractions(memberRepository, roommateCalendarMemberRepository);
+    }
+
+    @Test
+    @DisplayName("일반 일정 수정 시 작성자가 아니면 접근 거부 예외를 던지고 수정하지 않는다")
+    void modifyCalendarThrowsWhenMemberIsNotOwner() {
+        // Given
+        Long ownerId = 1L;
+        Long requesterId = 2L;
+        Long calendarId = 100L;
+        MyRoommate myRoommate = myRoommate(10L, ownerId, requesterId);
+        RoommateCalendar calendar = roommateCalendar(
+                calendarId,
+                myRoommate,
+                ownerId,
+                "생활",
+                "기존 제목",
+                "기존 내용",
+                LocalDateTime.of(2026, 7, 4, 9, 0),
+                LocalDateTime.of(2026, 7, 4, 10, 0)
+        );
+
+        given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.of(calendar));
+
+        // When & Then
+        assertThatThrownBy(() -> calendarService.modifyCalendar(requesterId, calendarId, calendarRequest(
+                "수정 제목",
+                "수정 내용",
+                LocalDateTime.of(2026, 7, 5, 11, 0),
+                LocalDateTime.of(2026, 7, 5, 12, 0),
+                "청소",
+                List.of(ownerId, requesterId)
+        )))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.CALENDER_ACCESS_DENIED));
+        assertThat(calendar.getTitle()).isEqualTo("기존 제목");
+        assertThat(calendar.getRoommateCalendarCategory().getName()).isEqualTo("생활");
+        verifyNoInteractions(memberRepository, roommateCalendarMemberRepository);
+    }
+
+    @Test
+    @DisplayName("일반 일정 수정 시 룸메이트 구성원이 아닌 담당자가 포함되면 접근 거부 예외를 던지고 담당자를 변경하지 않는다")
+    void modifyCalendarThrowsWhenMemberIdsContainNonRoommateMember() {
+        // Given
+        Long calendarId = 100L;
+        Long ownerId = 1L;
+        Long roommateMemberId = 2L;
+        Long nonRoommateMemberId = 999L;
+        MyRoommate myRoommate = myRoommate(10L, ownerId, roommateMemberId);
+        RoommateCalendar calendar = roommateCalendar(
+                calendarId,
+                myRoommate,
+                ownerId,
+                "생활",
+                "기존 제목",
+                "기존 내용",
+                LocalDateTime.of(2026, 7, 4, 9, 0),
+                LocalDateTime.of(2026, 7, 4, 10, 0)
+        );
+
+        given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.of(calendar));
+
+        // When & Then
+        assertThatThrownBy(() -> calendarService.modifyCalendar(ownerId, calendarId, calendarRequest(
+                "수정 제목",
+                "수정 내용",
+                LocalDateTime.of(2026, 7, 5, 11, 0),
+                LocalDateTime.of(2026, 7, 5, 12, 0),
+                "청소",
+                List.of(ownerId, nonRoommateMemberId)
+        )))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.CALENDER_ACCESS_DENIED));
+        verify(roommateCalendarMemberRepository, never()).findByRoommateCalendar(any(RoommateCalendar.class));
+        verify(roommateCalendarMemberRepository, never()).saveAll(any());
+        verify(roommateCalendarMemberRepository, never()).deleteById(any(RoommateCalendarMemberId.class));
     }
 
     private CalendarDto.Request calendarRequest(
@@ -293,9 +546,7 @@ class CalendarServiceImplTest {
         CalendarDto.Request request = new CalendarDto.Request();
         request.setCalendar(calendarInfo(title, contents, startDate, endDate));
         request.setCategoryName(categoryName);
-        request.setMembers(memberIds.stream()
-                .map(this::calendarMember)
-                .toList());
+        request.setMemberIds(memberIds);
         return request;
     }
 
@@ -313,9 +564,7 @@ class CalendarServiceImplTest {
         request.setCalendar(calendarInfo(title, contents, startDate, endDate));
         request.setCategoryName(categoryName);
         request.setRepeatInfo(repeatCalendarInfo(repeatEndDate, repeatType));
-        request.setMembers(memberIds.stream()
-                .map(this::calendarMember)
-                .toList());
+        request.setMemberIds(memberIds);
         return request;
     }
 
@@ -326,7 +575,7 @@ class CalendarServiceImplTest {
             LocalDateTime endDate
     ) {
         CalendarDto.CalendarInfoDto calendarInfo = new CalendarDto.CalendarInfoDto();
-        calendarInfo.setId(10L);
+        calendarInfo.setMyRoommateId(10L);
         calendarInfo.setTitle(title);
         calendarInfo.setContents(contents);
         calendarInfo.setStartDate(startDate);
@@ -339,12 +588,6 @@ class CalendarServiceImplTest {
         repeatInfo.setEndDate(endDate);
         repeatInfo.setRepeatType(repeatType);
         return repeatInfo;
-    }
-
-    private CalendarDto.CalendarMemberDto calendarMember(Long memberId) {
-        CalendarDto.CalendarMemberDto memberDto = new CalendarDto.CalendarMemberDto();
-        memberDto.setMemberId(memberId);
-        return memberDto;
     }
 
     private MyRoommate myRoommate(Long id, Long requesterId, Long requesteeId) {
@@ -363,6 +606,29 @@ class CalendarServiceImplTest {
 
     private Member member(Long id) {
         return Member.builder().id(id).build();
+    }
+
+    private RoommateCalendar roommateCalendar(
+            Long id,
+            MyRoommate myRoommate,
+            Long ownerId,
+            String categoryName,
+            String title,
+            String contents,
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    ) {
+        return RoommateCalendar.builder()
+                .id(id)
+                .myRoommate(myRoommate)
+                .member(member(ownerId))
+                .roommateCalendarCategory(RoommateCalendarCategory.builder().id(20L).name(categoryName).build())
+                .title(title)
+                .contents(contents)
+                .startDate(startDate)
+                .endDate(endDate)
+                .isDeleted(false)
+                .build();
     }
 
     private RoommateCalendar savedCalendar(Long id, RoommateCalendar calendar) {

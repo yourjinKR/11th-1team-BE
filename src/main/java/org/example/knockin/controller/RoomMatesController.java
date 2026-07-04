@@ -141,7 +141,22 @@ public class RoomMatesController {
 
     @PutMapping("/me/calendar/{id}")
     @Operation(summary = "내 룸메이트 캘린더 일정 수정")
-    public CommonResponse<CalendarDto.Response> modifyMyRoomMateCalendar(@PathVariable Long id, @RequestBody CalendarDto.Request request) {
+    public CommonResponse<CalendarDto.Response> modifyMyRoomMateCalendar(
+            @PathVariable Long id,
+            @Valid @RequestBody CalendarDto.Request request,
+            @AuthenticationPrincipal PrincipalDetails details
+    ) {
+        CalendarDto.Response response = calendarService.modifyCalendar(details.getMember().getId(), id, request);
+        return CommonResponse.status(HttpStatus.OK).body(response);
+    }
+
+    @PutMapping("/me/calendar/repeat/{id}")
+    @Operation(summary = "내 룸메이트 캘린더 반복 일정 수정")
+    public CommonResponse<CalendarDto.Response> modifyMyRepeatRoomMateCalendar(
+            @PathVariable Long id,
+            @RequestBody CalendarDto.Request request,
+            @AuthenticationPrincipal PrincipalDetails details
+    ) {
         return CommonResponse.status(HttpStatus.OK).body(new CalendarDto.Response());
     }
 

@@ -58,7 +58,7 @@ class HouseRuleServiceImplTest {
         HouseRuleDto.Request request = houseRuleRequest("청소 당번", "매주 일요일에 청소한다");
 
         given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
-        given(myRoommateRepository.findWithFetchedByMemberId(memberId)).willReturn(Optional.of(myRoommate));
+        given(myRoommateRepository.findWithRequiredByMemberId(memberId)).willReturn(Optional.of(myRoommate));
 
         // When
         HouseRuleDto.Response response = houseRuleService.saveHouseRule(request, memberId);
@@ -95,7 +95,7 @@ class HouseRuleServiceImplTest {
         // Given
         Long memberId = 1L;
         given(memberRepository.findById(memberId)).willReturn(Optional.of(member(memberId)));
-        given(myRoommateRepository.findWithFetchedByMemberId(memberId)).willReturn(Optional.empty());
+        given(myRoommateRepository.findWithRequiredByMemberId(memberId)).willReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> houseRuleService.saveHouseRule(houseRuleRequest("제목", "내용"), memberId))
@@ -115,7 +115,7 @@ class HouseRuleServiceImplTest {
                 houseRule(101L, "소등", "자정 이후 거실 소등", myRoommate)
         );
 
-        given(myRoommateRepository.findWithFetchedByMemberId(memberId)).willReturn(Optional.of(myRoommate));
+        given(myRoommateRepository.findWithRequiredByMemberId(memberId)).willReturn(Optional.of(myRoommate));
         given(roommateHouseRuleRepository.findByMyRoommateIdAndIsDeleted(10L, false)).willReturn(rules);
 
         // When
@@ -135,7 +135,7 @@ class HouseRuleServiceImplTest {
     void findHouseRuleListThrowsWhenMyRoommateDoesNotExist() {
         // Given
         Long memberId = 1L;
-        given(myRoommateRepository.findWithFetchedByMemberId(memberId)).willReturn(Optional.empty());
+        given(myRoommateRepository.findWithRequiredByMemberId(memberId)).willReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> houseRuleService.findHouseRuleList(memberId))

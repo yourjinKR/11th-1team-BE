@@ -12,7 +12,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.example.knockin.dto.CalendarDto.CalendarMemberDto;
 import org.example.knockin.entity.room.RepeatType;
 
 public class RepeatCalendarDto {
@@ -31,10 +30,9 @@ public class RepeatCalendarDto {
         @Schema(description = "반복 정보")
         private RepeatCalendarInfo repeatInfo;
 
-        @Valid
         @NotEmpty
         @Schema(description = "담당자 목록")
-        private List<CalendarMemberDto> members;
+        private List<Long> memberIds;
     }
 
     @Data

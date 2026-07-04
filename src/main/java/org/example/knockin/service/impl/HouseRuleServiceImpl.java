@@ -31,7 +31,7 @@ public class HouseRuleServiceImpl {
     @Transactional
     public HouseRuleDto.Response saveHouseRule(HouseRuleDto.Request request, Long memberId) {
         Member member = memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
-        MyRoommate myRoommate = myRoommateRepository.findWithFetchedByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+        MyRoommate myRoommate = myRoommateRepository.findWithRequiredByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
 
         RoommateHouseRule roommateHouseRule = RoommateHouseRule.builder()
                 .member(member)
@@ -45,7 +45,7 @@ public class HouseRuleServiceImpl {
 
     @Transactional(readOnly = true)
     public List<HouseRuleListDto.Response> findHouseRuleList(Long memberId) {
-        MyRoommate myRoommate = myRoommateRepository.findWithFetchedByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+        MyRoommate myRoommate = myRoommateRepository.findWithRequiredByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
         List<RoommateHouseRule> myRoommateRules = roommateHouseRuleRepository.findByMyRoommateIdAndIsDeleted(myRoommate.getId(), false);
         return myRoommateRules.stream().map(this::toListDto).toList();
     }
