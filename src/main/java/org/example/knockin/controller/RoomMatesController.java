@@ -92,10 +92,22 @@ public class RoomMatesController {
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
-    @GetMapping("/me/calendar")
-    @Operation(summary = "내 룸메이트 캘린더 목록 조회")
+    @GetMapping(value = "/me/calendar", params = "!day")
+    @Operation(summary = "내 룸메이트 캘린더 월별 목록 조회")
     public CommonResponse<MyRoommateCalendarListDto.Response> findMyRoomMateCalendarList(@RequestParam(required = false) Integer year, @RequestParam(required = false) Integer month) {
         return CommonResponse.status(HttpStatus.OK).body(new MyRoommateCalendarListDto.Response());
+    }
+
+    @GetMapping(value = "/me/calendar", params = "day")
+    @Operation(summary = "내 룸메이트 캘린더 일별 목록 조회")
+    public CommonResponse<List<MyRoommateCalendarListDto.Response>> findDailyCalendarList(
+            @AuthenticationPrincipal PrincipalDetails details,
+            @RequestParam Integer year,
+            @RequestParam Integer month,
+            @RequestParam Integer day
+    ) {
+        List<MyRoommateCalendarListDto.Response> responses = calendarService.findDailyCalendarList(details.getMember().getId(), year, month, day);
+        return CommonResponse.status(HttpStatus.OK).body(responses);
     }
 
     @GetMapping("/me/calendar/{id}")

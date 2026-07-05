@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import org.example.knockin.dto.CalendarDto;
 import org.example.knockin.dto.CalendarEditDto;
+import org.example.knockin.dto.MyRoommateCalendarListDto;
 import org.example.knockin.dto.RepeatCalendarDto;
 import org.example.knockin.dto.RepeatCalendarModifyDto;
 import org.example.knockin.dto.RepeatCalendarModifyType;
@@ -38,6 +39,9 @@ import org.example.knockin.repository.room.RepeatRoommateCalendarRepository;
 import org.example.knockin.repository.room.RoommateCalendarCategoryRepository;
 import org.example.knockin.repository.room.RoommateCalendarMemberRepository;
 import org.example.knockin.repository.room.RoommateCalendarRepository;
+import org.example.knockin.repository.room.row.DailyCalendarMemberRow;
+import org.example.knockin.repository.room.row.DailyCalendarRow;
+import org.example.knockin.repository.room.row.RepeatCalendarExcludeRow;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -342,6 +346,178 @@ class CalendarServiceImplTest {
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
         verifyNoInteractions(memberRepository, roommateCalendarCategoryRepository, roommateCalendarRepository,
                 roommateCalendarMemberRepository, repeatRoommateCalendarRepository);
+    }
+
+    @Test
+    @DisplayName("특정일 일정 조회 시 일반 일정과 반복 일정 발생분을 담당자와 함께 반환한다")
+    void findDailyCalendarListReturnsBasicAndRepeatOccurrenceWithMembers() {
+        // Given
+        Long requesterId = 1L;
+        Long requesteeId = 2L;
+        MyRoommate myRoommate = myRoommate(10L, requesterId, requesteeId);
+        LocalDateTime from = LocalDateTime.of(2026, 7, 12, 0, 0);
+        LocalDateTime to = LocalDateTime.of(2026, 7, 13, 0, 0);
+        DailyCalendarRow basicCalendar = dailyCalendarRow(
+                100L,
+                "장보기",
+                "저녁 재료 사오기",
+                LocalDateTime.of(2026, 7, 12, 9, 0),
+                LocalDateTime.of(2026, 7, 12, 10, 0),
+                "생활",
+                null,
+                null,
+                null
+        );
+        DailyCalendarRow repeatCalendar = dailyCalendarRow(
+                200L,
+                "청소",
+                "거실 청소",
+                LocalDateTime.of(2026, 7, 5, 14, 0),
+                LocalDateTime.of(2026, 7, 5, 16, 0),
+                "청소",
+                300L,
+                LocalDateTime.of(2026, 7, 26, 16, 0),
+                RepeatType.WEEKLY
+        );
+
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
+        given(roommateCalendarRepository.findDailyCalendarList(myRoommate.getId(), from, to))
+                .willReturn(List.of(basicCalendar, repeatCalendar));
+        given(roommateCalendarRepository.findDailyCalendarMembers(List.of(100L, 200L)))
+                .willReturn(List.of(
+                        new DailyCalendarMemberRow(100L, requesterId, "요청자"),
+                        new DailyCalendarMemberRow(200L, requesterId, "요청자"),
+                        new DailyCalendarMemberRow(200L, requesteeId, "요청받은 사람")
+                ));
+        given(roommateCalendarRepository.findRepeatCalendarExcludes(List.of(300L))).willReturn(List.of());
+
+        // When
+        List<MyRoommateCalendarListDto.Response> responses = calendarService.findDailyCalendarList(requesterId, 2026, 7, 12);
+
+        // Then
+        assertThat(responses).hasSize(2);
+        assertThat(responses)
+                .extracting(response -> response.getCalendarBasicInfo().getCalendarId(),
+                        response -> response.getCalendarBasicInfo().getStartDate(),
+                        response -> response.getCalendarBasicInfo().getEndDate(),
+                        response -> response.getCalendarBasicInfo().getRepeatType())
+                .containsExactly(
+                        tuple(100L, LocalDateTime.of(2026, 7, 12, 9, 0), LocalDateTime.of(2026, 7, 12, 10, 0), null),
+                        tuple(200L, LocalDateTime.of(2026, 7, 12, 14, 0), LocalDateTime.of(2026, 7, 12, 16, 0), RepeatType.WEEKLY)
+                );
+        assertThat(responses.get(1).getCalendarMembers())
+                .extracting(MyRoommateCalendarListDto.CalendarMember::getMemberId, MyRoommateCalendarListDto.CalendarMember::getName)
+                .containsExactly(
+                        tuple(requesterId, "요청자"),
+                        tuple(requesteeId, "요청받은 사람")
+                );
+        verify(roommateCalendarRepository).findDailyCalendarMembers(List.of(100L, 200L));
+        verify(roommateCalendarRepository).findRepeatCalendarExcludes(List.of(300L));
+    }
+
+    @Test
+    @DisplayName("특정일 일정 조회 시 제외된 반복 발생분은 반환하지 않고 대체 단일 일정만 반환한다")
+    void findDailyCalendarListSkipsExcludedRepeatOccurrence() {
+        // Given
+        Long requesterId = 1L;
+        Long requesteeId = 2L;
+        MyRoommate myRoommate = myRoommate(10L, requesterId, requesteeId);
+        LocalDateTime from = LocalDateTime.of(2026, 7, 12, 0, 0);
+        LocalDateTime to = LocalDateTime.of(2026, 7, 13, 0, 0);
+        DailyCalendarRow replacementCalendar = dailyCalendarRow(
+                201L,
+                "수정된 청소",
+                "욕실 청소",
+                LocalDateTime.of(2026, 7, 12, 12, 0),
+                LocalDateTime.of(2026, 7, 12, 13, 0),
+                "청소",
+                null,
+                null,
+                null
+        );
+        DailyCalendarRow repeatCalendar = dailyCalendarRow(
+                200L,
+                "청소",
+                "거실 청소",
+                LocalDateTime.of(2026, 7, 5, 14, 0),
+                LocalDateTime.of(2026, 7, 5, 16, 0),
+                "청소",
+                300L,
+                LocalDateTime.of(2026, 7, 26, 16, 0),
+                RepeatType.WEEKLY
+        );
+
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
+        given(roommateCalendarRepository.findDailyCalendarList(myRoommate.getId(), from, to))
+                .willReturn(List.of(replacementCalendar, repeatCalendar));
+        given(roommateCalendarRepository.findDailyCalendarMembers(List.of(201L, 200L)))
+                .willReturn(List.of(
+                        new DailyCalendarMemberRow(201L, requesterId, "요청자"),
+                        new DailyCalendarMemberRow(200L, requesteeId, "요청받은 사람")
+                ));
+        given(roommateCalendarRepository.findRepeatCalendarExcludes(List.of(300L)))
+                .willReturn(List.of(new RepeatCalendarExcludeRow(300L, LocalDateTime.of(2026, 7, 12, 14, 0))));
+
+        // When
+        List<MyRoommateCalendarListDto.Response> responses = calendarService.findDailyCalendarList(requesterId, 2026, 7, 12);
+
+        // Then
+        assertThat(responses).hasSize(1);
+        assertThat(responses.getFirst().getCalendarBasicInfo().getCalendarId()).isEqualTo(201L);
+        assertThat(responses.getFirst().getCalendarBasicInfo().getStartDate()).isEqualTo(LocalDateTime.of(2026, 7, 12, 12, 0));
+        assertThat(responses.getFirst().getCalendarBasicInfo().getRepeatType()).isNull();
+    }
+
+    @Test
+    @DisplayName("특정일 일정 조회 시 연속일 반복 일정이 조회일에 걸치면 해당 발생분을 반환한다")
+    void findDailyCalendarListReturnsMultiDayRepeatOccurrenceWhenItOverlapsTargetDay() {
+        // Given
+        Long requesterId = 1L;
+        Long requesteeId = 2L;
+        MyRoommate myRoommate = myRoommate(10L, requesterId, requesteeId);
+        LocalDateTime from = LocalDateTime.of(2026, 7, 13, 0, 0);
+        LocalDateTime to = LocalDateTime.of(2026, 7, 14, 0, 0);
+        DailyCalendarRow repeatCalendar = dailyCalendarRow(
+                200L,
+                "여행",
+                "연속 일정",
+                LocalDateTime.of(2026, 7, 5, 14, 0),
+                LocalDateTime.of(2026, 7, 7, 16, 0),
+                "기타",
+                300L,
+                LocalDateTime.of(2026, 7, 26, 16, 0),
+                RepeatType.WEEKLY
+        );
+
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
+        given(roommateCalendarRepository.findDailyCalendarList(myRoommate.getId(), from, to))
+                .willReturn(List.of(repeatCalendar));
+        given(roommateCalendarRepository.findDailyCalendarMembers(List.of(200L)))
+                .willReturn(List.of(new DailyCalendarMemberRow(200L, requesteeId, "요청받은 사람")));
+        given(roommateCalendarRepository.findRepeatCalendarExcludes(List.of(300L))).willReturn(List.of());
+
+        // When
+        List<MyRoommateCalendarListDto.Response> responses = calendarService.findDailyCalendarList(requesterId, 2026, 7, 13);
+
+        // Then
+        assertThat(responses).hasSize(1);
+        assertThat(responses.getFirst().getCalendarBasicInfo().getStartDate()).isEqualTo(LocalDateTime.of(2026, 7, 12, 14, 0));
+        assertThat(responses.getFirst().getCalendarBasicInfo().getEndDate()).isEqualTo(LocalDateTime.of(2026, 7, 14, 16, 0));
+        assertThat(responses.getFirst().getCalendarBasicInfo().getRepeatType()).isEqualTo(RepeatType.WEEKLY);
+    }
+
+    @Test
+    @DisplayName("특정일 일정 조회 시 내 룸메이트가 없으면 룸메이트 없음 예외를 던지고 일정을 조회하지 않는다")
+    void findDailyCalendarListThrowsWhenMyRoommateDoesNotExist() {
+        // Given
+        Long memberId = 1L;
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).willReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> calendarService.findDailyCalendarList(memberId, 2026, 7, 12))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
+        verifyNoInteractions(roommateCalendarRepository);
     }
 
     @Test
@@ -926,6 +1102,30 @@ class CalendarServiceImplTest {
         originalCalendar.setStartDate(startDate);
         originalCalendar.setEndDate(endDate);
         return originalCalendar;
+    }
+
+    private DailyCalendarRow dailyCalendarRow(
+            Long calendarId,
+            String title,
+            String contents,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            String categoryName,
+            Long repeatCalendarId,
+            LocalDateTime repeatEndDate,
+            RepeatType repeatType
+    ) {
+        return new DailyCalendarRow(
+                calendarId,
+                title,
+                contents,
+                startDate,
+                endDate,
+                categoryName,
+                repeatCalendarId,
+                repeatEndDate,
+                repeatType
+        );
     }
 
     private MyRoommate myRoommate(Long id, Long requesterId, Long requesteeId) {

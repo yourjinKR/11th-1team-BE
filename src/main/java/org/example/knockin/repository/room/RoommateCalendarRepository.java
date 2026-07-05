@@ -5,6 +5,6 @@ import org.example.knockin.entity.room.MyRoommate;
 import org.example.knockin.entity.room.RoommateCalendar;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface RoommateCalendarRepository extends JpaRepository<RoommateCalendar, Long> {
+public interface RoommateCalendarRepository extends JpaRepository<RoommateCalendar, Long>, RoommateCalendarRepositoryCustom {
     List<RoommateCalendar> findByMyRoommate(MyRoommate myRoommate);
 }
