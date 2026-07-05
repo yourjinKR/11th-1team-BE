@@ -40,4 +40,9 @@ public class RepeatRoommateCalendar {
     @Column(name = "repeat_type")
     @Enumerated(EnumType.STRING)
     private RepeatType repeatType;
+
+    public void modify(LocalDateTime endDate, RepeatType repeatType) {
+        this.endDate = endDate;
+        this.repeatType = repeatType;
+    }
 }

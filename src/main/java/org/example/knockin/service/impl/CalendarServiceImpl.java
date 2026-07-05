@@ -1,5 +1,6 @@
 package org.example.knockin.service.impl;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -13,7 +14,11 @@ import org.example.knockin.dto.CalendarEditDto;
 import org.example.knockin.dto.CalendarEditDto.MemberInfo;
 import org.example.knockin.dto.RepeatCalendarDto;
 import org.example.knockin.dto.RepeatCalendarDto.RepeatCalendarInfo;
+import org.example.knockin.dto.RepeatCalendarModifyDto;
+import org.example.knockin.dto.RepeatCalendarModifyDto.OriginalCalendar;
+import org.example.knockin.dto.RepeatCalendarModifyType;
 import org.example.knockin.entity.member.Member;
+import org.example.knockin.entity.room.ExcludeRoommateCalendar;
 import org.example.knockin.entity.room.MyRoommate;
 import org.example.knockin.entity.room.RepeatRoommateCalendar;
 import org.example.knockin.entity.room.RepeatType;
@@ -26,6 +31,7 @@ import org.example.knockin.global.exception.BusinessException;
 import org.example.knockin.global.exception.MyRoommateErrorCode;
 import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.row.MemberWithNameRow;
+import org.example.knockin.repository.room.ExcludeRoommateCalendarRepository;
 import org.example.knockin.repository.room.MyRoommateRepository;
 import org.example.knockin.repository.room.RepeatRoommateCalendarRepository;
 import org.example.knockin.repository.room.RoommateCalendarCategoryRepository;
@@ -44,6 +50,7 @@ public class CalendarServiceImpl {
     private final RoommateCalendarMemberRepository roommateCalendarMemberRepository;
     private final RepeatRoommateCalendarRepository repeatRoommateCalendarRepository;
     private final MemberRepository memberRepository;
+    private final ExcludeRoommateCalendarRepository excludeRoommateCalendarRepository;
 
     @Transactional
     public CalendarDto.Response saveBasicCalendar(Long memberId, CalendarDto.Request request) {
@@ -133,6 +140,7 @@ public class CalendarServiceImpl {
         return repeatRoommateCalendarRepository.save(repeatRoommateCalendar);
     }
 
+    //TODO: 반복 일정 설정값 전달, 권한 체크, 응답에 기존값 포함
     @Transactional
     public CalendarEditDto.Response getRoommateEditForm(Long memberId) {
         MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
@@ -219,5 +227,75 @@ public class CalendarServiceImpl {
                 .roommateCalendarId(roommateCalendarId)
                 .build();
         roommateCalendarMemberRepository.deleteById(id);
+    }
+
+    @Transactional
+    public RepeatCalendarModifyDto.Response modifyRepeatCalendar(Long memberId, Long calendarId, RepeatCalendarModifyDto.Request request) {
+        RoommateCalendar calendar = roommateCalendarRepository.findById(calendarId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.CALENDER_NOT_FOUND));
+        if (!calendar.isOwner(memberId)) throw new BusinessException(MyRoommateErrorCode.CALENDER_ACCESS_DENIED);
+
+        RepeatRoommateCalendar repeatCalendar = repeatRoommateCalendarRepository.findOneByRoommateCalendar(calendar)
+                .orElseThrow(() -> new BusinessException(MyRoommateErrorCode.CALENDER_NOT_REPEAT));
+
+        RepeatCalendarModifyType modifyType = request.getModifyType();
+        switch (modifyType) {
+            case THIS -> modifyOnlyThisRepeatCalendar(memberId, repeatCalendar, request);
+            case THIS_AND_FOLLOWING -> modifyThisAndFollowingRepeatCalendar(memberId, repeatCalendar, request);
+            case ALL -> modifyAllRepeatCalendar(calendar, repeatCalendar, request);
+        }
+
+        return RepeatCalendarModifyDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
+
+    private void modifyOnlyThisRepeatCalendar(Long memberId, RepeatRoommateCalendar repeatCalendar, RepeatCalendarModifyDto.Request request) {
+        MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+        RoommateMatchingRequired roommateMatchingRequired = myRoommate.getRoommateMatchingRequired();
+        RoommateCalendarCategory roommateCalendarCategory = saveCalendarCategory(request.getCategoryName());
+        RoommateCalendar newCalendar = saveCalendar(memberId, myRoommate, roommateCalendarCategory, request.getCalendar());
+        saveCalendarMembers(newCalendar, roommateMatchingRequired, request.getMemberIds());
+
+        ExcludeRoommateCalendar excludeCalendar = ExcludeRoommateCalendar.builder()
+                .repeatRoommateCalendar(repeatCalendar)
+                .excludeAt(request.getOriginalCalendar().getStartDate())
+                .build();
+        excludeRoommateCalendarRepository.save(excludeCalendar);
+    }
+
+    private void modifyThisAndFollowingRepeatCalendar(Long memberId, RepeatRoommateCalendar repeatCalendar, RepeatCalendarModifyDto.Request request) {
+        repeatCalendar.modify(request.getOriginalCalendar().getStartDate().minusNanos(1), repeatCalendar.getRepeatType());
+
+        MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+
+        RoommateCalendarCategory category = saveCalendarCategory(request.getCategoryName());
+        RoommateCalendar newCalendar = saveCalendar(memberId, myRoommate, category, request.getCalendar());
+        saveCalendarMembers(newCalendar, myRoommate.getRoommateMatchingRequired(), request.getMemberIds());
+
+        saveRepeatRoommateCalendar(newCalendar, request.getRepeatInfo());
+    }
+
+    private void modifyAllRepeatCalendar(RoommateCalendar calendar, RepeatRoommateCalendar repeatCalendar, RepeatCalendarModifyDto.Request request) {
+        CalendarInfoDto calendarInfo = applyOriginalOccurrenceDelta(calendar, request);
+        calendar.modify(calendarInfo);
+        modifyCalendarCategory(calendar, request.getCategoryName());
+        modifyCalendarMember(calendar, request.getMemberIds());
+
+        RepeatCalendarInfo repeatInfo = request.getRepeatInfo();
+        repeatCalendar.modify(repeatInfo.getEndDate(), repeatInfo.getRepeatType());
+    }
+
+    private CalendarInfoDto applyOriginalOccurrenceDelta(RoommateCalendar calendar, RepeatCalendarModifyDto.Request request) {
+        OriginalCalendar originalCalendarDto = request.getOriginalCalendar();
+        CalendarInfoDto calendarDto = request.getCalendar();
+
+        Duration startDelta = Duration.between(originalCalendarDto.getStartDate(), calendarDto.getStartDate());
+        Duration endDelta = Duration.between(originalCalendarDto.getEndDate(), calendarDto.getEndDate());
+
+        return CalendarInfoDto.builder()
+                .myRoommateId(calendarDto.getMyRoommateId())
+                .title(calendarDto.getTitle())
+                .contents(calendarDto.getContents())
+                .startDate(calendar.getStartDate().plus(startDelta))
+                .endDate(calendar.getEndDate().plus(endDelta))
+                .build();
     }
 }
