@@ -262,7 +262,8 @@ public class CalendarServiceImpl {
     }
 
     private void modifyThisAndFollowingRepeatCalendar(Long memberId, RepeatRoommateCalendar repeatCalendar, RepeatCalendarModifyDto.Request request) {
-        repeatCalendar.modify(request.getOriginalCalendar().getStartDate().minusNanos(1), repeatCalendar.getRepeatType());
+        LocalDateTime updatedEndDate = previousOccurrenceEndDate(request.getOriginalCalendar(), repeatCalendar.getRepeatType());
+        repeatCalendar.modify(updatedEndDate, repeatCalendar.getRepeatType());
 
         MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
 
@@ -297,5 +298,15 @@ public class CalendarServiceImpl {
                 .startDate(calendar.getStartDate().plus(startDelta))
                 .endDate(calendar.getEndDate().plus(endDelta))
                 .build();
+    }
+
+    private LocalDateTime previousOccurrenceEndDate(OriginalCalendar originalCalendar, RepeatType repeatType) {
+        Duration duration = Duration.between(originalCalendar.getStartDate(), originalCalendar.getEndDate());
+        LocalDateTime previousStartDate = switch (repeatType) {
+            case WEEKLY -> originalCalendar.getStartDate().minusWeeks(1);
+            case BI_WEEKLY -> originalCalendar.getStartDate().minusWeeks(2);
+            case MONTHLY -> originalCalendar.getStartDate().minusMonths(1);
+        };
+        return previousStartDate.plus(duration);
     }
 }

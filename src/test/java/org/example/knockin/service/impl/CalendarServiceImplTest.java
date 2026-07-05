@@ -658,7 +658,7 @@ class CalendarServiceImplTest {
         RepeatCalendarModifyDto.Response response = calendarService.modifyRepeatCalendar(ownerId, calendarId, request);
 
         // Then
-        assertThat(repeatCalendar.getEndDate()).isEqualTo(LocalDateTime.of(2026, 7, 12, 16, 0).minusNanos(1));
+        assertThat(repeatCalendar.getEndDate()).isEqualTo(LocalDateTime.of(2026, 7, 5, 18, 0));
         assertThat(repeatCalendar.getRepeatType()).isEqualTo(RepeatType.WEEKLY);
 
         ArgumentCaptor<RoommateCalendar> calendarCaptor = ArgumentCaptor.forClass(RoommateCalendar.class);
@@ -673,6 +673,114 @@ class CalendarServiceImplTest {
         assertThat(repeatCaptor.getValue().getRepeatType()).isEqualTo(RepeatType.BI_WEEKLY);
         assertThat(response.getUpdatedAt()).isNotNull();
         verify(excludeRoommateCalendarRepository, never()).save(any(ExcludeRoommateCalendar.class));
+    }
+
+    @Test
+    @DisplayName("격주 반복 일정 중 선택 일자부터 수정하면 기존 반복을 직전 격주 일정 종료일까지 끊는다")
+    void modifyRepeatCalendarThisAndFollowingEndsBiWeeklyRepeatAtPreviousOccurrenceEnd() {
+        // Given
+        Long calendarId = 100L;
+        Long ownerId = 1L;
+        Long roommateMemberId = 2L;
+        MyRoommate myRoommate = myRoommate(10L, ownerId, roommateMemberId);
+        RoommateCalendar masterCalendar = roommateCalendar(
+                calendarId,
+                myRoommate,
+                ownerId,
+                "청소",
+                "기존 반복",
+                "기존 내용",
+                LocalDateTime.of(2026, 7, 5, 16, 0),
+                LocalDateTime.of(2026, 7, 5, 18, 0)
+        );
+        RepeatRoommateCalendar repeatCalendar = repeatRoommateCalendar(
+                500L,
+                masterCalendar,
+                LocalDateTime.of(2026, 8, 31, 18, 0),
+                RepeatType.BI_WEEKLY
+        );
+        RepeatCalendarModifyDto.Request request = repeatModifyRequest(
+                RepeatCalendarModifyType.THIS_AND_FOLLOWING,
+                "수정 반복",
+                "수정 내용",
+                LocalDateTime.of(2026, 7, 19, 12, 0),
+                LocalDateTime.of(2026, 7, 19, 20, 0),
+                "공과금",
+                LocalDateTime.of(2026, 9, 30, 20, 0),
+                RepeatType.WEEKLY,
+                List.of(ownerId, roommateMemberId),
+                LocalDateTime.of(2026, 7, 19, 16, 0),
+                LocalDateTime.of(2026, 7, 19, 18, 0)
+        );
+
+        given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.of(masterCalendar));
+        given(repeatRoommateCalendarRepository.findOneByRoommateCalendar(masterCalendar)).willReturn(Optional.of(repeatCalendar));
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(ownerId)).willReturn(Optional.of(myRoommate));
+        given(roommateCalendarCategoryRepository.save(any(RoommateCalendarCategory.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+        given(roommateCalendarRepository.save(any(RoommateCalendar.class)))
+                .willAnswer(invocation -> savedCalendar(300L, invocation.getArgument(0)));
+
+        // When
+        calendarService.modifyRepeatCalendar(ownerId, calendarId, request);
+
+        // Then
+        assertThat(repeatCalendar.getEndDate()).isEqualTo(LocalDateTime.of(2026, 7, 5, 18, 0));
+        assertThat(repeatCalendar.getRepeatType()).isEqualTo(RepeatType.BI_WEEKLY);
+    }
+
+    @Test
+    @DisplayName("월간 반복 일정 중 선택 일자부터 수정하면 기존 반복을 직전 월간 일정 종료일까지 끊는다")
+    void modifyRepeatCalendarThisAndFollowingEndsMonthlyRepeatAtPreviousOccurrenceEnd() {
+        // Given
+        Long calendarId = 100L;
+        Long ownerId = 1L;
+        Long roommateMemberId = 2L;
+        MyRoommate myRoommate = myRoommate(10L, ownerId, roommateMemberId);
+        RoommateCalendar masterCalendar = roommateCalendar(
+                calendarId,
+                myRoommate,
+                ownerId,
+                "청소",
+                "기존 반복",
+                "기존 내용",
+                LocalDateTime.of(2026, 7, 31, 16, 0),
+                LocalDateTime.of(2026, 7, 31, 18, 0)
+        );
+        RepeatRoommateCalendar repeatCalendar = repeatRoommateCalendar(
+                500L,
+                masterCalendar,
+                LocalDateTime.of(2026, 12, 31, 18, 0),
+                RepeatType.MONTHLY
+        );
+        RepeatCalendarModifyDto.Request request = repeatModifyRequest(
+                RepeatCalendarModifyType.THIS_AND_FOLLOWING,
+                "수정 반복",
+                "수정 내용",
+                LocalDateTime.of(2026, 8, 31, 12, 0),
+                LocalDateTime.of(2026, 8, 31, 20, 0),
+                "공과금",
+                LocalDateTime.of(2026, 12, 31, 20, 0),
+                RepeatType.MONTHLY,
+                List.of(ownerId, roommateMemberId),
+                LocalDateTime.of(2026, 8, 31, 16, 0),
+                LocalDateTime.of(2026, 8, 31, 18, 0)
+        );
+
+        given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.of(masterCalendar));
+        given(repeatRoommateCalendarRepository.findOneByRoommateCalendar(masterCalendar)).willReturn(Optional.of(repeatCalendar));
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(ownerId)).willReturn(Optional.of(myRoommate));
+        given(roommateCalendarCategoryRepository.save(any(RoommateCalendarCategory.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+        given(roommateCalendarRepository.save(any(RoommateCalendar.class)))
+                .willAnswer(invocation -> savedCalendar(300L, invocation.getArgument(0)));
+
+        // When
+        calendarService.modifyRepeatCalendar(ownerId, calendarId, request);
+
+        // Then
+        assertThat(repeatCalendar.getEndDate()).isEqualTo(LocalDateTime.of(2026, 7, 31, 18, 0));
+        assertThat(repeatCalendar.getRepeatType()).isEqualTo(RepeatType.MONTHLY);
     }
 
     @Test
