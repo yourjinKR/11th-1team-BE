@@ -45,4 +45,8 @@ public class RoommateCalendarMember {
                 .member(member)
                 .build();
     }
+
+    public Long getMemberId() {
+        return this.getId().getMemberId();
+    }
 }

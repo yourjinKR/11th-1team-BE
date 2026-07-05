@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class RoomMatesController {
     private final MyRoomMateServiceImpl myRoomMateService;
     private final HouseRuleServiceImpl houseRuleService;
-    private final CalendarServiceImpl calendarServiceImpl;
+    private final CalendarServiceImpl calendarService;
 
     @GetMapping("/me")
     @Operation(summary = "내 룸메이트 조회")
@@ -104,10 +104,19 @@ public class RoomMatesController {
         return CommonResponse.status(HttpStatus.OK).body(new MyRoommateCalendarDetailDto.Response());
     }
 
-    @GetMapping("/me/calendar/types")
+    @GetMapping("/me/calendar/categories")
     @Operation(summary = "캘린더 타입 조회")
-    public CommonResponse<CalendarTypesDto.Response> findCalendarType() {
-        return CommonResponse.status(HttpStatus.OK).body(new CalendarTypesDto.Response());
+    public CommonResponse<CalendarCategoryDto.Response> findCalendarType() {
+        return CommonResponse.status(HttpStatus.OK).body(CalendarCategoryDto.Response.builder().categoryNames(calendarService.findCategoryNames()).build());
+    }
+
+    @GetMapping("/me/calendar/edit")
+    @Operation(summary = "캘린더 편집 폼 조회")
+    public CommonResponse<CalendarEditDto.Response> findCalendarEditForm(
+            @AuthenticationPrincipal PrincipalDetails details
+    ) {
+        CalendarEditDto.Response response = calendarService.getRoommateEditForm(details.getMember().getId());
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @PostMapping("/me/calendar")
@@ -116,7 +125,7 @@ public class RoomMatesController {
             @AuthenticationPrincipal PrincipalDetails principalDetails,
             @Valid @RequestBody CalendarDto.Request request
     ) {
-        CalendarDto.Response response = calendarServiceImpl.saveBasicCalendar(principalDetails.getMember().getId(), request);
+        CalendarDto.Response response = calendarService.saveBasicCalendar(principalDetails.getMember().getId(), request);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
@@ -126,13 +135,28 @@ public class RoomMatesController {
             @AuthenticationPrincipal PrincipalDetails principalDetails,
             @Valid @RequestBody RepeatCalendarDto.Request request
     ) {
-        RepeatCalendarDto.Response response = calendarServiceImpl.saveRepeatCalendar(principalDetails.getMember().getId(), request);
+        RepeatCalendarDto.Response response = calendarService.saveRepeatCalendar(principalDetails.getMember().getId(), request);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @PutMapping("/me/calendar/{id}")
     @Operation(summary = "내 룸메이트 캘린더 일정 수정")
-    public CommonResponse<CalendarDto.Response> modifyMyRoomMateCalendar(@PathVariable Long id, @RequestBody CalendarDto.Request request) {
+    public CommonResponse<CalendarDto.Response> modifyMyRoomMateCalendar(
+            @PathVariable Long id,
+            @Valid @RequestBody CalendarDto.Request request,
+            @AuthenticationPrincipal PrincipalDetails details
+    ) {
+        CalendarDto.Response response = calendarService.modifyCalendar(details.getMember().getId(), id, request);
+        return CommonResponse.status(HttpStatus.OK).body(response);
+    }
+
+    @PutMapping("/me/calendar/repeat/{id}")
+    @Operation(summary = "내 룸메이트 캘린더 반복 일정 수정")
+    public CommonResponse<CalendarDto.Response> modifyMyRepeatRoomMateCalendar(
+            @PathVariable Long id,
+            @RequestBody CalendarDto.Request request,
+            @AuthenticationPrincipal PrincipalDetails details
+    ) {
         return CommonResponse.status(HttpStatus.OK).body(new CalendarDto.Response());
     }
 

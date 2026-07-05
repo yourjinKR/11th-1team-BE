@@ -27,10 +27,9 @@ public class CalendarDto {
         @Schema(description = "카테고리명")
         private String categoryName;
 
-        @Valid
         @NotEmpty
         @Schema(description = "담당자 목록")
-        private List<CalendarMemberDto> members;
+        private List<Long> memberIds;
     }
 
     @Data
@@ -46,7 +45,7 @@ public class CalendarDto {
     public static class CalendarInfoDto {
         @NotNull
         @Schema(description = "내 룸메 고유 식별 ID")
-        private Long id;
+        private Long myRoommateId;
 
         @NotBlank
         @Size(min = 1, max = 50)
@@ -65,12 +64,5 @@ public class CalendarDto {
         @NotNull
         @Schema(description = "일정 종료일 (당일치기면 일정 시작일과 동일)")
         private LocalDateTime endDate;
-    }
-
-    @Data
-    public static class CalendarMemberDto {
-        @NotNull
-        @Schema(description = "회원 고유 식별 ID")
-        Long memberId;
     }
 }
