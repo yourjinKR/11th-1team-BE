@@ -547,4 +547,17 @@ public class CalendarServiceImpl {
         };
         return previousStartDate.plus(duration);
     }
+
+    @Transactional
+    public CalendarDto.Response deleteCalendar(Long memberId, Long calendarId) {
+        RoommateCalendar calendar = roommateCalendarRepository.findById(calendarId)
+                .orElseThrow(() -> new BusinessException(MyRoommateErrorCode.CALENDER_NOT_FOUND));
+
+        if (!calendar.isOwner(memberId)) {
+            throw new BusinessException(MyRoommateErrorCode.CALENDER_ACCESS_DENIED);
+        }
+
+        calendar.softDelete();
+        return CalendarDto.Response.builder().updatedAt(LocalDateTime.now()).build();
+    }
 }

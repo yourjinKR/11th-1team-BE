@@ -804,6 +804,80 @@ class CalendarServiceImplTest {
     }
 
     @Test
+    @DisplayName("작성자가 일정을 삭제하면 캘린더를 삭제 상태로 변경하고 수정 시간을 반환한다")
+    void deleteCalendarSoftDeletesCalendarWhenOwnerRequests() {
+        // Given
+        Long calendarId = 100L;
+        Long ownerId = 1L;
+        Long roommateMemberId = 2L;
+        MyRoommate myRoommate = myRoommate(10L, ownerId, roommateMemberId);
+        RoommateCalendar calendar = roommateCalendar(
+                calendarId,
+                myRoommate,
+                ownerId,
+                "생활",
+                "삭제할 일정",
+                "삭제할 내용",
+                LocalDateTime.of(2026, 7, 4, 9, 0),
+                LocalDateTime.of(2026, 7, 4, 10, 0)
+        );
+
+        given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.of(calendar));
+
+        // When
+        CalendarDto.Response response = calendarService.deleteCalendar(ownerId, calendarId);
+
+        // Then
+        assertThat(calendar.getIsDeleted()).isTrue();
+        assertThat(response.getUpdatedAt()).isNotNull();
+        verifyNoInteractions(memberRepository, roommateCalendarMemberRepository, repeatRoommateCalendarRepository, excludeRoommateCalendarRepository);
+    }
+
+    @Test
+    @DisplayName("일정 삭제 시 캘린더가 없으면 캘린더 없음 예외를 던지고 삭제하지 않는다")
+    void deleteCalendarThrowsWhenCalendarDoesNotExist() {
+        // Given
+        Long memberId = 1L;
+        Long calendarId = 100L;
+        given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> calendarService.deleteCalendar(memberId, calendarId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.CALENDER_NOT_FOUND));
+        verifyNoInteractions(memberRepository, roommateCalendarMemberRepository, repeatRoommateCalendarRepository, excludeRoommateCalendarRepository);
+    }
+
+    @Test
+    @DisplayName("일정 삭제 시 작성자가 아니면 접근 거부 예외를 던지고 삭제하지 않는다")
+    void deleteCalendarThrowsWhenMemberIsNotOwner() {
+        // Given
+        Long ownerId = 1L;
+        Long requesterId = 2L;
+        Long calendarId = 100L;
+        MyRoommate myRoommate = myRoommate(10L, ownerId, requesterId);
+        RoommateCalendar calendar = roommateCalendar(
+                calendarId,
+                myRoommate,
+                ownerId,
+                "생활",
+                "삭제할 일정",
+                "삭제할 내용",
+                LocalDateTime.of(2026, 7, 4, 9, 0),
+                LocalDateTime.of(2026, 7, 4, 10, 0)
+        );
+
+        given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.of(calendar));
+
+        // When & Then
+        assertThatThrownBy(() -> calendarService.deleteCalendar(requesterId, calendarId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.CALENDER_ACCESS_DENIED));
+        assertThat(calendar.getIsDeleted()).isFalse();
+        verifyNoInteractions(memberRepository, roommateCalendarMemberRepository, repeatRoommateCalendarRepository, excludeRoommateCalendarRepository);
+    }
+
+    @Test
     @DisplayName("반복 일정 중 하나만 수정하면 원래 반복 일자를 제외하고 요청 일정으로 단일 일정을 저장한다")
     void modifyRepeatCalendarThisSavesSingleCalendarAndExcludesOriginalOccurrence() {
         // Given

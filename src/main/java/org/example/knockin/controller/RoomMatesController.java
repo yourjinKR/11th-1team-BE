@@ -180,8 +180,12 @@ public class RoomMatesController {
 
     @DeleteMapping("/me/calendar/{id}")
     @Operation(summary = "내 룸메이트 캘린더 일정 삭제")
-    public CommonResponse<CalendarDto.Response> deleteMyRoomMateCalendar(@PathVariable Long id) {
-        return CommonResponse.status(HttpStatus.OK).body(new CalendarDto.Response());
+    public CommonResponse<CalendarDto.Response> deleteMyRoomMateCalendar(
+            @AuthenticationPrincipal PrincipalDetails details,
+            @PathVariable Long id
+    ) {
+        CalendarDto.Response response = calendarService.deleteCalendar(details.getMember().getId(), id);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 }
 
