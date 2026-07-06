@@ -71,4 +71,8 @@ public class RoommateCalendar extends BaseEntity {
     public boolean isOwner(Long memberId) {
         return Objects.equals(this.member.getId(), memberId);
     }
+
+    public void softDelete() {
+        this.isDeleted = true;
+    }
 }

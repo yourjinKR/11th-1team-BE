@@ -18,6 +18,7 @@ import org.example.knockin.entity.room.QRepeatRoommateCalendar;
 import org.example.knockin.repository.room.RoommateCalendarRepositoryCustom;
 import org.example.knockin.repository.room.row.DailyCalendarMemberRow;
 import org.example.knockin.repository.room.row.DailyCalendarRow;
+import org.example.knockin.repository.room.row.MonthlyCalendarRow;
 import org.example.knockin.repository.room.row.RepeatCalendarExcludeRow;
 import org.springframework.stereotype.Repository;
 
@@ -55,7 +56,38 @@ public class RoommateCalendarRepositoryImpl implements RoommateCalendarRepositor
                 ))
                 .where(
                         roommateCalendar.myRoommate.id.eq(myRoommateId),
-                        dailyCalendarRange(from, to),
+                        calendarRange(from, to),
+                        roommateCalendar.isDeleted.isFalse()
+                )
+                .orderBy(roommateCalendar.startDate.asc(), roommateCalendar.id.asc())
+                .fetch();
+    }
+
+    @Override
+    public List<MonthlyCalendarRow> findMonthlyCalendarList(Long myRoommateId, LocalDateTime from, LocalDateTime to) {
+        QRepeatRoommateCalendar latestRepeat = new QRepeatRoommateCalendar("latestRepeat");
+
+        return jpaQueryFactory
+                .select(Projections.constructor(
+                        MonthlyCalendarRow.class,
+                        roommateCalendar.id,
+                        roommateCalendar.startDate,
+                        roommateCalendar.endDate,
+                        repeatRoommateCalendar.id,
+                        repeatRoommateCalendar.endDate,
+                        repeatRoommateCalendar.repeatType
+                ))
+                .from(roommateCalendar)
+                .leftJoin(repeatRoommateCalendar)
+                .on(repeatRoommateCalendar.id.eq(
+                        JPAExpressions
+                                .select(latestRepeat.id.max())
+                                .from(latestRepeat)
+                                .where(latestRepeat.roommateCalendar.eq(roommateCalendar))
+                ))
+                .where(
+                        roommateCalendar.myRoommate.id.eq(myRoommateId),
+                        calendarRange(from, to),
                         roommateCalendar.isDeleted.isFalse()
                 )
                 .orderBy(roommateCalendar.startDate.asc(), roommateCalendar.id.asc())
@@ -105,7 +137,7 @@ public class RoommateCalendarRepositoryImpl implements RoommateCalendarRepositor
                 .fetch();
     }
 
-    private BooleanExpression dailyCalendarRange(LocalDateTime from, LocalDateTime to) {
+    private BooleanExpression calendarRange(LocalDateTime from, LocalDateTime to) {
         BooleanExpression basicCalendarRange = repeatRoommateCalendar.id.isNull()
                 .and(roommateCalendar.startDate.lt(to))
                 .and(roommateCalendar.endDate.gt(from));
@@ -116,4 +148,5 @@ public class RoommateCalendarRepositoryImpl implements RoommateCalendarRepositor
 
         return basicCalendarRange.or(repeatCalendarRange);
     }
+
 }
