@@ -13,6 +13,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.example.knockin.entity.room.RepeatType;
+import org.jspecify.annotations.Nullable;
 
 public class RepeatCalendarDto {
     @Data
@@ -45,8 +46,11 @@ public class RepeatCalendarDto {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class RepeatCalendarInfo {
-        @NotNull
+        @Nullable
         @Schema(description = "종료 일자")
         private LocalDateTime endDate;
 
