@@ -17,8 +17,9 @@ import org.example.knockin.dto.CalendarDto;
 import org.example.knockin.dto.CalendarDto.CalendarInfoDto;
 import org.example.knockin.dto.CalendarEditDto;
 import org.example.knockin.dto.CalendarEditDto.MemberInfo;
-import org.example.knockin.dto.MyRoommateCalendarListDto;
-import org.example.knockin.dto.MyRoommateCalendarListDto.CalendarBasicInfo;
+import org.example.knockin.dto.MyRoommateDailyCalendarListDto;
+import org.example.knockin.dto.MyRoommateDailyCalendarListDto.CalendarBasicInfo;
+import org.example.knockin.dto.MyRoommateMonthlyCalendarListDto;
 import org.example.knockin.dto.RepeatCalendarDto;
 import org.example.knockin.dto.RepeatCalendarDto.RepeatCalendarInfo;
 import org.example.knockin.dto.RepeatCalendarModifyDto;
@@ -151,7 +152,7 @@ public class CalendarServiceImpl {
     }
 
     @Transactional
-    public List<MyRoommateCalendarListDto.Response> findDailyCalendarList(Long memberId, Integer year, Integer month, Integer day) {
+    public MyRoommateDailyCalendarListDto.Response findDailyCalendarList(Long memberId, Integer year, Integer month, Integer day) {
         MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
         LocalDate targetDate = LocalDate.of(year, month, day);
         LocalDateTime from = targetDate.atStartOfDay();
@@ -162,7 +163,7 @@ public class CalendarServiceImpl {
                 .map(DailyCalendarRow::calendarId)
                 .distinct()
                 .toList();
-        Map<Long, List<MyRoommateCalendarListDto.CalendarMember>> memberMap = findDailyCalendarMemberMap(calendarIds);
+        Map<Long, List<MyRoommateDailyCalendarListDto.CalendarMember>> memberMap = findDailyCalendarMemberMap(calendarIds);
 
         List<Long> repeatCalendarIds = dailyCalendarList.stream()
                 .map(DailyCalendarRow::repeatCalendarId)
@@ -171,20 +172,25 @@ public class CalendarServiceImpl {
                 .toList();
         Map<Long, Set<LocalDateTime>> excludeMap = findRepeatExcludeMap(repeatCalendarIds);
 
-        return dailyCalendarList.stream()
-                .flatMap(calendar -> toDailyResponses(calendar, targetDate, from, to, memberMap, excludeMap).stream())
+        List<MyRoommateDailyCalendarListDto.CalendarItem> calendars = dailyCalendarList.stream()
+                .flatMap(calendar -> toDailyCalendarItems(calendar, from, to, memberMap, excludeMap).stream())
                 .sorted(Comparator
-                        .comparing((MyRoommateCalendarListDto.Response response) -> response.getCalendarBasicInfo().getStartDate())
-                        .thenComparing(response -> response.getCalendarBasicInfo().getCalendarId()))
+                        .comparing((MyRoommateDailyCalendarListDto.CalendarItem item) -> item.getCalendarBasicInfo().getStartDate())
+                        .thenComparing(item -> item.getCalendarBasicInfo().getCalendarId()))
                 .toList();
+
+        return MyRoommateDailyCalendarListDto.Response.builder()
+                .targetDay(targetDate)
+                .calendars(calendars)
+                .build();
     }
 
-    private Map<Long, List<MyRoommateCalendarListDto.CalendarMember>> findDailyCalendarMemberMap(List<Long> calendarIds) {
+    private Map<Long, List<MyRoommateDailyCalendarListDto.CalendarMember>> findDailyCalendarMemberMap(List<Long> calendarIds) {
         return roommateCalendarRepository.findDailyCalendarMembers(calendarIds).stream()
                 .collect(Collectors.groupingBy(
                         DailyCalendarMemberRow::calendarId,
                         Collectors.mapping(
-                                row -> MyRoommateCalendarListDto.CalendarMember.builder()
+                                row -> MyRoommateDailyCalendarListDto.CalendarMember.builder()
                                         .memberId(row.memberId())
                                         .name(row.name())
                                         .build(),
@@ -201,21 +207,20 @@ public class CalendarServiceImpl {
                 ));
     }
 
-    private List<MyRoommateCalendarListDto.Response> toDailyResponses(
+    private List<MyRoommateDailyCalendarListDto.CalendarItem> toDailyCalendarItems(
             DailyCalendarRow calendar,
-            LocalDate targetDate,
             LocalDateTime from,
             LocalDateTime to,
-            Map<Long, List<MyRoommateCalendarListDto.CalendarMember>> memberMap,
+            Map<Long, List<MyRoommateDailyCalendarListDto.CalendarMember>> memberMap,
             Map<Long, Set<LocalDateTime>> excludeMap
     ) {
-        List<MyRoommateCalendarListDto.CalendarMember> members = memberMap.getOrDefault(calendar.calendarId(), Collections.emptyList());
+        List<MyRoommateDailyCalendarListDto.CalendarMember> members = memberMap.getOrDefault(calendar.calendarId(), Collections.emptyList());
         if (!calendar.isRepeat()) {
-            return List.of(toDailyResponse(calendar, targetDate, calendar.startDate(), calendar.endDate(), members));
+            return List.of(toDailyCalendarItem(calendar, calendar.startDate(), calendar.endDate(), members));
         }
 
         Set<LocalDateTime> excludedStartDates = excludeMap.getOrDefault(calendar.repeatCalendarId(), Collections.emptySet());
-        List<MyRoommateCalendarListDto.Response> responses = new ArrayList<>();
+        List<MyRoommateDailyCalendarListDto.CalendarItem> calendarItems = new ArrayList<>();
         Duration duration = Duration.between(calendar.startDate(), calendar.endDate());
         LocalDateTime occurrenceStartDate = calendar.startDate();
 
@@ -224,20 +229,19 @@ public class CalendarServiceImpl {
             if (occurrenceEndDate.isAfter(from)
                     && occurrenceStartDate.isBefore(to)
                     && !excludedStartDates.contains(occurrenceStartDate)) {
-                responses.add(toDailyResponse(calendar, targetDate, occurrenceStartDate, occurrenceEndDate, members));
+                calendarItems.add(toDailyCalendarItem(calendar, occurrenceStartDate, occurrenceEndDate, members));
             }
             occurrenceStartDate = nextOccurrenceStartDate(occurrenceStartDate, calendar.repeatType());
         }
 
-        return responses;
+        return calendarItems;
     }
 
-    private MyRoommateCalendarListDto.Response toDailyResponse(
+    private MyRoommateDailyCalendarListDto.CalendarItem toDailyCalendarItem(
             DailyCalendarRow calendar,
-            LocalDate targetDate,
             LocalDateTime startDate,
             LocalDateTime endDate,
-            List<MyRoommateCalendarListDto.CalendarMember> members
+            List<MyRoommateDailyCalendarListDto.CalendarMember> members
     ) {
         CalendarBasicInfo calendarBasicInfo = CalendarBasicInfo.builder()
                 .calendarId(calendar.calendarId())
@@ -250,8 +254,7 @@ public class CalendarServiceImpl {
                 .repeatType(calendar.repeatType())
                 .build();
 
-        return MyRoommateCalendarListDto.Response.builder()
-                .targetDay(targetDate)
+        return MyRoommateDailyCalendarListDto.CalendarItem.builder()
                 .calendarBasicInfo(calendarBasicInfo)
                 .calendarMembers(members)
                 .build();

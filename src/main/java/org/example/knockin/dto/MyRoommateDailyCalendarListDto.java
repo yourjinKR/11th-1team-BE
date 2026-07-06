@@ -15,7 +15,7 @@ import org.example.knockin.entity.room.RepeatType;
 import org.jspecify.annotations.Nullable;
 
 @Data
-public class MyRoommateCalendarListDto {
+public class MyRoommateDailyCalendarListDto {
     @Data
     public static class Request {
     }
@@ -28,6 +28,14 @@ public class MyRoommateCalendarListDto {
         @Schema(description = "조회한 날짜")
         private LocalDate targetDay;
 
+        @Schema(description = "일정 목록")
+        private List<CalendarItem> calendars;
+    }
+
+    @Data
+    @Builder
+    @AllArgsConstructor
+    public static class CalendarItem {
         @Schema(description = "캘린더 기본 정보")
         private CalendarBasicInfo calendarBasicInfo;
 

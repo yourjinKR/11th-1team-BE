@@ -94,20 +94,24 @@ public class RoomMatesController {
 
     @GetMapping(value = "/me/calendar", params = "!day")
     @Operation(summary = "내 룸메이트 캘린더 월별 목록 조회")
-    public CommonResponse<MyRoommateCalendarListDto.Response> findMyRoomMateCalendarList(@RequestParam(required = false) Integer year, @RequestParam(required = false) Integer month) {
-        return CommonResponse.status(HttpStatus.OK).body(new MyRoommateCalendarListDto.Response());
+    public CommonResponse<MyRoommateMonthlyCalendarListDto.Response> findMyRoomMateCalendarList(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month
+    ) {
+        MyRoommateMonthlyCalendarListDto.Response response = new MyRoommateMonthlyCalendarListDto.Response();
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @GetMapping(value = "/me/calendar", params = "day")
     @Operation(summary = "내 룸메이트 캘린더 일별 목록 조회")
-    public CommonResponse<List<MyRoommateCalendarListDto.Response>> findDailyCalendarList(
+    public CommonResponse<MyRoommateDailyCalendarListDto.Response> findDailyCalendarList(
             @AuthenticationPrincipal PrincipalDetails details,
             @RequestParam Integer year,
             @RequestParam Integer month,
             @RequestParam Integer day
     ) {
-        List<MyRoommateCalendarListDto.Response> responses = calendarService.findDailyCalendarList(details.getMember().getId(), year, month, day);
-        return CommonResponse.status(HttpStatus.OK).body(responses);
+        MyRoommateDailyCalendarListDto.Response response = calendarService.findDailyCalendarList(details.getMember().getId(), year, month, day);
+        return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @GetMapping("/me/calendar/{id}")

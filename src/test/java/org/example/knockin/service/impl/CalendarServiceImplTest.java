@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import org.example.knockin.dto.CalendarDto;
 import org.example.knockin.dto.CalendarEditDto;
-import org.example.knockin.dto.MyRoommateCalendarListDto;
+import org.example.knockin.dto.MyRoommateDailyCalendarListDto;
 import org.example.knockin.dto.RepeatCalendarDto;
 import org.example.knockin.dto.RepeatCalendarModifyDto;
 import org.example.knockin.dto.RepeatCalendarModifyType;
@@ -392,21 +392,22 @@ class CalendarServiceImplTest {
         given(roommateCalendarRepository.findRepeatCalendarExcludes(List.of(300L))).willReturn(List.of());
 
         // When
-        List<MyRoommateCalendarListDto.Response> responses = calendarService.findDailyCalendarList(requesterId, 2026, 7, 12);
+        MyRoommateDailyCalendarListDto.Response response = calendarService.findDailyCalendarList(requesterId, 2026, 7, 12);
 
         // Then
-        assertThat(responses).hasSize(2);
-        assertThat(responses)
-                .extracting(response -> response.getCalendarBasicInfo().getCalendarId(),
-                        response -> response.getCalendarBasicInfo().getStartDate(),
-                        response -> response.getCalendarBasicInfo().getEndDate(),
-                        response -> response.getCalendarBasicInfo().getRepeatType())
+        assertThat(response.getTargetDay()).isEqualTo(LocalDateTime.of(2026, 7, 12, 0, 0).toLocalDate());
+        assertThat(response.getCalendars()).hasSize(2);
+        assertThat(response.getCalendars())
+                .extracting(item -> item.getCalendarBasicInfo().getCalendarId(),
+                        item -> item.getCalendarBasicInfo().getStartDate(),
+                        item -> item.getCalendarBasicInfo().getEndDate(),
+                        item -> item.getCalendarBasicInfo().getRepeatType())
                 .containsExactly(
                         tuple(100L, LocalDateTime.of(2026, 7, 12, 9, 0), LocalDateTime.of(2026, 7, 12, 10, 0), null),
                         tuple(200L, LocalDateTime.of(2026, 7, 12, 14, 0), LocalDateTime.of(2026, 7, 12, 16, 0), RepeatType.WEEKLY)
                 );
-        assertThat(responses.get(1).getCalendarMembers())
-                .extracting(MyRoommateCalendarListDto.CalendarMember::getMemberId, MyRoommateCalendarListDto.CalendarMember::getName)
+        assertThat(response.getCalendars().get(1).getCalendarMembers())
+                .extracting(MyRoommateDailyCalendarListDto.CalendarMember::getMemberId, MyRoommateDailyCalendarListDto.CalendarMember::getName)
                 .containsExactly(
                         tuple(requesterId, "요청자"),
                         tuple(requesteeId, "요청받은 사람")
@@ -459,13 +460,14 @@ class CalendarServiceImplTest {
                 .willReturn(List.of(new RepeatCalendarExcludeRow(300L, LocalDateTime.of(2026, 7, 12, 14, 0))));
 
         // When
-        List<MyRoommateCalendarListDto.Response> responses = calendarService.findDailyCalendarList(requesterId, 2026, 7, 12);
+        MyRoommateDailyCalendarListDto.Response response = calendarService.findDailyCalendarList(requesterId, 2026, 7, 12);
 
         // Then
-        assertThat(responses).hasSize(1);
-        assertThat(responses.getFirst().getCalendarBasicInfo().getCalendarId()).isEqualTo(201L);
-        assertThat(responses.getFirst().getCalendarBasicInfo().getStartDate()).isEqualTo(LocalDateTime.of(2026, 7, 12, 12, 0));
-        assertThat(responses.getFirst().getCalendarBasicInfo().getRepeatType()).isNull();
+        assertThat(response.getTargetDay()).isEqualTo(LocalDateTime.of(2026, 7, 12, 0, 0).toLocalDate());
+        assertThat(response.getCalendars()).hasSize(1);
+        assertThat(response.getCalendars().getFirst().getCalendarBasicInfo().getCalendarId()).isEqualTo(201L);
+        assertThat(response.getCalendars().getFirst().getCalendarBasicInfo().getStartDate()).isEqualTo(LocalDateTime.of(2026, 7, 12, 12, 0));
+        assertThat(response.getCalendars().getFirst().getCalendarBasicInfo().getRepeatType()).isNull();
     }
 
     @Test
@@ -497,13 +499,14 @@ class CalendarServiceImplTest {
         given(roommateCalendarRepository.findRepeatCalendarExcludes(List.of(300L))).willReturn(List.of());
 
         // When
-        List<MyRoommateCalendarListDto.Response> responses = calendarService.findDailyCalendarList(requesterId, 2026, 7, 13);
+        MyRoommateDailyCalendarListDto.Response response = calendarService.findDailyCalendarList(requesterId, 2026, 7, 13);
 
         // Then
-        assertThat(responses).hasSize(1);
-        assertThat(responses.getFirst().getCalendarBasicInfo().getStartDate()).isEqualTo(LocalDateTime.of(2026, 7, 12, 14, 0));
-        assertThat(responses.getFirst().getCalendarBasicInfo().getEndDate()).isEqualTo(LocalDateTime.of(2026, 7, 14, 16, 0));
-        assertThat(responses.getFirst().getCalendarBasicInfo().getRepeatType()).isEqualTo(RepeatType.WEEKLY);
+        assertThat(response.getTargetDay()).isEqualTo(LocalDateTime.of(2026, 7, 13, 0, 0).toLocalDate());
+        assertThat(response.getCalendars()).hasSize(1);
+        assertThat(response.getCalendars().getFirst().getCalendarBasicInfo().getStartDate()).isEqualTo(LocalDateTime.of(2026, 7, 12, 14, 0));
+        assertThat(response.getCalendars().getFirst().getCalendarBasicInfo().getEndDate()).isEqualTo(LocalDateTime.of(2026, 7, 14, 16, 0));
+        assertThat(response.getCalendars().getFirst().getCalendarBasicInfo().getRepeatType()).isEqualTo(RepeatType.WEEKLY);
     }
 
     @Test
