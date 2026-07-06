@@ -95,10 +95,11 @@ public class RoomMatesController {
     @GetMapping(value = "/me/calendar", params = "!day")
     @Operation(summary = "내 룸메이트 캘린더 월별 목록 조회")
     public CommonResponse<MyRoommateMonthlyCalendarListDto.Response> findMyRoomMateCalendarList(
+            @AuthenticationPrincipal PrincipalDetails details,
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) Integer month
     ) {
-        MyRoommateMonthlyCalendarListDto.Response response = new MyRoommateMonthlyCalendarListDto.Response();
+        MyRoommateMonthlyCalendarListDto.Response response = calendarService.findMyMonthlyCalendarList(details.getMember().getId(), year, month);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 

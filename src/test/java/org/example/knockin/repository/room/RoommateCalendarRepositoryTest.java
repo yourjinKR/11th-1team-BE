@@ -27,6 +27,7 @@ import org.example.knockin.entity.room.RoommateMatchingRequired;
 import org.example.knockin.entity.room.RoommateRequiredStatus;
 import org.example.knockin.repository.room.row.DailyCalendarMemberRow;
 import org.example.knockin.repository.room.row.DailyCalendarRow;
+import org.example.knockin.repository.room.row.MonthlyCalendarRow;
 import org.example.knockin.repository.room.row.RepeatCalendarExcludeRow;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -96,6 +97,7 @@ class RoommateCalendarRepositoryTest {
         List<RepeatCalendarExcludeRow> excludes = roommateCalendarRepository.findRepeatCalendarExcludes(
                 List.of(repeatCalendar.getId())
         );
+        List<MonthlyCalendarRow> monthlyCalendars = roommateCalendarRepository.findMonthlyCalendarList(myRoommate.getId(), from, to);
 
         // Then
         assertThat(calendars)
@@ -114,6 +116,15 @@ class RoommateCalendarRepositoryTest {
         assertThat(excludes)
                 .extracting(RepeatCalendarExcludeRow::repeatCalendarId, RepeatCalendarExcludeRow::excludeAt)
                 .containsExactly(tuple(repeatCalendar.getId(), LocalDateTime.of(2026, 7, 12, 14, 0)));
+        assertThat(monthlyCalendars)
+                .extracting(MonthlyCalendarRow::calendarId, MonthlyCalendarRow::startDate, MonthlyCalendarRow::endDate,
+                        MonthlyCalendarRow::repeatCalendarId, MonthlyCalendarRow::repeatEndDate, MonthlyCalendarRow::repeatType)
+                .containsExactly(
+                        tuple(repeatMaster.getId(), LocalDateTime.of(2026, 7, 5, 14, 0), LocalDateTime.of(2026, 7, 5, 16, 0),
+                                repeatCalendar.getId(), LocalDateTime.of(2026, 7, 26, 16, 0), RepeatType.WEEKLY),
+                        tuple(basicCalendar.getId(), LocalDateTime.of(2026, 7, 12, 9, 0), LocalDateTime.of(2026, 7, 12, 10, 0),
+                                null, null, null)
+                );
     }
 
     private Member persistMember(String providerId, String name) {

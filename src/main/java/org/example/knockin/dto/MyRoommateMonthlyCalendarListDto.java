@@ -29,6 +29,9 @@ public class MyRoommateMonthlyCalendarListDto {
     }
 
     @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CalendarDay {
         @Schema(description = "조회한 날짜 (년/월/일)")
         private LocalDate targetDate;

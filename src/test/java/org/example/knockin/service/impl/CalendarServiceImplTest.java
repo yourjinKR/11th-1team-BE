@@ -9,12 +9,15 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 import org.example.knockin.dto.CalendarDto;
 import org.example.knockin.dto.CalendarEditDto;
 import org.example.knockin.dto.MyRoommateDailyCalendarListDto;
+import org.example.knockin.dto.MyRoommateMonthlyCalendarListDto;
 import org.example.knockin.dto.RepeatCalendarDto;
 import org.example.knockin.dto.RepeatCalendarModifyDto;
 import org.example.knockin.dto.RepeatCalendarModifyType;
@@ -41,6 +44,7 @@ import org.example.knockin.repository.room.RoommateCalendarMemberRepository;
 import org.example.knockin.repository.room.RoommateCalendarRepository;
 import org.example.knockin.repository.room.row.DailyCalendarMemberRow;
 import org.example.knockin.repository.room.row.DailyCalendarRow;
+import org.example.knockin.repository.room.row.MonthlyCalendarRow;
 import org.example.knockin.repository.room.row.RepeatCalendarExcludeRow;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -518,6 +522,84 @@ class CalendarServiceImplTest {
 
         // When & Then
         assertThatThrownBy(() -> calendarService.findDailyCalendarList(memberId, 2026, 7, 12))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
+        verifyNoInteractions(roommateCalendarRepository);
+    }
+
+    @Test
+    @DisplayName("월별 일정 조회 시 일반 일정과 반복 일정이 존재하는 날짜를 표시하고 제외된 반복일은 표시하지 않는다")
+    void findMyMonthlyCalendarListReturnsExistingDaysForBasicAndRepeatCalendars() {
+        // Given
+        Long requesterId = 1L;
+        Long requesteeId = 2L;
+        MyRoommate myRoommate = myRoommate(10L, requesterId, requesteeId);
+        LocalDateTime from = LocalDateTime.of(2026, 7, 1, 0, 0);
+        LocalDateTime to = LocalDateTime.of(2026, 8, 1, 0, 0);
+        MonthlyCalendarRow multiDayCalendar = monthlyCalendarRow(
+                100L,
+                LocalDateTime.of(2026, 6, 30, 12, 0),
+                LocalDateTime.of(2026, 7, 2, 12, 0),
+                null,
+                null,
+                null
+        );
+        MonthlyCalendarRow basicCalendar = monthlyCalendarRow(
+                101L,
+                LocalDateTime.of(2026, 7, 10, 9, 0),
+                LocalDateTime.of(2026, 7, 10, 10, 0),
+                null,
+                null,
+                null
+        );
+        MonthlyCalendarRow repeatCalendar = monthlyCalendarRow(
+                200L,
+                LocalDateTime.of(2026, 7, 5, 14, 0),
+                LocalDateTime.of(2026, 7, 5, 16, 0),
+                300L,
+                LocalDateTime.of(2026, 7, 26, 16, 0),
+                RepeatType.WEEKLY
+        );
+
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
+        given(roommateCalendarRepository.findMonthlyCalendarList(myRoommate.getId(), from, to))
+                .willReturn(List.of(multiDayCalendar, basicCalendar, repeatCalendar));
+        given(roommateCalendarRepository.findRepeatCalendarExcludes(List.of(300L)))
+                .willReturn(List.of(new RepeatCalendarExcludeRow(300L, LocalDateTime.of(2026, 7, 12, 14, 0))));
+
+        // When
+        MyRoommateMonthlyCalendarListDto.Response response = calendarService.findMyMonthlyCalendarList(requesterId, 2026, 7);
+
+        // Then
+        assertThat(response.getTargetMonth()).isEqualTo(YearMonth.of(2026, 7));
+        assertThat(response.getCalendarDays()).hasSize(31);
+        assertThat(response.getCalendarDays())
+                .filteredOn(MyRoommateMonthlyCalendarListDto.CalendarDay::getExists)
+                .extracting(MyRoommateMonthlyCalendarListDto.CalendarDay::getTargetDate)
+                .containsExactly(
+                        LocalDate.of(2026, 7, 1),
+                        LocalDate.of(2026, 7, 2),
+                        LocalDate.of(2026, 7, 5),
+                        LocalDate.of(2026, 7, 10),
+                        LocalDate.of(2026, 7, 19),
+                        LocalDate.of(2026, 7, 26)
+                );
+        assertThat(response.getCalendarDays())
+                .filteredOn(calendarDay -> calendarDay.getTargetDate().equals(LocalDate.of(2026, 7, 12)))
+                .extracting(MyRoommateMonthlyCalendarListDto.CalendarDay::getExists)
+                .containsExactly(false);
+        verify(roommateCalendarRepository, never()).findDailyCalendarMembers(any());
+    }
+
+    @Test
+    @DisplayName("월별 일정 조회 시 내 룸메이트가 없으면 룸메이트 없음 예외를 던지고 일정을 조회하지 않는다")
+    void findMyMonthlyCalendarListThrowsWhenMyRoommateDoesNotExist() {
+        // Given
+        Long memberId = 1L;
+        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).willReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> calendarService.findMyMonthlyCalendarList(memberId, 2026, 7))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
         verifyNoInteractions(roommateCalendarRepository);
@@ -1125,6 +1207,24 @@ class CalendarServiceImplTest {
                 startDate,
                 endDate,
                 categoryName,
+                repeatCalendarId,
+                repeatEndDate,
+                repeatType
+        );
+    }
+
+    private MonthlyCalendarRow monthlyCalendarRow(
+            Long calendarId,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            Long repeatCalendarId,
+            LocalDateTime repeatEndDate,
+            RepeatType repeatType
+    ) {
+        return new MonthlyCalendarRow(
+                calendarId,
+                startDate,
+                endDate,
                 repeatCalendarId,
                 repeatEndDate,
                 repeatType
