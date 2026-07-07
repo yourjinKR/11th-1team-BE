@@ -58,7 +58,7 @@ public class ChatRequestDetailDto {
             private Gender gender;
 
             @Schema(description = "프로필 사진 URL")
-            private String profileImageUrl;
+            private String memberProfileImageUrl;
 
             @Schema(description = "라이프스타일 목록")
             private List<Lifestyle> lifeStyles;

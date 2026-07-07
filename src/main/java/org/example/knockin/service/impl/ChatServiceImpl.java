@@ -242,7 +242,7 @@ public class ChatServiceImpl {
                 .name(row.name())
                 .age(DateUtils.calculateAge(row.birth()))
                 .gender(row.gender())
-                .profileImageUrl(row.profileImageUrl())
+                .memberProfileImageUrl(row.profileImageUrl())
                 .score(score)
                 .build();
     }

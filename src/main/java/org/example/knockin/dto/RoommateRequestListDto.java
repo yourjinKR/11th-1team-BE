@@ -19,8 +19,8 @@ public class RoommateRequestListDto {
     @Builder
     @AllArgsConstructor
     public static class Response {
-        @Schema(description = "고유 식별 ID")
-        private Long id;
+        @Schema(description = "룸메이트 요청 고유 식별 ID")
+        private Long requiredId;
 
         @Schema(description = "요청자 ID")
         private Long requesterId;

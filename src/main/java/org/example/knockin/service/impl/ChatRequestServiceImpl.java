@@ -142,7 +142,7 @@ public class ChatRequestServiceImpl {
                 .memberName(basicInformationRow.name())
                 .memberAge(DateUtils.calculateAge(basicInformationRow.birth()))
                 .gender(basicInformationRow.gender())
-                .profileImageUrl(basicInformationRow.profileImageUrl())
+                .memberProfileImageUrl(basicInformationRow.profileImageUrl())
                 .lifeStyles(lifestyles)
                 .build();
     }

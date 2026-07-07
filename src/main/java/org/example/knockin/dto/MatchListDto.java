@@ -47,7 +47,7 @@ public class MatchListDto {
         private Gender gender;
 
         @Schema(description = "좋아요 여부")
-        private Boolean isLike;
+        private Boolean interested;
 
         @Schema(description = "방 프로필 타입")
         private RoomProfileType roomProfileType;

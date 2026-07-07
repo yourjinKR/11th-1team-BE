@@ -31,8 +31,8 @@ public class RoommateRequestDto {
     @Builder
     @AllArgsConstructor
     public static class RoommateMatchingRequiredInfo {
-        @Schema(description = "고유 식별 ID")
-        private Long id;
+        @Schema(description = "룸메이트 요청 고유 식별 ID")
+        private Long requiredId;
 
         @Schema(description = "요청자 멤버 고유 식별 ID")
         private Long requesterMemberId;

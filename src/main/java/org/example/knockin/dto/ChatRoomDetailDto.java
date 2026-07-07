@@ -50,7 +50,7 @@ public class ChatRoomDetailDto {
         private Gender gender;
 
         @Schema(description = "프로필 이미지 url")
-        private String profileImageUrl;
+        private String memberProfileImageUrl;
 
         @Schema(description = "점수 (TBD)")
         private Integer score;

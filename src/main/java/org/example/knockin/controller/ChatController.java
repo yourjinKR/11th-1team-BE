@@ -50,14 +50,14 @@ public class ChatController {
         return CommonResponse.status(HttpStatus.OK).body(responses);
     }
 
-    @GetMapping("/{chatId}")
+    @GetMapping("/{chatRoomId}")
     @Operation(summary = "채팅방 상세 조회")
     public CommonResponse<ChatRoomDetailDto.Response> findChatRoomDetail(
-            @PathVariable Long chatId,
+            @PathVariable Long chatRoomId,
             @AuthenticationPrincipal PrincipalDetails details
     ) {
         Long memberId = details.getMember().getId();
-        ChatRoomDetailDto.Response response = chatService.getChatRoomDetail(chatId, memberId);
+        ChatRoomDetailDto.Response response = chatService.getChatRoomDetail(chatRoomId, memberId);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
@@ -72,38 +72,38 @@ public class ChatController {
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
-    @PostMapping("/{chatId}/leave")
+    @PostMapping("/{chatRoomId}/leave")
     @Operation(summary = "채팅방 나가기")
     public CommonResponse<ChatRoomDto.Response> leaveChatRoom(
-            @PathVariable Long chatId,
+            @PathVariable Long chatRoomId,
             @AuthenticationPrincipal PrincipalDetails details
     ) {
         Long memberId = details.getMember().getId();
-        ChatRoomDto.Response response = chatService.leaveChatRoom(memberId, chatId);
+        ChatRoomDto.Response response = chatService.leaveChatRoom(memberId, chatRoomId);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
-    @PostMapping(value = "/{chatId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/{chatRoomId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "채팅방 이미지 업로드")
     public CommonResponse<ChatRoomImageDto.Response> uploadImage(
-            @PathVariable Long chatId,
+            @PathVariable Long chatRoomId,
             @RequestPart(value = "file", required = false) MultipartFile file,
             @AuthenticationPrincipal PrincipalDetails details
     ) {
         Long memberId = details.getMember().getId();
-        ChatRoomImageDto.Response response = chatService.uploadImage(chatId, memberId, file);
+        ChatRoomImageDto.Response response = chatService.uploadImage(chatRoomId, memberId, file);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
     @MessageMapping("/chats/{chatRoomId}/messages")
     @Operation(summary = "메시지 전송")
     public void sendMessage(
-            @DestinationVariable("chatRoomId") Long chatId,
+            @DestinationVariable("chatRoomId") Long chatRoomId,
             @Payload ChatMessageDto.Request request,
             Principal principal
     ) {
         Long memberId = principalMemberResolver.resolveMemberId(principal);
-        chatService.sendUserMessage(chatId, request, memberId);
+        chatService.sendUserMessage(chatRoomId, request, memberId);
     }
 }
 

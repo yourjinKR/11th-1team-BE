@@ -106,7 +106,7 @@ public class RoommateRequestServiceImpl {
 
     private RoommateRequestDto.Response toDto(RoommateMatchingRequired roommateMatchingRequired) {
         RoommateMatchingRequiredInfo roommateMatchingRequiredInfo = RoommateMatchingRequiredInfo.builder()
-                .id(roommateMatchingRequired.getId())
+                .requiredId(roommateMatchingRequired.getId())
                 .requesterMemberId(roommateMatchingRequired.getRequester().getId())
                 .requesteeMemberId(roommateMatchingRequired.getRequestee().getId())
                 .status(roommateMatchingRequired.getStatus())
@@ -200,7 +200,7 @@ public class RoommateRequestServiceImpl {
 
     private RoommateRequestListDto.Response toListDto(RoommateMatchingRequired roommateMatchingRequired) {
         return RoommateRequestListDto.Response.builder()
-                .id(roommateMatchingRequired.getId())
+                .requiredId(roommateMatchingRequired.getId())
                 .requesterId(roommateMatchingRequired.getRequester().getId())
                 .requesteeId(roommateMatchingRequired.getRequestee().getId())
                 .chatRoomId(roommateMatchingRequired.getChattingRoom().getId())
