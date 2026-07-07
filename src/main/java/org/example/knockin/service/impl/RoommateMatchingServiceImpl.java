@@ -233,7 +233,7 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
                 .memberName(row.memberName())
                 .memberAge(DateUtils.calculateAge(row.birth()))
                 .gender(row.gender())
-                .isLike(likedMemberIds.contains(candidateId))
+                .interested(likedMemberIds.contains(candidateId))
                 .roomProfileType(row.roomProfileType())
                 .offerProfile(offerProfile)
                 .seekerProfile(seekerProfile)
@@ -313,7 +313,7 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
         List<MatchingPreferenceConditionWeightRow> preferenceConditionWeightRows = preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(List.of(targetMemberId));
         Compatibility compatibility = roommateScoreService.calculateScore(requesterId, targetMemberId);
 
-        boolean isLike = requesterId != null && memberInterestRepository.existsBySenderIdAndReceiverId(requesterId, targetMemberId);
+        boolean interested = requesterId != null && memberInterestRepository.existsBySenderIdAndReceiverId(requesterId, targetMemberId);
 
         List<String> roomTypeNames = seekerRoomTypeRows.stream().map(MatchingSeekerRoomTypeRow::roomTypeName).toList();
         List<String> regionFullNames = seekerRegionRows.stream()
@@ -330,7 +330,7 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
                 .memberName(basicInfoRow.memberName())
                 .memberAge(DateUtils.calculateAge(basicInfoRow.birth()))
                 .gender(basicInfoRow.gender())
-                .isLike(isLike)
+                .interested(interested)
                 .roomProfileType(roomProfileType)
                 .offerProfile(roomProfileType == RoomProfileType.OFFER ? toOfferProfile(offerProfileRow) : null)
                 .seekerProfile(roomProfileType == RoomProfileType.SEEKER ? toSeekerProfile(seekerProfileRow, roomTypeNames, regionFullNames) : null)

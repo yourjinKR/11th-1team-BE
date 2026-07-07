@@ -194,7 +194,7 @@ class ChatServiceImplTest {
         );
         List<RoommateMatchingRequiredInfo> matchingRequiredList = List.of(
                 RoommateMatchingRequiredInfo.builder()
-                        .id(200L)
+                        .requiredId(200L)
                         .requesterMemberId(memberId)
                         .requesteeMemberId(opponent.getId())
                         .status(RoommateRequiredStatus.PENDING)
@@ -226,7 +226,7 @@ class ChatServiceImplTest {
         assertThat(response.getOpponentProfile().getName()).isEqualTo("상대방");
         assertThat(response.getOpponentProfile().getAge()).isEqualTo(DateUtils.calculateAge(opponentBirth));
         assertThat(response.getOpponentProfile().getGender()).isEqualTo(Gender.FEMALE);
-        assertThat(response.getOpponentProfile().getProfileImageUrl()).isEqualTo("opponent-profile.jpg");
+        assertThat(response.getOpponentProfile().getMemberProfileImageUrl()).isEqualTo("opponent-profile.jpg");
         assertThat(response.getOpponentProfile().getScore()).isEqualTo(100);
         assertThat(response.getMessages()).isSameAs(messages);
         assertThat(response.getMatchingRequiredList()).isSameAs(matchingRequiredList);

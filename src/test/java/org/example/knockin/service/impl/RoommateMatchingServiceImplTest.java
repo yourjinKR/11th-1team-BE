@@ -351,7 +351,7 @@ class RoommateMatchingServiceImplTest {
         assertThat(offer.getMemberId()).isEqualTo(1L);
         assertThat(offer.getMemberName()).isEqualTo("오퍼");
         assertThat(offer.getMemberAge()).isEqualTo(DateUtils.calculateAge(offerBirth));
-        assertThat(offer.getIsLike()).isFalse();
+        assertThat(offer.getInterested()).isFalse();
         assertThat(offer.getScore()).isEqualTo(80);
         assertThat(offer.getOfferProfile().getDeposit()).isEqualTo(500);
         assertThat(offer.getOfferProfile().getMonthlyRent()).isEqualTo(45);
@@ -364,7 +364,7 @@ class RoommateMatchingServiceImplTest {
         assertThat(seeker.getMemberId()).isEqualTo(2L);
         assertThat(seeker.getMemberName()).isEqualTo("시커");
         assertThat(seeker.getMemberAge()).isEqualTo(DateUtils.calculateAge(seekerBirth));
-        assertThat(seeker.getIsLike()).isTrue();
+        assertThat(seeker.getInterested()).isTrue();
         assertThat(seeker.getOfferProfile()).isNull();
         assertThat(seeker.getSeekerProfile().getMinDeposit()).isEqualTo(300);
         assertThat(seeker.getSeekerProfile().getMaxDeposit()).isEqualTo(1000);
@@ -435,7 +435,7 @@ class RoommateMatchingServiceImplTest {
 
         // Then
         assertThat(response.getContent()).hasSize(1);
-        assertThat(response.getContent().getFirst().getIsLike()).isFalse();
+        assertThat(response.getContent().getFirst().getInterested()).isFalse();
         assertThat(response.hasNext()).isFalse();
         verify(memberInterestRepository, never()).findActiveReceiverIdsBySenderIdAndReceiverIds(any(), anyList());
     }
@@ -481,7 +481,7 @@ class RoommateMatchingServiceImplTest {
         assertThat(response.getMemberName()).isEqualTo("오퍼");
         assertThat(response.getMemberAge()).isEqualTo(DateUtils.calculateAge(birth));
         assertThat(response.getGender()).isEqualTo(Gender.MALE);
-        assertThat(response.getIsLike()).isTrue();
+        assertThat(response.getInterested()).isTrue();
         assertThat(response.getRoomProfileType()).isEqualTo(RoomProfileType.OFFER);
         assertThat(response.getOfferProfile().getDeposit()).isEqualTo(500);
         assertThat(response.getOfferProfile().getMonthlyRent()).isEqualTo(45);
@@ -531,7 +531,7 @@ class RoommateMatchingServiceImplTest {
         assertThat(response.getMemberId()).isEqualTo(targetMemberId);
         assertThat(response.getMemberName()).isEqualTo("시커");
         assertThat(response.getMemberAge()).isEqualTo(DateUtils.calculateAge(birth));
-        assertThat(response.getIsLike()).isFalse();
+        assertThat(response.getInterested()).isFalse();
         assertThat(response.getRoomProfileType()).isEqualTo(RoomProfileType.SEEKER);
         assertThat(response.getOfferProfile()).isNull();
         assertThat(response.getSeekerProfile().getMinDeposit()).isEqualTo(300);

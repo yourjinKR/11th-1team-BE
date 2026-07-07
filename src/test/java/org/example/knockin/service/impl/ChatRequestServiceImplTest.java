@@ -207,7 +207,7 @@ class ChatRequestServiceImplTest {
         assertThat(response.getMe().getMemberName()).isEqualTo("피요청자");
         assertThat(response.getMe().getMemberAge()).isEqualTo(DateUtils.calculateAge(requesteeBirth));
         assertThat(response.getMe().getGender()).isEqualTo(Gender.FEMALE);
-        assertThat(response.getMe().getProfileImageUrl()).isEqualTo("requestee.jpg");
+        assertThat(response.getMe().getMemberProfileImageUrl()).isEqualTo("requestee.jpg");
         assertThat(response.getMe().getLifeStyles()).hasSize(1);
         assertThat(response.getMe().getLifeStyles().getFirst().getLifestyleId()).isEqualTo(11L);
         assertThat(response.getMe().getLifeStyles().getFirst().getName()).isEqualTo("청결");
@@ -216,7 +216,7 @@ class ChatRequestServiceImplTest {
         assertThat(response.getOpponent().getMemberName()).isEqualTo("요청자");
         assertThat(response.getOpponent().getMemberAge()).isEqualTo(DateUtils.calculateAge(requesterBirth));
         assertThat(response.getOpponent().getGender()).isEqualTo(Gender.MALE);
-        assertThat(response.getOpponent().getProfileImageUrl()).isEqualTo("requester.jpg");
+        assertThat(response.getOpponent().getMemberProfileImageUrl()).isEqualTo("requester.jpg");
         assertThat(response.getOpponent().getLifeStyles()).hasSize(1);
         assertThat(response.getOpponent().getLifeStyles().getFirst().getLifestyleId()).isEqualTo(12L);
         assertThat(response.getOpponent().getLifeStyles().getFirst().getType()).isEqualTo(LifePatternType.SINGLE_CHOICE);

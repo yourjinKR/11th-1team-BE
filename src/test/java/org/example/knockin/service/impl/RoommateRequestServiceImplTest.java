@@ -115,7 +115,7 @@ class RoommateRequestServiceImplTest {
 
         // Then
         RoommateMatchingRequiredInfo info = response.getRoommateMatchingRequiredInfo();
-        assertThat(info.getId()).isEqualTo(1000L);
+        assertThat(info.getRequiredId()).isEqualTo(1000L);
         assertThat(info.getRequesterMemberId()).isEqualTo(requesterId);
         assertThat(info.getRequesteeMemberId()).isEqualTo(requesteeId);
         assertThat(info.getStatus()).isEqualTo(RoommateRequiredStatus.PENDING);
@@ -272,7 +272,7 @@ class RoommateRequestServiceImplTest {
 
         // Then
         RoommateMatchingRequiredInfo info = response.getRoommateMatchingRequiredInfo();
-        assertThat(info.getId()).isEqualTo(requestId);
+        assertThat(info.getRequiredId()).isEqualTo(requestId);
         assertThat(info.getRequesterMemberId()).isEqualTo(requesterId);
         assertThat(info.getRequesteeMemberId()).isEqualTo(requesteeId);
         assertThat(info.getStatus()).isEqualTo(RoommateRequiredStatus.ACCEPTED);
@@ -492,7 +492,7 @@ class RoommateRequestServiceImplTest {
         assertThat(response.getSize()).isEqualTo(20);
 
         RoommateRequestListDto.Response content = response.getContent().getFirst();
-        assertThat(content.getId()).isEqualTo(1000L);
+        assertThat(content.getRequiredId()).isEqualTo(1000L);
         assertThat(content.getRequesterId()).isEqualTo(memberId);
         assertThat(content.getRequesteeId()).isEqualTo(2L);
         assertThat(content.getChatRoomId()).isEqualTo(10L);
