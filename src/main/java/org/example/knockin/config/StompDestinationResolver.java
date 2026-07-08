@@ -1,8 +1,8 @@
 package org.example.knockin.config;
 
 import java.util.Optional;
-import org.example.knockin.global.exception.BusinessException;
-import org.example.knockin.global.exception.ChattingErrorCode;
+import org.example.knockin.exception.BusinessException;
+import org.example.knockin.exception.ChattingErrorCode;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.http.server.PathContainer;

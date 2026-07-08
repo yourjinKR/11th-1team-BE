@@ -19,7 +19,7 @@ import org.example.knockin.dto.BoardModifyDto;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.Region;
 import org.example.knockin.entity.room.RoomType;
-import org.example.knockin.global.jpa.BaseEntity;
+import org.example.knockin.global.entity.BaseEntity;
 import org.hibernate.annotations.ColumnDefault;
 
 

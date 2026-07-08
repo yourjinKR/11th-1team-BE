@@ -7,7 +7,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.BoReportDoneListDto;
 import org.example.knockin.dto.BoReportWaitListDto;
-import org.example.knockin.global.jpa.DeclarationType;
+import org.example.knockin.global.entity.DeclarationType;
 import org.example.knockin.global.util.ReportType;
 import org.example.knockin.repository.member.MemberDeclarationRepositoryCustom;
 import org.springframework.data.domain.Pageable;

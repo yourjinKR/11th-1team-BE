@@ -1,8 +1,8 @@
 package org.example.knockin.service.impl;
 
 import org.example.knockin.entity.room.RoomType;
-import org.example.knockin.global.exception.BusinessException;
-import org.example.knockin.global.exception.RoomTypeErrorCode;
+import org.example.knockin.exception.BusinessException;
+import org.example.knockin.exception.RoomTypeErrorCode;
 import org.example.knockin.repository.room.RoomTypeRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

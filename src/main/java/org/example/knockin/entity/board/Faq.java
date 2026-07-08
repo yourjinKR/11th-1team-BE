@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.example.knockin.dto.FaqModifyDto;
 import org.example.knockin.entity.member.Member;
-import org.example.knockin.global.jpa.BaseEntity;
+import org.example.knockin.global.entity.BaseEntity;
 import org.hibernate.annotations.ColumnDefault;
 
 @Getter

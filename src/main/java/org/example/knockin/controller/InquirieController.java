@@ -8,7 +8,7 @@ import org.example.knockin.dto.InquiryDetailDto;
 import org.example.knockin.dto.InquiryDto;
 import org.example.knockin.dto.InquiryListDto;
 import org.example.knockin.global.api.CommonResponse;
-import org.example.knockin.global.auth.dto.PrincipalDetails;
+import org.example.knockin.dto.PrincipalDetails;
 import org.example.knockin.service.impl.InquirieServiceImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;

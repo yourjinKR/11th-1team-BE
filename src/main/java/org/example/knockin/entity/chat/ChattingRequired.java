@@ -18,7 +18,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.member.Member;
-import org.example.knockin.global.jpa.CreatedAtEntity;
+import org.example.knockin.global.entity.CreatedAtEntity;
 
 
 @Getter

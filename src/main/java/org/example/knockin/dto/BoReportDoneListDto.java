@@ -6,10 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.example.knockin.entity.auth.AuthenticationType;
-import org.example.knockin.entity.member.MemberRole;
-import org.example.knockin.entity.member.MemberState;
-import org.example.knockin.global.jpa.DeclarationType;
+import org.example.knockin.global.entity.DeclarationType;
 
 import java.time.LocalDateTime;
 import java.util.List;

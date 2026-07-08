@@ -5,9 +5,9 @@ import org.example.knockin.entity.inquiry.Inquiry;
 import org.example.knockin.entity.inquiry.InquiryCategory;
 import org.example.knockin.entity.inquiry.InquiryComment;
 import org.example.knockin.entity.member.Member;
-import org.example.knockin.global.auth.exception.AuthErrorCode;
-import org.example.knockin.global.exception.BusinessException;
-import org.example.knockin.global.exception.InquiryErrorCode;
+import org.example.knockin.exception.AuthErrorCode;
+import org.example.knockin.exception.BusinessException;
+import org.example.knockin.exception.InquiryErrorCode;
 import org.example.knockin.repository.inquiry.InquiryCategoryRepository;
 import org.example.knockin.repository.inquiry.InquiryCommentRepository;
 import org.example.knockin.repository.inquiry.InquiryRepository;
@@ -20,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 

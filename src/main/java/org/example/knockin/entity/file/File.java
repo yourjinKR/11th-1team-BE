@@ -13,7 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.example.knockin.global.jpa.CreatedAtEntity;
+import org.example.knockin.global.entity.CreatedAtEntity;
 import org.hibernate.annotations.ColumnDefault;
 
 @Getter

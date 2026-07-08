@@ -2,7 +2,7 @@ package org.example.knockin.entity.agreement;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.example.knockin.global.jpa.CreatedAtEntity;
+import org.example.knockin.global.entity.CreatedAtEntity;
 import org.hibernate.annotations.ColumnDefault;
 
 @Getter

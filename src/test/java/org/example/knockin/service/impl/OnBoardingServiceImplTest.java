@@ -9,7 +9,7 @@ import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.MemberPrivacy;
 import org.example.knockin.entity.member.MemberPrivacyType;
 import org.example.knockin.entity.room.*;
-import org.example.knockin.global.exception.BusinessException;
+import org.example.knockin.exception.BusinessException;
 import org.example.knockin.service.RoommateBoardService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,8 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
- 
-import java.time.LocalDateTime;
+
 import java.util.*;
  
 import static org.assertj.core.api.Assertions.assertThat;

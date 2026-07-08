@@ -31,7 +31,7 @@ import org.example.knockin.entity.life.MemberLifePattern;
 import org.example.knockin.entity.life.PreferenceCondition;
 import org.example.knockin.entity.room.RoomProfile;
 import org.example.knockin.entity.auth.LoginProviderType;
-import org.example.knockin.global.jpa.CreatedAtEntity;
+import org.example.knockin.global.entity.CreatedAtEntity;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;

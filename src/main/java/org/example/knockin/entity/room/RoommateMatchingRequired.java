@@ -18,7 +18,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.example.knockin.entity.chat.ChattingRoom;
 import org.example.knockin.entity.member.Member;
-import org.example.knockin.global.jpa.BaseEntity;
+import org.example.knockin.global.entity.BaseEntity;
 
 
 @Getter

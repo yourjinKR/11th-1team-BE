@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.*;
 import org.example.knockin.dto.HouseRuleDto.Response;
 import org.example.knockin.global.api.CommonResponse;
-import org.example.knockin.global.auth.dto.PrincipalDetails;
+import org.example.knockin.dto.PrincipalDetails;
 import org.example.knockin.service.impl.CalendarServiceImpl;
 import org.example.knockin.service.impl.HouseRuleServiceImpl;
 import org.example.knockin.service.impl.MyRoomMateServiceImpl;

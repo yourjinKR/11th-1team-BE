@@ -11,7 +11,7 @@ import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.StateRepository;
 import org.example.knockin.repository.room.RoomProfileRepository;
-import org.example.knockin.global.auth.service.Oauth2DeleteFactory;
+import org.example.knockin.auth.service.Oauth2DeleteFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
