@@ -1,6 +1,6 @@
 package org.example.knockin.global.api;
 
-import org.example.knockin.global.exception.ErrorCode;
+import org.example.knockin.exception.ErrorCode;
 
 public record ErrorResponse(
         Integer codeNo,

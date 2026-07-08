@@ -10,15 +10,13 @@ import org.example.knockin.entity.inquiry.InquiryComment;
 import org.example.knockin.entity.life.LifePattern;
 import org.example.knockin.entity.life.LifePatternInformation;
 import org.example.knockin.entity.member.Member;
-import org.example.knockin.entity.member.MemberRole;
 import org.example.knockin.entity.member.MemberState;
 import org.example.knockin.entity.room.RoomType;
-import org.example.knockin.global.auth.exception.AuthErrorCode;
-import org.example.knockin.global.exception.BusinessException;
+import org.example.knockin.exception.AuthErrorCode;
+import org.example.knockin.exception.BusinessException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import java.time.LocalDateTime;
 import java.util.List;

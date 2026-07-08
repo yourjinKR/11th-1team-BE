@@ -10,7 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.*;
-import org.example.knockin.global.jpa.CreatedAtEntity;
+import org.example.knockin.global.entity.CreatedAtEntity;
 
 @Getter
 @Entity

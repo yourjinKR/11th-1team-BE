@@ -6,8 +6,8 @@ import org.example.knockin.dto.BoLifeStylePatternListDto;
 import org.example.knockin.dto.MetaLifestylePatternsDto;
 import org.example.knockin.entity.life.LifePattern;
 import org.example.knockin.entity.life.LifePatternInformation;
-import org.example.knockin.global.exception.BusinessException;
-import org.example.knockin.global.exception.LifePatternErrorCode;
+import org.example.knockin.exception.BusinessException;
+import org.example.knockin.exception.LifePatternErrorCode;
 import org.example.knockin.repository.life.LifePatternInformationRepository;
 import org.example.knockin.repository.life.LifePatternRepository;
 import org.springframework.data.domain.Pageable;
@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor

@@ -7,8 +7,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.example.knockin.entity.member.Member;
-import org.example.knockin.global.jpa.CreatedAtEntity;
-import org.example.knockin.global.jpa.DeclarationType;
+import org.example.knockin.global.entity.CreatedAtEntity;
+import org.example.knockin.global.entity.DeclarationType;
 
 
 @Getter

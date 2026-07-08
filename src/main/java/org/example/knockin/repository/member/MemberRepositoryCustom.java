@@ -12,7 +12,7 @@ import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.Region;
 import org.example.knockin.entity.room.RoomProfile;
 import org.example.knockin.entity.room.RoomSeekerProfile;
-import org.example.knockin.global.auth.dto.AuthResponse;
+import org.example.knockin.dto.AuthResponse;
 import org.example.knockin.repository.member.row.MatchingBasicInfoRow;
 import org.example.knockin.repository.member.row.MemberWithNameRow;
 import org.springframework.data.domain.Pageable;

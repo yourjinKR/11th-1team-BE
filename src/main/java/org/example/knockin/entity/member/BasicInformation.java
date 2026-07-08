@@ -16,7 +16,7 @@ import java.time.LocalDate;
 
 import lombok.*;
 import org.example.knockin.dto.ModifyProfileBasicDto;
-import org.example.knockin.global.jpa.BaseEntity;
+import org.example.knockin.global.entity.BaseEntity;
 
 @Getter
 @Entity

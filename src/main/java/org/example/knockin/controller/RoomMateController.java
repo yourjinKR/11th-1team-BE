@@ -18,7 +18,7 @@ import org.example.knockin.dto.MatchScoreDto;
 import org.example.knockin.dto.MemberReportDto;
 import org.example.knockin.dto.ReportDto;
 import org.example.knockin.global.api.CommonResponse;
-import org.example.knockin.global.auth.dto.PrincipalDetails;
+import org.example.knockin.dto.PrincipalDetails;
 import org.example.knockin.service.RoommateBoardService;
 import org.example.knockin.service.RoommateMatchingService;
 import org.springdoc.core.annotations.ParameterObject;

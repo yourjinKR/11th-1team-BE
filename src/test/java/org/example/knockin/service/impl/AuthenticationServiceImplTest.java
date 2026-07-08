@@ -1,15 +1,14 @@
 package org.example.knockin.service.impl;
 
 import org.example.knockin.dto.*;
-import org.example.knockin.entity.auth.ApproveType;
 import org.example.knockin.entity.auth.Authentication;
 import org.example.knockin.entity.auth.AuthenticationApprove;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.member.Member;
-import org.example.knockin.global.exception.AuthenticationErrorCode;
-import org.example.knockin.global.exception.BusinessException;
-import org.example.knockin.global.exception.EmailErrorCode;
-import org.example.knockin.global.exception.MemberErrorCode;
+import org.example.knockin.exception.AuthenticationErrorCode;
+import org.example.knockin.exception.BusinessException;
+import org.example.knockin.exception.EmailErrorCode;
+import org.example.knockin.exception.MemberErrorCode;
 import org.example.knockin.repository.auth.AuthenticationApproveRepository;
 import org.example.knockin.repository.auth.AuthenticationRepository;
 import org.example.knockin.service.MailSendService;

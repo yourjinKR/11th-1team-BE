@@ -2,13 +2,12 @@ package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.BoTermsListDto;
-import org.example.knockin.dto.BoTypeTermsDto;
 import org.example.knockin.dto.BoTypeTermsListDto;
 import org.example.knockin.entity.agreement.Agreement;
 import org.example.knockin.entity.agreement.AgreementLog;
 import org.example.knockin.entity.agreement.AgreementType;
-import org.example.knockin.global.exception.AgreementErrorCode;
-import org.example.knockin.global.exception.BusinessException;
+import org.example.knockin.exception.AgreementErrorCode;
+import org.example.knockin.exception.BusinessException;
 import org.example.knockin.repository.agreement.AgreementLogRepository;
 import org.example.knockin.repository.agreement.AgreementRepository;
 import org.example.knockin.repository.agreement.AgreementTypeRepository;

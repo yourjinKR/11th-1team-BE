@@ -3,12 +3,13 @@ package org.example.knockin.global.auth.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import org.example.knockin.auth.util.PrincipalMemberResolver;
 import org.example.knockin.entity.auth.LoginProviderType;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.MemberRole;
-import org.example.knockin.global.auth.dto.PrincipalDetails;
-import org.example.knockin.global.auth.exception.AuthErrorCode;
-import org.example.knockin.global.auth.exception.AuthException;
+import org.example.knockin.dto.PrincipalDetails;
+import org.example.knockin.exception.AuthErrorCode;
+import org.example.knockin.exception.AuthException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

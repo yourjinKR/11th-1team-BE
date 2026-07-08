@@ -2,13 +2,9 @@ package org.example.knockin.service.impl;
  
 import org.example.knockin.dto.*;
 import org.example.knockin.entity.agreement.Agreement;
-import org.example.knockin.entity.agreement.AgreementLog;
-import org.example.knockin.entity.life.LifePattern;
-import org.example.knockin.entity.life.LifePatternInformation;
 import org.example.knockin.entity.room.Region;
 import org.example.knockin.entity.room.RoomExtraOption;
 import org.example.knockin.entity.room.RoomType;
-import org.example.knockin.global.exception.BusinessException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

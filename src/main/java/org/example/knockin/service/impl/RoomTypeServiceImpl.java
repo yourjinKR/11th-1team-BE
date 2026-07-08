@@ -3,8 +3,8 @@ package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.entity.room.*;
-import org.example.knockin.global.exception.BusinessException;
-import org.example.knockin.global.exception.RoomTypeErrorCode;
+import org.example.knockin.exception.BusinessException;
+import org.example.knockin.exception.RoomTypeErrorCode;
 import org.example.knockin.repository.room.OfferRoomTypeRepository;
 import org.example.knockin.repository.room.RoomTypeRepository;
 import org.example.knockin.repository.room.SeekerRoomTypeRepository;
