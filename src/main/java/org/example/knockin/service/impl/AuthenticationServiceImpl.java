@@ -151,4 +151,8 @@ public class AuthenticationServiceImpl {
         Authentication authentication = authenticationRepository.findById(id).orElseThrow(() -> new BusinessException(AuthenticationErrorCode.AUTHENTICATION_NOT_FOUNT));
         authenticationApproveRepository.save(AuthenticationApprove.builder().authentication(authentication).status(ApproveType.REJECT).build());
     }
+
+    public List<AuthenticationType> findTypesByMemberId(Long memberId) {
+        return authenticationRepository.getAcceptedAuthenticationTypeByMemberId(memberId);
+    }
 }

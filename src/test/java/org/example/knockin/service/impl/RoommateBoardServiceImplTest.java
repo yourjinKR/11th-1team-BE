@@ -3,6 +3,7 @@ package org.example.knockin.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -131,6 +132,27 @@ class RoommateBoardServiceImplTest {
     @Mock
     private RoommateScoreService roommateScoreService;
 
+    @Mock
+    private RoommateBoardFileServiceImpl roommateBoardFileService;
+
+    @Mock
+    private PreferenceConditionServiceImpl preferenceConditionService;
+
+    @Mock
+    private MemberLifePatternService memberLifePatternService;
+
+    @Mock
+    private AuthenticationServiceImpl authenticationService;
+
+    @Mock
+    private RoommateBoardOptionServiceImpl roommateBoardOptionService;
+
+    @Mock
+    private RoommateBoardInterestServiceImpl roommateBoardInterestService;
+
+    @Mock
+    private RoommateBoardDeclarationServiceImpl roommateBoardDeclarationService;
+
     @InjectMocks
     private RoommateBoardServiceImpl roommateBoardService;
 
@@ -162,11 +184,134 @@ class RoommateBoardServiceImplTest {
     private ArgumentCaptor<RoommateBoardDeclaration> roommateBoardDeclarationCaptor;
 
     @BeforeEach
-    void setUpTransactionTemplate() {
+    void setUpDependencies() throws IOException {
         lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
             TransactionCallback<?> callback = invocation.getArgument(0);
             return callback.doInTransaction(null);
         });
+        lenient().when(roommateBoardRepository.save(any(RoommateBoard.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(fileRepository.save(any(File.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(fileService.save(any(MultipartFile.class), any(FileType.class))).thenAnswer(invocation -> {
+            MultipartFile multipartFile = invocation.getArgument(0);
+            FileType fileType = invocation.getArgument(1);
+            File uploadedFile = fileService.upload(multipartFile, fileType);
+            return fileRepository.save(uploadedFile);
+        });
+        lenient().when(roommateBoardFileService.saveAll(any(RoommateBoard.class), any(), any())).thenAnswer(invocation -> {
+            RoommateBoard roommateBoard = invocation.getArgument(0);
+            List<MultipartFile> multipartFiles = invocation.getArgument(1);
+            List<Boolean> thumbnails = invocation.getArgument(2);
+            List<RoommateBoardFile> savedBoardFiles = new ArrayList<>();
+            for (int i = 0; i < multipartFiles.size(); i++) {
+                File savedFile = fileService.save(multipartFiles.get(i), FileType.ROOMMATE_BOARD_IMAGE);
+                RoommateBoardFile roommateBoardFile = RoommateBoardFile.builder()
+                        .roommateBoard(roommateBoard)
+                        .file(savedFile)
+                        .isThumbnail(thumbnails.get(i))
+                        .build();
+                roommateBoardFileRepository.save(roommateBoardFile);
+                savedBoardFiles.add(roommateBoardFile);
+            }
+            return savedBoardFiles;
+        });
+        lenient().when(roommateBoardFileService.findFileDetailDtoByBoardId(any()))
+                .thenAnswer(invocation -> roommateBoardFileRepository.getFileDetailDtoByBoardId(invocation.getArgument(0)));
+        lenient().when(roommateBoardFileService.findAllByRoommateBoard(any(RoommateBoard.class)))
+                .thenAnswer(invocation -> roommateBoardFileRepository.findByRoommateBoard(invocation.getArgument(0)));
+        lenient().doAnswer(invocation -> {
+            RoommateBoardFile roommateBoardFile = invocation.getArgument(0);
+            roommateBoardFile.getFile().softDelete();
+            roommateBoardFileRepository.delete(roommateBoardFile);
+            return null;
+        }).when(roommateBoardFileService).softDelete(any(RoommateBoardFile.class));
+        lenient().when(memberLifePatternService.findMatchingRowByMemberIdsIn(any()))
+                .thenAnswer(invocation -> memberLifePatternRepository.findAllLifestyleByMemberIdIn(invocation.getArgument(0)));
+        lenient().when(memberLifePatternService.findLifeStyleDtoByMemberId(any()))
+                .thenAnswer(invocation -> memberLifePatternRepository.getLifeStyleDto(invocation.getArgument(0)));
+        lenient().when(preferenceConditionService.findRowByMemberIdsIn(any()))
+                .thenAnswer(invocation -> preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(invocation.getArgument(0)));
+        lenient().when(preferenceConditionService.findAllConditionByMemberId(any()))
+                .thenAnswer(invocation -> preferenceConditionRepository.getConditionDtoByMemberId(invocation.getArgument(0)));
+        lenient().when(preferenceConditionService.findWeightRowByMemberIdsIn(any()))
+                .thenAnswer(invocation -> preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(invocation.getArgument(0)));
+        lenient().when(preferenceConditionService.findAllConditionWeightByMemberId(any()))
+                .thenAnswer(invocation -> preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(invocation.getArgument(0)));
+        lenient().when(authenticationService.findTypesByMemberId(any()))
+                .thenAnswer(invocation -> authenticationRepository.getAcceptedAuthenticationTypeByMemberId(invocation.getArgument(0)));
+        lenient().when(roommateBoardOptionService.findExtraOptionNamesByBoardId(any()))
+                .thenAnswer(invocation -> roommateBoardOptionRepository.getExtraOptionsNameByBoardId(invocation.getArgument(0)));
+        lenient().when(roommateBoardOptionService.findExtraOptionsByBoardId(any()))
+                .thenAnswer(invocation -> roommateBoardOptionRepository.getExtraOptionsByBoardId(invocation.getArgument(0)));
+        lenient().when(roommateBoardOptionService.findWithRoomExtraOptionByBoardId(any()))
+                .thenAnswer(invocation -> roommateBoardOptionRepository.findWithRoomExtraOptionByBoardId(invocation.getArgument(0)));
+        lenient().when(roommateBoardOptionService.saveByExtraOptionsIds(any(RoommateBoard.class), any())).thenAnswer(invocation -> {
+            RoommateBoard roommateBoard = invocation.getArgument(0);
+            List<Long> extraOptionIds = invocation.getArgument(1);
+            if (extraOptionIds == null || extraOptionIds.isEmpty()) {
+                return List.of();
+            }
+
+            List<Long> uniqueIds = extraOptionIds.stream().distinct().toList();
+            List<RoomExtraOption> roomExtraOptions = metaService.findRoomExtraOptionsByIdIn(uniqueIds);
+            if (uniqueIds.size() != roomExtraOptions.size()) {
+                throw new BusinessException(MetaErrorCode.EXTRA_OPTION_NOT_FOUND);
+            }
+
+            List<RoommateBoardOption> options = roomExtraOptions.stream()
+                    .map(extraOption -> RoommateBoardOption.builder()
+                            .roommateBoard(roommateBoard)
+                            .roomExtraOption(extraOption)
+                            .build())
+                    .toList();
+            return roommateBoardOptionRepository.saveAll(options);
+        });
+        lenient().doAnswer(invocation -> {
+            List<RoommateBoardOption> roommateBoardOptions = invocation.getArgument(0);
+            List<Long> extraOptionIds = invocation.getArgument(1);
+            if (extraOptionIds == null || extraOptionIds.isEmpty()) {
+                return null;
+            }
+
+            List<RoommateBoardOption> deleteTargets = roommateBoardOptions.stream()
+                    .filter(option -> extraOptionIds.contains(option.getRoomExtraOption().getId()))
+                    .toList();
+            roommateBoardOptionRepository.deleteAll(deleteTargets);
+            return null;
+        }).when(roommateBoardOptionService).deleteByExtraOptionIds(any(), any());
+        lenient().when(roommateBoardInterestService.existsActiveByBoardIdAndMemberId(any(), any()))
+                .thenAnswer(invocation -> roommateBoardInterestRepository.existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(
+                        invocation.getArgument(0), invocation.getArgument(1)));
+        lenient().doAnswer(invocation -> {
+            Member member = invocation.getArgument(0);
+            RoommateBoard roommateBoard = invocation.getArgument(1);
+            roommateBoardInterestRepository.findByRoommateBoardAndMember(roommateBoard, member)
+                    .ifPresentOrElse(
+                            RoommateBoardInterest::likeToggle,
+                            () -> roommateBoardInterestRepository.save(RoommateBoardInterest.builder()
+                                    .member(member)
+                                    .roommateBoard(roommateBoard)
+                                    .isDeleted(false)
+                                    .build())
+                    );
+            return null;
+        }).when(roommateBoardInterestService).toggle(any(Member.class), any(RoommateBoard.class));
+        lenient().doAnswer(invocation -> {
+            RoommateBoard roommateBoard = invocation.getArgument(0);
+            Member member = invocation.getArgument(1);
+            String reason = invocation.getArgument(2);
+            roommateBoardDeclarationRepository.findByRoommateBoardAndMember(roommateBoard, member)
+                    .ifPresent(declaration -> {
+                        throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_DECLARATION_DUPLICATE);
+                    });
+            roommateBoardDeclarationRepository.save(RoommateBoardDeclaration.builder()
+                    .member(member)
+                    .roommateBoard(roommateBoard)
+                    .reason(reason)
+                    .declarationType(org.example.knockin.global.entity.DeclarationType.PENDING)
+                    .build());
+            return null;
+        }).when(roommateBoardDeclarationService).report(any(RoommateBoard.class), any(Member.class), any());
     }
 
     @Test
@@ -469,23 +614,13 @@ class RoommateBoardServiceImplTest {
         assertThat(boardToSave.getIsDeleted()).isFalse();
         assertThat(boardToSave.getHits()).isZero();
 
-        verify(fileRepository).saveAll(filesCaptor.capture());
-        List<File> files = toList(filesCaptor.getValue());
-        assertThat(files).containsExactly(thumbnailFile, roomFile);
-
-        verify(roommateBoardFileRepository).saveAll(boardFilesCaptor.capture());
-        List<RoommateBoardFile> boardFiles = toList(boardFilesCaptor.getValue());
-        assertThat(boardFiles).hasSize(2);
-        assertThat(boardFiles).extracting(RoommateBoardFile::getRoommateBoard)
-                .containsOnly(savedRoommateBoard);
-        assertThat(boardFiles).filteredOn(RoommateBoardFile::getIsThumbnail)
-                .singleElement()
-                .extracting(RoommateBoardFile::getFile)
-                .isSameAs(thumbnailFile);
-        assertThat(boardFiles).filteredOn(boardFile -> !boardFile.getIsThumbnail())
-                .singleElement()
-                .extracting(RoommateBoardFile::getFile)
-                .isSameAs(roomFile);
+        ArgumentCaptor<List<MultipartFile>> imageFilesCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<Boolean>> thumbnailsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(roommateBoardFileService).saveAll(eq(savedRoommateBoard), imageFilesCaptor.capture(), thumbnailsCaptor.capture());
+        assertThat(imageFilesCaptor.getValue()).hasSize(2);
+        assertThat(imageFilesCaptor.getValue())
+                .containsExactly(thumbnailImage, roomImage);
+        assertThat(thumbnailsCaptor.getValue()).containsExactly(true, false);
         assertThat(response.getUpdatedAt()).isEqualTo(updatedAt);
     }
 
@@ -538,7 +673,7 @@ class RoommateBoardServiceImplTest {
     }
 
     @Test
-    @DisplayName("이미지 업로드가 실패하면 트랜잭션 저장을 수행하지 않고 업로드 실패 예외를 던진다")
+    @DisplayName("이미지 업로드가 실패하면 업로드 실패 예외를 던진다")
     void saveThrowsWhenFileUploadFails() throws IOException {
         MultipartFile thumbnailImage = emptyMultipartFile();
         BoardDto.Request request = createRequest(createFileDto(0, true));
@@ -556,11 +691,13 @@ class RoommateBoardServiceImplTest {
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(FileErrorCode.FILE_UPLOAD_FAILED));
 
-        verifyNoInteractions(roommateBoardRepository, roommateBoardFileRepository);
+        verify(roommateBoardRepository).save(any(RoommateBoard.class));
+        verify(fileService, never()).deleteAll(any());
+        verify(roommateBoardFileRepository, never()).save(any(RoommateBoardFile.class));
     }
 
     @Test
-    @DisplayName("두 번째 이미지 업로드가 실패하면 먼저 업로드된 이미지를 삭제 요청하고 트랜잭션 저장을 수행하지 않는다")
+    @DisplayName("두 번째 이미지 업로드가 실패하면 업로드 실패 예외를 던진다")
     void saveDeletesUploadedImagesWhenLaterUploadFails() throws IOException {
         MultipartFile thumbnailImage = emptyMultipartFile();
         MultipartFile roomImage = emptyMultipartFile();
@@ -583,13 +720,12 @@ class RoommateBoardServiceImplTest {
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(FileErrorCode.FILE_UPLOAD_FAILED));
 
-        verify(fileService).deleteAll(uploadedFilesCaptor.capture());
-        assertThat(uploadedFilesCaptor.getValue()).containsExactly(thumbnailFile);
-        verifyNoInteractions(roommateBoardRepository, roommateBoardFileRepository);
+        verify(roommateBoardRepository).save(any(RoommateBoard.class));
+        verify(fileService, never()).deleteAll(any());
     }
 
     @Test
-    @DisplayName("트랜잭션 저장이 실패하면 업로드된 이미지를 삭제 요청하고 예외를 다시 던진다")
+    @DisplayName("게시글 저장이 실패하면 파일 저장을 수행하지 않고 예외를 다시 던진다")
     void saveDeletesUploadedImagesWhenTransactionalSaveFails() throws IOException {
         MultipartFile thumbnailImage = emptyMultipartFile();
         BoardDto.Request request = createRequest(createFileDto(0, true));
@@ -597,25 +733,23 @@ class RoommateBoardServiceImplTest {
         Member member = org.mockito.Mockito.mock(Member.class);
         RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
         Region region = org.mockito.Mockito.mock(Region.class);
-        File thumbnailFile = createFile("thumbnail.jpg", "saved-thumbnail.jpg", "jpg");
         when(memberService.findById(memberId)).thenReturn(Optional.of(member));
         when(metaService.findByRoomTypeId(1L)).thenReturn(roomType);
         when(metaService.findByRegionId(2L)).thenReturn(Optional.of(region));
-        when(fileService.upload(thumbnailImage, FileType.ROOMMATE_BOARD_IMAGE)).thenReturn(thumbnailFile);
         when(roommateBoardRepository.save(any(RoommateBoard.class))).thenThrow(new IllegalStateException("db failed"));
 
         assertThatThrownBy(() -> roommateBoardService.save(request, memberId, List.of(thumbnailImage)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("db failed");
 
-        verify(fileService).deleteAll(uploadedFilesCaptor.capture());
-        assertThat(uploadedFilesCaptor.getValue()).containsExactly(thumbnailFile);
-        verifyNoInteractions(roommateBoardFileRepository);
+        verify(fileService, never()).upload(any(MultipartFile.class), any(FileType.class));
+        verify(fileService, never()).deleteAll(any());
+        verify(roommateBoardFileService, never()).saveAll(any(RoommateBoard.class), any(), any());
     }
 
     @Test
     @DisplayName("이미지 없이 저장을 요청하면 게시글만 저장하고 파일 업로드를 수행하지 않는다")
-    void saveAllowsRequestWithoutImages() {
+    void saveAllowsRequestWithoutImages() throws IOException {
         BoardDto.Request request = createRequest();
         Long memberId = 42L;
         Member member = org.mockito.Mockito.mock(Member.class);
@@ -634,10 +768,8 @@ class RoommateBoardServiceImplTest {
 
         assertThat(response.getUpdatedAt()).isEqualTo(updatedAt);
         verifyNoInteractions(fileService);
-        verify(fileRepository).saveAll(filesCaptor.capture());
-        assertThat(toList(filesCaptor.getValue())).isEmpty();
-        verify(roommateBoardFileRepository).saveAll(boardFilesCaptor.capture());
-        assertThat(toList(boardFilesCaptor.getValue())).isEmpty();
+        verify(roommateBoardFileService, never()).saveAll(any(RoommateBoard.class), any(), any());
+        verifyNoInteractions(fileRepository, roommateBoardFileRepository);
     }
 
     @Test
@@ -688,7 +820,6 @@ class RoommateBoardServiceImplTest {
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.BAD_REQUEST));
         verify(fileService, never()).upload(any(MultipartFile.class), any(FileType.class));
-        verify(fileService).deleteAll(List.of());
         verifyNoInteractions(roommateBoardRepository, fileRepository, roommateBoardFileRepository);
     }
 
@@ -1319,7 +1450,7 @@ class RoommateBoardServiceImplTest {
         assertThatThrownBy(() -> roommateBoardService.modify(7L, boardId, request, List.of(failedFile)))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(FileErrorCode.FILE_UPLOAD_FAILED));
-        verify(fileService).deleteAll(List.of());
+        verify(fileService, never()).deleteAll(any());
         verify(fileRepository, never()).save(any(File.class));
         verify(roommateBoardFileRepository, never()).save(any(RoommateBoardFile.class));
     }
@@ -1367,7 +1498,6 @@ class RoommateBoardServiceImplTest {
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.BAD_REQUEST));
         verify(fileService, never()).upload(any(MultipartFile.class), any(FileType.class));
-        verify(fileService).deleteAll(List.of());
         verifyNoInteractions(fileRepository);
     }
 

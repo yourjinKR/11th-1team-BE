@@ -216,6 +216,22 @@ class AuthenticationServiceImplTest {
     }
 
     @Test
+    @DisplayName("회원 ID로 승인된 신원 인증 타입 목록을 조회한다")
+    void findTypesByMemberIdReturnsAcceptedAuthenticationTypes() {
+        // given
+        Long memberId = 1L;
+        List<AuthenticationType> authenticationTypes = List.of(AuthenticationType.STUDENT, AuthenticationType.COMPANY);
+        given(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(memberId)).willReturn(authenticationTypes);
+
+        // when
+        List<AuthenticationType> result = authenticationService.findTypesByMemberId(memberId);
+
+        // then
+        assertThat(result).containsExactly(AuthenticationType.STUDENT, AuthenticationType.COMPANY);
+        verify(authenticationRepository).getAcceptedAuthenticationTypeByMemberId(memberId);
+    }
+
+    @Test
     @DisplayName("인증번호 유효시간(3분) 경과 시 예외 발생 테스트")
     void confirmAuthNumTimeoutTest() {
         // given

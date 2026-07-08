@@ -3,6 +3,7 @@ package org.example.knockin.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -14,6 +15,7 @@ import org.example.knockin.entity.file.File;
 import org.example.knockin.entity.file.FileType;
 import org.example.knockin.exception.BusinessException;
 import org.example.knockin.exception.FileErrorCode;
+import org.example.knockin.repository.file.FileRepository;
 import org.example.knockin.service.FileUploadService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,9 @@ class FileServiceImplTest {
     @Mock
     private FileUploadService fileUploadService;
 
+    @Mock
+    private FileRepository fileRepository;
+
     @InjectMocks
     private FileServiceImpl fileService;
 
@@ -45,6 +50,19 @@ class FileServiceImplTest {
         assertThat(file.getOriginalFileName()).isEqualTo("room.JPG");
         assertThat(file.getSavedFileName()).isEqualTo("saved-room.jpg");
         assertThat(file.getFileExt()).isEqualTo("JPG");
+    }
+
+    @Test
+    @DisplayName("이미지 업로드가 성공하면 파일 엔티티를 저장한다")
+    void saveUploadsAndPersistsFileEntity() throws IOException {
+        MultipartFile multipartFile = mockMultipartFile("room.JPG");
+        when(fileUploadService.uploadImage(multipartFile)).thenReturn("saved-room.jpg");
+        when(fileRepository.save(any(File.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        File file = fileService.save(multipartFile, FileType.ROOMMATE_BOARD_IMAGE);
+
+        assertThat(file.getSavedFileName()).isEqualTo("saved-room.jpg");
+        verify(fileRepository).save(file);
     }
 
     @Test

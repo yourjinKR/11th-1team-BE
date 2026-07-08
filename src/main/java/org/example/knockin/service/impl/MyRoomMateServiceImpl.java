@@ -16,13 +16,10 @@ import org.example.knockin.entity.room.RoommateMatchingRequired;
 import org.example.knockin.entity.room.RoommateScore;
 import org.example.knockin.exception.BusinessException;
 import org.example.knockin.exception.CommonErrorCode;
-import org.example.knockin.exception.MemberErrorCode;
 import org.example.knockin.exception.MyRoommateErrorCode;
 import org.example.knockin.global.util.DateUtils;
-import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.row.ChattingRoomBasicInfoRow;
 import org.example.knockin.repository.room.MyRoommateRepository;
-import org.example.knockin.repository.room.RoommateScoreRepository;
 import org.example.knockin.service.RoommateScoreService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,10 +28,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MyRoomMateServiceImpl {
     private final MyRoommateRepository myRoommateRepository;
-    private final BasicInformationRepository basicInformationRepository;
-    private final RoommateScoreRepository roommateScoreRepository;
     private final RoommateScoreService roommateScoreService;
     private final MemberPrivacyServiceImpl memberPrivacyService;
+    private final BasicInformationServiceImpl basicInformationService;
+    private final MyRoommateScoreServiceImpl myRoommateScoreService;
 
     public boolean isExistRoomMate(Member member) {
         return myRoommateRepository.isExistRoomMate(member);
@@ -48,11 +45,11 @@ public class MyRoomMateServiceImpl {
         Long requesteeId = roommateMatchingRequired.getRequestee().getId();
 
         Long opponentId = getOpponentId(memberId, requesterId, requesteeId);
-        ChattingRoomBasicInfoRow basicInfoRow = basicInformationRepository.findChattingRoomBasicInfoRow(opponentId).orElseThrow(() -> new BusinessException(MemberErrorCode.BASIC_INFO_NOT_FOUND));
+        ChattingRoomBasicInfoRow basicInfoRow = basicInformationService.findChattingRoomBasicInfoRowByMemberId(opponentId);
         MyRoommateInfo myRoommateInfo = toMyRoommateInfo(basicInfoRow);
 
         Long myRoommateId = myRoommate.getId();
-        List<RoommateScore> roommateScores = roommateScoreRepository.findWithScoreDetailsByMyRoommateId(myRoommateId);
+        List<RoommateScore> roommateScores = myRoommateScoreService.findByRoommateId(myRoommateId);
         Compatibility compatibility = roommateScoreService.calculateRoommateCompatibility(memberId, roommateScores);
         Integer totalScore = compatibility.getTotalScore();
 

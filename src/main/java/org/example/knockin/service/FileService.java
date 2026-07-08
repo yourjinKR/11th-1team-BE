@@ -9,5 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 public interface FileService {
     File upload(MultipartFile multipartFile, FileType type) throws IOException;
 
+    File save(MultipartFile multipartFile, FileType type) throws IOException;
+
     void deleteAll(List<File> files);
 }
