@@ -18,11 +18,9 @@ import org.example.knockin.dto.EventType;
 import org.example.knockin.dto.MessageType;
 import org.example.knockin.dto.RoommateRequestDto.RoommateMatchingRequiredInfo;
 import org.example.knockin.entity.board.RoommateBoard;
-import org.example.knockin.entity.chat.ChatRoomFile;
 import org.example.knockin.entity.chat.ChatRoomMember;
 import org.example.knockin.entity.chat.ChatRoomMessage;
 import org.example.knockin.entity.chat.ChattingRequired;
-import org.example.knockin.entity.chat.ChattingRequiredStatus;
 import org.example.knockin.entity.chat.ChattingRoom;
 import org.example.knockin.entity.file.File;
 import org.example.knockin.entity.file.FileType;
@@ -30,24 +28,10 @@ import org.example.knockin.entity.member.Member;
 import org.example.knockin.exception.BusinessException;
 import org.example.knockin.exception.ChattingErrorCode;
 import org.example.knockin.exception.FileErrorCode;
-import org.example.knockin.exception.MemberErrorCode;
-import org.example.knockin.exception.RoommateBoardErrorCode;
 import org.example.knockin.global.util.DateUtils;
-import org.example.knockin.repository.board.RoommateBoardRepository;
-import org.example.knockin.repository.chat.ChatRoomFileRepository;
-import org.example.knockin.repository.chat.ChatRoomMemberRepository;
-import org.example.knockin.repository.chat.ChatRoomMessageRepository;
-import org.example.knockin.repository.chat.ChattingRequiredRepository;
-import org.example.knockin.repository.chat.ChattingRoomRepository;
-import org.example.knockin.repository.chat.ChattingScoreRepository;
-import org.example.knockin.repository.file.FileRepository;
-import org.example.knockin.repository.member.BasicInformationRepository;
-import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.row.ChattingRoomBasicInfoRow;
-import org.example.knockin.repository.room.RoommateMatchingRequiredRepository;
 import org.example.knockin.service.FileService;
 import org.example.knockin.service.RoommateScoreService;
-import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Service;
@@ -65,35 +49,32 @@ public class ChatServiceImpl {
     private static final String IMAGE_MESSAGE_CONTENTS = "사진을 보냈습니다.";
     private static final long CHAT_ROOM_LIMIT_PER_MEMBER = 15L;
 
-    private final ChattingRoomRepository chattingRoomRepository;
-    private final ChatRoomMemberRepository chatRoomMemberRepository;
+    private final ChattingRoomServiceImpl chattingRoomService;
+    private final ChatRoomMemberServiceImpl chatRoomMemberService;
     private final SimpMessageSendingOperations messagingTemplate;
     private final ApplicationEventPublisher publisher;
-    private final ChatRoomAccessService chatRoomAccessService;
-    private final ChatRoomMessageRepository chatRoomMessageRepository;
+    private final ChatRoomMessageServiceImpl chatRoomMessageService;
     private final FileService fileService;
-    private final FileRepository fileRepository;
-    private final ChatRoomFileRepository chatRoomFileRepository;
-    private final BasicInformationRepository basicInformationRepository;
-    private final RoommateMatchingRequiredRepository roommateMatchingRequiredRepository;
-    private final RoommateBoardRepository roommateBoardRepository;
-    private final ChattingRequiredRepository chattingRequiredRepository;
-    private final MemberRepository memberRepository;
+    private final ChatRoomFileServiceImpl chatRoomFileService;
+    private final BasicInformationServiceImpl basicInformationService;
+    private final RoommateMatchingRequiredServiceImpl roommateMatchingRequiredService;
+    private final RoommateBoardServiceImpl roommateBoardService;
+    private final ChattingRequiredServiceImpl chattingRequiredService;
+    private final MemberServiceImpl memberService;
     private final RoommateScoreService roommateScoreService;
-    private final ChattingScoreRepository chattingScoreRepository;
+    private final ChattingScoreServiceImpl chattingScoreService;
 
     public List<ChatRoomListDto.Response> getChatRoomList(Long memberId) {
-        return chattingRoomRepository.findByMemberId(memberId);
+        return chattingRoomService.findByMemberId(memberId);
     }
 
     @Transactional
     public ChatRoomImageDto.Response uploadImage(Long chatRoomId, Long memberId, MultipartFile multipartFile) {
         validateImageFile(multipartFile);
-        chatRoomAccessService.checkCanSendMessage(chatRoomId, memberId);
+        chatRoomMemberService.checkCanSendMessage(chatRoomId, memberId);
 
         try {
-            File uploadedFile = fileService.upload(multipartFile, FileType.CHAT_ROOM_IMAGE);
-            File savedFile = fileRepository.save(uploadedFile);
+            File savedFile = fileService.save(multipartFile, FileType.CHAT_ROOM_IMAGE);
             return new ChatRoomImageDto.Response(savedFile.getSavedFileName());
         } catch (IOException e) {
             throw new BusinessException(FileErrorCode.FILE_UPLOAD_FAILED);
@@ -102,13 +83,11 @@ public class ChatServiceImpl {
 
     @Transactional
     public ChatRoomDto.Response leaveChatRoom(Long memberId, Long chatRoomId) {
-        ChatRoomMember roomMember = chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatRoomId, memberId)
-                .orElseThrow(() -> new BusinessException(ChattingErrorCode.ROOM_MEMBER_NOT_FOUND));
+        ChatRoomMember roomMember = chatRoomMemberService.findActiveMemberByRoomIdAndMemberId(chatRoomId, memberId);
         roomMember.left();
 
-        ChattingRoom chattingRoom = chattingRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new BusinessException(ChattingErrorCode.ROOM_NOT_FOUND));
-        saveMessage(ROOM_LEAVE_MESSAGE_CONTENTS, null, chattingRoom, MessageType.LEFT_ROOM);
+        ChattingRoom chattingRoom = chattingRoomService.findByIdOrThrow(chatRoomId);
+        chatRoomMessageService.save(ROOM_LEAVE_MESSAGE_CONTENTS, null, chattingRoom, MessageType.LEFT_ROOM);
 
         LocalDateTime now = LocalDateTime.now();
         publisher.publishEvent(new ChatRoomLeftEvent(chatRoomId, now, ROOM_LEAVE_MESSAGE_CONTENTS));
@@ -118,51 +97,24 @@ public class ChatServiceImpl {
     @Transactional
     public void sendUserMessage(Long chatRoomId, ChatMessageDto.Request request, Long senderId) {
         validateMessageRequest(request);
-        ChatRoomMember chatRoomMember = chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatRoomId, senderId)
-                .orElseThrow(() -> new BusinessException(ChattingErrorCode.ROOM_MEMBER_NOT_FOUND));
-        ChattingRoom chattingRoom = chattingRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new BusinessException(ChattingErrorCode.ROOM_NOT_FOUND));
+        ChatRoomMember chatRoomMember = chatRoomMemberService.findActiveMemberByRoomIdAndMemberId(chatRoomId, senderId);
+        ChattingRoom chattingRoom = chattingRoomService.findByIdOrThrow(chatRoomId);
         Member member = chatRoomMember.getMember();
         MessageType type = request.getType();
 
         switch (request.getType()) {
             case TEXT -> {
-                saveMessage(request.getMessage(), member, chattingRoom, type);
+                chatRoomMessageService.save(request.getMessage(), member, chattingRoom, type);
                 publishMessageEvent(chatRoomId, senderId, request);
             }
             case IMAGE -> {
-                ChatRoomMessage chatRoomMessage = saveMessage(IMAGE_MESSAGE_CONTENTS, member, chattingRoom, type);
-                File file = findFile(request.getImageUrl());
-                saveMessageFile(file, chatRoomMessage);
+                ChatRoomMessage chatRoomMessage = chatRoomMessageService.save(IMAGE_MESSAGE_CONTENTS, member, chattingRoom, type);
+                File file = fileService.findBySavedFileNameAndType(request.getImageUrl(), FileType.CHAT_ROOM_IMAGE);
+                chatRoomFileService.save(file, chatRoomMessage);
                 publishMessageEvent(chatRoomId, senderId, request);
             }
             default -> throw new BusinessException(ChattingErrorCode.MESSAGE_PAYLOAD_INVALID);
         }
-    }
-
-    private ChatRoomMessage saveMessage(String contents, @Nullable Member member, ChattingRoom chattingRoom, MessageType type) {
-        ChatRoomMessage chatRoomMessage = ChatRoomMessage.builder()
-                .contents(contents)
-                .member(member)
-                .chattingRoom(chattingRoom)
-                .type(type)
-                .build();
-
-        return chatRoomMessageRepository.save(chatRoomMessage);
-    }
-
-    private File findFile(String fileUrl) {
-        return fileRepository.findBySavedFileNameAndType(fileUrl, FileType.CHAT_ROOM_IMAGE)
-                .orElseThrow(() -> new BusinessException(FileErrorCode.FILE_NOT_FOUND));
-    }
-
-    private ChatRoomFile saveMessageFile(File file, ChatRoomMessage chatRoomMessage) {
-        ChatRoomFile chatRoomFile = ChatRoomFile.builder()
-                .file(file)
-                .chatRoomMessage(chatRoomMessage)
-                .build();
-
-        return chatRoomFileRepository.save(chatRoomFile);
     }
 
     private void publishMessageEvent(Long chatRoomId, Long senderId, ChatMessageDto.Request request) {
@@ -214,14 +166,12 @@ public class ChatServiceImpl {
 
     @Transactional
     public ChatRoomDetailDto.Response getChatRoomDetail(Long chatRoomId, Long memberId) {
-        ChattingRoom chattingRoom = chattingRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new BusinessException(ChattingErrorCode.ROOM_NOT_FOUND));
-        ChatRoomMember chatRoomMember = chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatRoomId, memberId)
-                .orElseThrow(() -> new BusinessException(ChattingErrorCode.ROOM_MEMBER_NOT_FOUND));
+        ChattingRoom chattingRoom = chattingRoomService.findByIdOrThrow(chatRoomId);
+        ChatRoomMember chatRoomMember = chatRoomMemberService.findActiveMemberByRoomIdAndMemberId(chatRoomId, memberId);
 
         ChatRoomDetailDto.ProfileInfo opponentProfile = getOpponentProfileInfo(chatRoomMember, chatRoomId);
-        List<ChatRoomDetailDto.ChatMessage> messages = chatRoomMessageRepository.findChatMessageDto(chatRoomId);
-        List<RoommateMatchingRequiredInfo> matchingRequiredList = roommateMatchingRequiredRepository.findRequiredDto(chattingRoom);
+        List<ChatRoomDetailDto.ChatMessage> messages = chatRoomMessageService.findChatMessageDto(chatRoomId);
+        List<RoommateMatchingRequiredInfo> matchingRequiredList = roommateMatchingRequiredService.findRequiredDto(chattingRoom);
 
         return ChatRoomDetailDto.Response.builder()
                 .opponentProfile(opponentProfile)
@@ -231,9 +181,8 @@ public class ChatServiceImpl {
     }
 
     private ChatRoomDetailDto.ProfileInfo getOpponentProfileInfo(ChatRoomMember me, Long chatRoomId) {
-        Member opponentMember = chatRoomMemberRepository.findPartnerMember(me, chatRoomId);
-        ChattingRoomBasicInfoRow row = basicInformationRepository.findChattingRoomBasicInfoRow(opponentMember.getId())
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.BASIC_INFO_NOT_FOUND));
+        Member opponentMember = chatRoomMemberService.findPartnerMember(me, chatRoomId);
+        ChattingRoomBasicInfoRow row = basicInformationService.findChattingRoomBasicInfoRowByMemberId(opponentMember.getId());
         Integer score = roommateScoreService.calculateSimpleScore(me.getMember().getId(), opponentMember.getId());
 
         return ChatRoomDetailDto.ProfileInfo.builder()
@@ -248,21 +197,19 @@ public class ChatServiceImpl {
 
     @Transactional
     public ChatRoomCreateDto.Response createChattingRoom(Long requesterId, ChatRoomCreateDto.Request request) {
-        Member requester = memberRepository.findById(requesterId)
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
-        Member requestee = memberRepository.findById(request.getRequesteeId())
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+        Member requester = memberService.findByIdOrThrow(requesterId);
+        Member requestee = memberService.findByIdOrThrow(request.getRequesteeId());
 
         validateActiveRoomDoesNotExist(requesterId, request.getRequesteeId());
         validateChatRoomLimit(requesterId, request.getRequesteeId());
 
-        RoommateBoard roommateBoard = findRoommateBoardNullSafety(request.getBoardId());
-        ChattingRequired chattingRequired = saveChattingRequiredDirectly(requester, requestee, roommateBoard);
-        ChattingRoom chattingRoom = saveChattingRoom(chattingRequired);
-        saveChattingRoomMembers(chattingRoom, List.of(requester, requestee));
+        RoommateBoard roommateBoard = roommateBoardService.findById(request.getBoardId());
+        ChattingRequired chattingRequired = chattingRequiredService.saveAccepted(requester, requestee, roommateBoard);
+        ChattingRoom chattingRoom = chattingRoomService.save(chattingRequired);
+        chatRoomMemberService.saveAll(chattingRoom, List.of(requester, requestee));
         String contents = request.getChatMessage().getContents();
-        ChatRoomMessage chatRoomMessage = saveMessage(contents, requester, chattingRoom, MessageType.TEXT);
-        chattingScoreRepository.saveAll(roommateScoreService.createChattingScores(chattingRequired));
+        ChatRoomMessage chatRoomMessage = chatRoomMessageService.save(contents, requester, chattingRoom, MessageType.TEXT);
+        chattingScoreService.saveAll(roommateScoreService.createChattingScores(chattingRequired));
 
         return ChatRoomCreateDto.Response.builder()
                 .chatRoomId(chattingRoom.getId())
@@ -271,53 +218,18 @@ public class ChatServiceImpl {
     }
 
     private void validateActiveRoomDoesNotExist(Long requesterId, Long requesteeId) {
-        if (chattingRoomRepository.existsActiveRoomBetweenMembers(requesterId, requesteeId)) {
+        if (chattingRoomService.existsActiveRoomBetweenMembers(requesterId, requesteeId)) {
             throw new BusinessException(ChattingErrorCode.ROOM_DUPLICATE);
         }
     }
 
     private void validateChatRoomLimit(Long requesterId, Long requesteeId) {
-        long requesterRoomCount = chattingRoomRepository.countActiveRoomsByMemberId(requesterId);
-        long requesteeRoomCount = chattingRoomRepository.countActiveRoomsByMemberId(requesteeId);
+        long requesterRoomCount = chattingRoomService.countActiveRoomsByMemberId(requesterId);
+        long requesteeRoomCount = chattingRoomService.countActiveRoomsByMemberId(requesteeId);
 
         if (requesterRoomCount >= CHAT_ROOM_LIMIT_PER_MEMBER || requesteeRoomCount >= CHAT_ROOM_LIMIT_PER_MEMBER) {
             throw new BusinessException(ChattingErrorCode.ROOM_LIMIT_EXCEEDED);
         }
-    }
-
-    private RoommateBoard findRoommateBoardNullSafety(@Nullable Long boardId) {
-        if (boardId == null) return null;
-
-        return roommateBoardRepository.findById(boardId)
-                .orElseThrow(() -> new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
-    }
-
-    private ChattingRequired saveChattingRequiredDirectly(Member requester, Member requestee, @Nullable RoommateBoard roommateBoard) {
-        ChattingRequired chattingRequired = ChattingRequired.builder()
-                .requester(requester)
-                .requestee(requestee)
-                .roommateBoard(roommateBoard)
-                .status(ChattingRequiredStatus.ACCEPTED)
-                .build();
-
-        return chattingRequiredRepository.save(chattingRequired);
-    }
-
-    private ChattingRoom saveChattingRoom(ChattingRequired chattingRequired) {
-        ChattingRoom chattingRoom = ChattingRoom.builder().chattingRequired(chattingRequired).build();
-        return chattingRoomRepository.save(chattingRoom);
-    }
-
-    private List<ChatRoomMember> saveChattingRoomMembers(ChattingRoom chattingRoom, List<Member> members) {
-        if (members.size() > 2) {
-            throw new BusinessException(ChattingErrorCode.ROOM_CAPACITY_EXCEEDED);
-        }
-
-        List<ChatRoomMember> chatRoomMembers = members.stream()
-                .map(member -> ChatRoomMember.of(chattingRoom, member))
-                .toList();
-
-        return chatRoomMemberRepository.saveAll(chatRoomMembers);
     }
 
     private void validateTextMessage(ChatMessageDto.Request request) {

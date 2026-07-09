@@ -22,6 +22,15 @@ public class BasicInformationServiceImpl {
         return basicInformationRepository.findByMember(member);
     }
 
+    public BasicInformation findLatestBasicInformation(Member member) {
+        return basicInformationRepository.findLatestBasicInformation(member)
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.BASIC_INFO_NOT_FOUND));
+    }
+
+    public List<ChattingRoomBasicInfoRow> findChattingRoomBasicInfoRows(List<Long> memberIds) {
+        return basicInformationRepository.findChattingRoomBasicInfoRows(memberIds);
+    }
+
     @Transactional
     public BasicInformation save(BasicInformation basicInformation) {
         return basicInformationRepository.save(basicInformation);

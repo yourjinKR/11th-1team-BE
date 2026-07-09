@@ -45,6 +45,7 @@ import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.row.ChattingRoomBasicInfoRow;
 import org.example.knockin.service.RoommateScoreService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -90,6 +91,44 @@ class ChatRequestServiceImplTest {
 
     @InjectMocks
     private ChatRequestServiceImpl chatRequestService;
+
+    @BeforeEach
+    void setUp() {
+        MemberServiceImpl memberService = new MemberServiceImpl(
+                memberRepository,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        BasicInformationServiceImpl basicInformationService = new BasicInformationServiceImpl(basicInformationRepository);
+        MemberLifePatternService memberLifePatternService = new MemberLifePatternService(memberLifePatternRepository, null);
+        RoommateBoardServiceImpl roommateBoardService = new RoommateBoardServiceImpl(
+                roommateBoardRepository,
+                memberService,
+                null,
+                roommateScoreService,
+                null,
+                null,
+                memberLifePatternService,
+                null,
+                null,
+                null,
+                null
+        );
+
+        chatRequestService = new ChatRequestServiceImpl(
+                memberService,
+                new ChattingRequiredServiceImpl(chattingRequiredRepository),
+                roommateBoardService,
+                new ChattingRequiredAlarmServiceImpl(chattingRequiredAlarmRepository, basicInformationService, alarmService),
+                basicInformationService,
+                memberLifePatternService,
+                roommateScoreService
+        );
+    }
 
     @Test
     @DisplayName("대기 중인 채팅 요청 목록을 조회하면 요청자 정보와 임시 점수를 반환한다")

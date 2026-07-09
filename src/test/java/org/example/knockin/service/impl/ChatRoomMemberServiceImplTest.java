@@ -16,14 +16,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("채팅방 접근 서비스")
-class ChatRoomAccessServiceTest {
+@DisplayName("채팅방 멤버 서비스")
+class ChatRoomMemberServiceImplTest {
 
     @Mock
     private ChatRoomMemberRepository chatRoomMemberRepository;
 
     @InjectMocks
-    private ChatRoomAccessService chatRoomAccessService;
+    private ChatRoomMemberServiceImpl chatRoomMemberService;
 
     @Test
     @DisplayName("활성 채팅방 멤버는 채팅방 구독을 허용한다")
@@ -34,7 +34,7 @@ class ChatRoomAccessServiceTest {
         when(chatRoomMemberRepository.existsActiveMember(chatRoomId, memberId)).thenReturn(true);
 
         // When
-        chatRoomAccessService.checkCanSubscribe(chatRoomId, memberId);
+        chatRoomMemberService.checkCanSubscribe(chatRoomId, memberId);
 
         // Then
         verify(chatRoomMemberRepository).existsActiveMember(chatRoomId, memberId);
@@ -49,7 +49,7 @@ class ChatRoomAccessServiceTest {
         when(chatRoomMemberRepository.existsActiveMember(chatRoomId, memberId)).thenReturn(false);
 
         // When & Then
-        assertThatThrownBy(() -> chatRoomAccessService.checkCanSubscribe(chatRoomId, memberId))
+        assertThatThrownBy(() -> chatRoomMemberService.checkCanSubscribe(chatRoomId, memberId))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(ChattingErrorCode.ROOM_ACCESS_DENIED));
     }
@@ -63,7 +63,7 @@ class ChatRoomAccessServiceTest {
         when(chatRoomMemberRepository.existsActiveMember(chatRoomId, memberId)).thenReturn(true);
 
         // When
-        chatRoomAccessService.checkCanSendMessage(chatRoomId, memberId);
+        chatRoomMemberService.checkCanSendMessage(chatRoomId, memberId);
 
         // Then
         verify(chatRoomMemberRepository).existsActiveMember(chatRoomId, memberId);
@@ -78,7 +78,7 @@ class ChatRoomAccessServiceTest {
         when(chatRoomMemberRepository.existsActiveMember(chatRoomId, memberId)).thenReturn(false);
 
         // When & Then
-        assertThatThrownBy(() -> chatRoomAccessService.checkCanSendMessage(chatRoomId, memberId))
+        assertThatThrownBy(() -> chatRoomMemberService.checkCanSendMessage(chatRoomId, memberId))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(ChattingErrorCode.ROOM_MEMBER_NOT_FOUND));
     }

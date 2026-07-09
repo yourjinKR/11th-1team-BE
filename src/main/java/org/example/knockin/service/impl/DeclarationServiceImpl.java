@@ -3,6 +3,9 @@ package org.example.knockin.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.BoReportDoneListDto;
 import org.example.knockin.dto.BoReportWaitListDto;
+import org.example.knockin.entity.member.Member;
+import org.example.knockin.entity.member.MemberDeclaration;
+import org.example.knockin.exception.MemberErrorCode;
 import org.example.knockin.exception.BusinessException;
 import org.example.knockin.exception.DeclarationErrorCode;
 import org.example.knockin.global.entity.DeclarationType;
@@ -35,6 +38,22 @@ public class DeclarationServiceImpl {
         List<BoReportDoneListDto.Response.ReportInfo> boardReports = roommateBoardDeclarationRepository.findReportDoneList(pageable);
 
         return Stream.concat(memberReports.stream(), boardReports.stream()).sorted(Comparator.comparing(BoReportDoneListDto.Response.ReportInfo::getCreatedAt).reversed()).toList();
+    }
+
+    @Transactional
+    public MemberDeclaration reportMember(Member reporter, Member reported, String reason) {
+        if (memberDeclarationRepository.existsByReporterAndReported(reporter, reported)) {
+            throw new BusinessException(MemberErrorCode.DECLARATION_DUPLICATE);
+        }
+
+        MemberDeclaration memberDeclaration = MemberDeclaration.builder()
+                .reporter(reporter)
+                .reported(reported)
+                .reason(reason)
+                .declarationType(DeclarationType.PENDING)
+                .build();
+
+        return memberDeclarationRepository.save(memberDeclaration);
     }
 
     @Transactional

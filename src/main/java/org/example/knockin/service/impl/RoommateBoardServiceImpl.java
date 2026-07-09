@@ -7,7 +7,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -53,7 +52,6 @@ import org.example.knockin.repository.life.row.MatchingPreferenceConditionRow;
 import org.example.knockin.repository.life.row.MatchingPreferenceConditionWeightRow;
 import org.example.knockin.service.RoommateBoardService;
 import org.example.knockin.service.RoommateScoreService;
-import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -62,7 +60,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-@NullMarked
 @Service
 @RequiredArgsConstructor
 public class RoommateBoardServiceImpl implements RoommateBoardService {
@@ -78,9 +75,14 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     private final RoommateBoardInterestServiceImpl roommateBoardInterestService;
     private final RoommateBoardDeclarationServiceImpl roommateBoardDeclarationService;
 
+    public RoommateBoard findById(Long id) {
+        return roommateBoardRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
+    }
+
     @Override
     @Transactional
-    public BoardDto.Response save(BoardDto.Request request, Long memberId, @Nullable List<MultipartFile> files) {
+    public BoardDto.Response save(BoardDto.Request request, Long memberId, List<MultipartFile> files) {
         Member member = memberService.findById(memberId)
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 

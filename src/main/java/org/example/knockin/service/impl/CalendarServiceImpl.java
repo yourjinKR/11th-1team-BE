@@ -28,25 +28,16 @@ import org.example.knockin.dto.RepeatCalendarModifyDto;
 import org.example.knockin.dto.RepeatCalendarModifyDto.OriginalCalendar;
 import org.example.knockin.dto.RepeatCalendarModifyType;
 import org.example.knockin.entity.member.Member;
-import org.example.knockin.entity.room.ExcludeRoommateCalendar;
 import org.example.knockin.entity.room.MyRoommate;
 import org.example.knockin.entity.room.RepeatRoommateCalendar;
 import org.example.knockin.entity.room.RepeatType;
 import org.example.knockin.entity.room.RoommateCalendar;
 import org.example.knockin.entity.room.RoommateCalendarCategory;
 import org.example.knockin.entity.room.RoommateCalendarMember;
-import org.example.knockin.entity.room.RoommateCalendarMemberId;
 import org.example.knockin.entity.room.RoommateMatchingRequired;
 import org.example.knockin.exception.BusinessException;
 import org.example.knockin.exception.MyRoommateErrorCode;
-import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.row.MemberWithNameRow;
-import org.example.knockin.repository.room.ExcludeRoommateCalendarRepository;
-import org.example.knockin.repository.room.MyRoommateRepository;
-import org.example.knockin.repository.room.RepeatRoommateCalendarRepository;
-import org.example.knockin.repository.room.RoommateCalendarCategoryRepository;
-import org.example.knockin.repository.room.RoommateCalendarMemberRepository;
-import org.example.knockin.repository.room.RoommateCalendarRepository;
 import org.example.knockin.repository.room.row.DailyCalendarMemberRow;
 import org.example.knockin.repository.room.row.DailyCalendarRow;
 import org.example.knockin.repository.room.row.MonthlyCalendarRow;
@@ -58,17 +49,15 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CalendarServiceImpl {
 
-    private final RoommateCalendarCategoryRepository roommateCalendarCategoryRepository;
-    private final MyRoommateRepository myRoommateRepository;
-    private final RoommateCalendarRepository roommateCalendarRepository;
-    private final RoommateCalendarMemberRepository roommateCalendarMemberRepository;
-    private final RepeatRoommateCalendarRepository repeatRoommateCalendarRepository;
-    private final MemberRepository memberRepository;
-    private final ExcludeRoommateCalendarRepository excludeRoommateCalendarRepository;
+    private final RoommateCalendarCategoryServiceImpl roommateCalendarCategoryService;
+    private final RoommateCalendarServiceImpl roommateCalendarService;
+    private final RoommateCalendarMemberServiceImpl roommateCalendarMemberService;
+    private final RepeatRoommateCalendarServiceImpl repeatRoommateCalendarService;
+    private final MemberServiceImpl memberService;
+    private final ExcludeRoommateCalendarServiceImpl excludeRoommateCalendarService;
 
     @Transactional
-    public CalendarDto.Response saveBasicCalendar(Long memberId, CalendarDto.Request request) {
-        MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+    public CalendarDto.Response saveBasic(Long memberId, MyRoommate myRoommate, CalendarDto.Request request) {
         RoommateMatchingRequired roommateMatchingRequired = myRoommate.getRoommateMatchingRequired();
         RoommateCalendarCategory roommateCalendarCategory = saveCalendarCategory(request.getCategoryName());
         RoommateCalendar roommateCalendar = saveCalendar(memberId, myRoommate, roommateCalendarCategory, request.getCalendar());
@@ -79,23 +68,11 @@ public class CalendarServiceImpl {
     private RoommateCalendar saveCalendar(Long memberId, MyRoommate myRoommate, RoommateCalendarCategory category, CalendarInfoDto dto) {
         RoommateMatchingRequired roommateMatchingRequired = myRoommate.getRoommateMatchingRequired();
         Member me = pickMe(memberId, roommateMatchingRequired);
-
-        return roommateCalendarRepository.save(RoommateCalendar.builder()
-                .myRoommate(myRoommate)
-                .member(me)
-                .roommateCalendarCategory(category)
-                .title(dto.getTitle())
-                .contents(dto.getContents())
-                .startDate(dto.getStartDate())
-                .endDate(dto.getEndDate())
-                .build());
+        return roommateCalendarService.save(myRoommate, me, category, dto);
     }
 
     private RoommateCalendarCategory saveCalendarCategory(String name) {
-        RoommateCalendarCategory category = RoommateCalendarCategory.builder()
-                .name(name)
-                .build();
-        return roommateCalendarCategoryRepository.save(category);
+        return roommateCalendarCategoryService.save(name);
     }
 
     private List<RoommateCalendarMember> saveCalendarMembers(RoommateCalendar calendar, RoommateMatchingRequired required, List<Long> memberIds) {
@@ -104,10 +81,7 @@ public class CalendarServiceImpl {
     }
 
     private List<RoommateCalendarMember> saveCalendarMembers(RoommateCalendar calendar, List<Member> members) {
-        List<RoommateCalendarMember> calendarMembers = members.stream()
-                .map(member -> RoommateCalendarMember.of(calendar, member))
-                .toList();
-        return roommateCalendarMemberRepository.saveAll(calendarMembers);
+        return roommateCalendarMemberService.saveAll(calendar, members);
     }
 
     private List<Member> pickRoommateMembers(List<Long> memberIds, RoommateMatchingRequired required) {
@@ -135,8 +109,7 @@ public class CalendarServiceImpl {
     }
 
     @Transactional
-    public RepeatCalendarDto.Response saveRepeatCalendar(Long memberId, RepeatCalendarDto.Request request) {
-        MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+    public RepeatCalendarDto.Response saveRepeat(Long memberId, MyRoommate myRoommate, RepeatCalendarDto.Request request) {
         RoommateMatchingRequired roommateMatchingRequired = myRoommate.getRoommateMatchingRequired();
         RoommateCalendarCategory roommateCalendarCategory = saveCalendarCategory(request.getCategoryName());
         RoommateCalendar roommateCalendar = saveCalendar(memberId, myRoommate, roommateCalendarCategory, request.getCalendar());
@@ -146,21 +119,15 @@ public class CalendarServiceImpl {
     }
 
     private RepeatRoommateCalendar saveRepeatRoommateCalendar(RoommateCalendar calendar, RepeatCalendarInfo repeatInfo) {
-        RepeatRoommateCalendar repeatRoommateCalendar = RepeatRoommateCalendar.builder()
-                .roommateCalendar(calendar)
-                .endDate(repeatInfo.getEndDate())
-                .repeatType(repeatInfo.getRepeatType())
-                .build();
-        return repeatRoommateCalendarRepository.save(repeatRoommateCalendar);
+        return repeatRoommateCalendarService.save(calendar, repeatInfo);
     }
 
     @Transactional
-    public MyRoommateDailyCalendarListDto.Response findDailyCalendarList(Long memberId, Integer year, Integer month, Integer day) {
-        MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+    public MyRoommateDailyCalendarListDto.Response findDailyList(MyRoommate myRoommate, Integer year, Integer month, Integer day) {
         LocalDate targetDate = LocalDate.of(year, month, day);
         LocalDateTime from = targetDate.atStartOfDay();
         LocalDateTime to = targetDate.plusDays(1).atStartOfDay();
-        List<DailyCalendarRow> dailyCalendarList = roommateCalendarRepository.findDailyCalendarList(myRoommate.getId(), from, to);
+        List<DailyCalendarRow> dailyCalendarList = roommateCalendarService.findDailyCalendarList(myRoommate.getId(), from, to);
 
         List<Long> calendarIds = dailyCalendarList.stream()
                 .map(DailyCalendarRow::calendarId)
@@ -193,7 +160,7 @@ public class CalendarServiceImpl {
             return Map.of();
         }
 
-        return roommateCalendarRepository.findDailyCalendarMembers(calendarIds).stream()
+        return roommateCalendarMemberService.findDailyCalendarMembers(calendarIds).stream()
                 .collect(Collectors.groupingBy(
                         DailyCalendarMemberRow::calendarId,
                         Collectors.mapping(
@@ -211,7 +178,7 @@ public class CalendarServiceImpl {
             return Map.of();
         }
 
-        return roommateCalendarRepository.findRepeatCalendarExcludes(repeatCalendarIds).stream()
+        return excludeRoommateCalendarService.findRepeatCalendarExcludes(repeatCalendarIds).stream()
                 .collect(Collectors.groupingBy(
                         RepeatCalendarExcludeRow::repeatCalendarId,
                         Collectors.mapping(RepeatCalendarExcludeRow::excludeAt, Collectors.toSet())
@@ -279,14 +246,12 @@ public class CalendarServiceImpl {
         };
     }
 
-
     @Transactional
-    public MyRoommateMonthlyCalendarListDto.Response findMyMonthlyCalendarList(Long memberId, Integer year, Integer month) {
-        MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+    public MyRoommateMonthlyCalendarListDto.Response findMyMonthlyList(MyRoommate myRoommate, Integer year, Integer month) {
         YearMonth targetMonth = targetMonth(year, month);
         LocalDateTime from = targetMonth.atDay(1).atStartOfDay();
         LocalDateTime to = targetMonth.plusMonths(1).atDay(1).atStartOfDay();
-        List<MonthlyCalendarRow> calendarCandidates = roommateCalendarRepository.findMonthlyCalendarList(myRoommate.getId(), from, to);
+        List<MonthlyCalendarRow> calendarCandidates = roommateCalendarService.findMonthlyCalendarList(myRoommate.getId(), from, to);
 
         List<Long> repeatCalendarIds = calendarCandidates.stream()
                 .map(MonthlyCalendarRow::repeatCalendarId)
@@ -380,8 +345,7 @@ public class CalendarServiceImpl {
 
     //TODO: 반복 일정 설정값 전달, 권한 체크, 응답에 기존값 포함
     @Transactional
-    public CalendarEditDto.Response getRoommateEditForm(Long memberId) {
-        MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+    public CalendarEditDto.Response getEditForm(Long memberId, MyRoommate myRoommate) {
         RoommateMatchingRequired roommateMatchingRequired = myRoommate.getRoommateMatchingRequired();
         List<MemberInfo> memberInfos = findAllMemberInfo(memberId, roommateMatchingRequired);
         List<String> categoryNames = findCategoryNames();
@@ -394,7 +358,7 @@ public class CalendarServiceImpl {
 
     private List<MemberInfo> findAllMemberInfo(Long myId, RoommateMatchingRequired roommateMatchingRequired) {
         List<Long> ids = List.of(roommateMatchingRequired.getRequester().getId(), roommateMatchingRequired.getRequestee().getId());
-        List<MemberWithNameRow> rows = memberRepository.findAllWithNameRowById(ids);
+        List<MemberWithNameRow> rows = memberService.findAllWithNameRowById(ids);
         return rows.stream()
                 .map(row -> toEditDto(myId, row))
                 .toList();
@@ -415,8 +379,7 @@ public class CalendarServiceImpl {
 
     @Transactional
     public CalendarDto.Response modifyCalendar(Long memberId, Long calendarId, CalendarDto.Request request) {
-        RoommateCalendar roommateCalendar = roommateCalendarRepository.findById(calendarId)
-                .orElseThrow(() -> new BusinessException(MyRoommateErrorCode.CALENDER_NOT_FOUND));
+        RoommateCalendar roommateCalendar = roommateCalendarService.findByIdOrThrow(calendarId);
 
         if (!roommateCalendar.isOwner(memberId)) {
             throw new BusinessException(MyRoommateErrorCode.CALENDER_ACCESS_DENIED);
@@ -441,7 +404,7 @@ public class CalendarServiceImpl {
                 calendar.getMyRoommate().getRoommateMatchingRequired()
         );
 
-        List<RoommateCalendarMember> calendarMembers = roommateCalendarMemberRepository.findByRoommateCalendar(calendar);
+        List<RoommateCalendarMember> calendarMembers = roommateCalendarMemberService.findByRoommateCalendar(calendar);
         List<Long> existingMemberIds = calendarMembers.stream().map(RoommateCalendarMember::getMemberId).toList();
 
         Set<Long> existingIdSet = new HashSet<>(existingMemberIds);
@@ -460,50 +423,37 @@ public class CalendarServiceImpl {
     }
 
     private void deleteCalendarMember(Long roommateCalendarId, Long memberId) {
-        RoommateCalendarMemberId id = RoommateCalendarMemberId.builder()
-                .memberId(memberId)
-                .roommateCalendarId(roommateCalendarId)
-                .build();
-        roommateCalendarMemberRepository.deleteById(id);
+        roommateCalendarMemberService.deleteByCalendarIdAndMemberId(roommateCalendarId, memberId);
     }
 
     @Transactional
-    public RepeatCalendarModifyDto.Response modifyRepeatCalendar(Long memberId, Long calendarId, RepeatCalendarModifyDto.Request request) {
-        RoommateCalendar calendar = roommateCalendarRepository.findById(calendarId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.CALENDER_NOT_FOUND));
+    public RepeatCalendarModifyDto.Response modifyRepeat(Long memberId, Long calendarId, MyRoommate myRoommate, RepeatCalendarModifyDto.Request request) {
+        RoommateCalendar calendar = roommateCalendarService.findByIdOrThrow(calendarId);
         if (!calendar.isOwner(memberId)) throw new BusinessException(MyRoommateErrorCode.CALENDER_ACCESS_DENIED);
 
-        RepeatRoommateCalendar repeatCalendar = repeatRoommateCalendarRepository.findOneByRoommateCalendar(calendar)
-                .orElseThrow(() -> new BusinessException(MyRoommateErrorCode.CALENDER_NOT_REPEAT));
+        RepeatRoommateCalendar repeatCalendar = repeatRoommateCalendarService.findOneByRoommateCalendarOrThrow(calendar);
 
         RepeatCalendarModifyType modifyType = request.getModifyType();
         switch (modifyType) {
-            case THIS -> modifyOnlyThisRepeatCalendar(memberId, repeatCalendar, request);
-            case THIS_AND_FOLLOWING -> modifyThisAndFollowingRepeatCalendar(memberId, repeatCalendar, request);
+            case THIS -> modifyOnlyThisRepeatCalendar(memberId, myRoommate, repeatCalendar, request);
+            case THIS_AND_FOLLOWING -> modifyThisAndFollowingRepeatCalendar(memberId, myRoommate, repeatCalendar, request);
             case ALL -> modifyAllRepeatCalendar(calendar, repeatCalendar, request);
         }
 
         return RepeatCalendarModifyDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 
-    private void modifyOnlyThisRepeatCalendar(Long memberId, RepeatRoommateCalendar repeatCalendar, RepeatCalendarModifyDto.Request request) {
-        MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+    private void modifyOnlyThisRepeatCalendar(Long memberId, MyRoommate myRoommate, RepeatRoommateCalendar repeatCalendar, RepeatCalendarModifyDto.Request request) {
         RoommateMatchingRequired roommateMatchingRequired = myRoommate.getRoommateMatchingRequired();
         RoommateCalendarCategory roommateCalendarCategory = saveCalendarCategory(request.getCategoryName());
         RoommateCalendar newCalendar = saveCalendar(memberId, myRoommate, roommateCalendarCategory, request.getCalendar());
         saveCalendarMembers(newCalendar, roommateMatchingRequired, request.getMemberIds());
-
-        ExcludeRoommateCalendar excludeCalendar = ExcludeRoommateCalendar.builder()
-                .repeatRoommateCalendar(repeatCalendar)
-                .excludeAt(request.getOriginalCalendar().getStartDate())
-                .build();
-        excludeRoommateCalendarRepository.save(excludeCalendar);
+        excludeRoommateCalendarService.save(repeatCalendar, request.getOriginalCalendar().getStartDate());
     }
 
-    private void modifyThisAndFollowingRepeatCalendar(Long memberId, RepeatRoommateCalendar repeatCalendar, RepeatCalendarModifyDto.Request request) {
+    private void modifyThisAndFollowingRepeatCalendar(Long memberId, MyRoommate myRoommate, RepeatRoommateCalendar repeatCalendar, RepeatCalendarModifyDto.Request request) {
         LocalDateTime updatedEndDate = previousOccurrenceEndDate(request.getOriginalCalendar(), repeatCalendar.getRepeatType());
         repeatCalendar.modify(updatedEndDate, repeatCalendar.getRepeatType());
-
-        MyRoommate myRoommate = myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
 
         RoommateCalendarCategory category = saveCalendarCategory(request.getCategoryName());
         RoommateCalendar newCalendar = saveCalendar(memberId, myRoommate, category, request.getCalendar());
@@ -549,9 +499,8 @@ public class CalendarServiceImpl {
     }
 
     @Transactional
-    public CalendarDto.Response deleteCalendar(Long memberId, Long calendarId) {
-        RoommateCalendar calendar = roommateCalendarRepository.findById(calendarId)
-                .orElseThrow(() -> new BusinessException(MyRoommateErrorCode.CALENDER_NOT_FOUND));
+    public CalendarDto.Response delete(Long memberId, Long calendarId) {
+        RoommateCalendar calendar = roommateCalendarService.findByIdOrThrow(calendarId);
 
         if (!calendar.isOwner(memberId)) {
             throw new BusinessException(MyRoommateErrorCode.CALENDER_ACCESS_DENIED);

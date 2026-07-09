@@ -40,6 +40,12 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    public File findBySavedFileNameAndType(String savedFileName, FileType type) {
+        return fileRepository.findBySavedFileNameAndType(savedFileName, type)
+                .orElseThrow(() -> new BusinessException(FileErrorCode.FILE_NOT_FOUND));
+    }
+
+    @Override
     public void deleteAll(List<File> files) {
         for (File file : files) {
             try {

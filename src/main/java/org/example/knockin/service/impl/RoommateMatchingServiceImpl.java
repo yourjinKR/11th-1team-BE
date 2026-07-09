@@ -12,31 +12,20 @@ import org.example.knockin.dto.Compatibility;
 import org.example.knockin.dto.MatchDetailDto;
 import org.example.knockin.dto.MatchDto;
 import org.example.knockin.dto.MatchListDto;
+import org.example.knockin.dto.MatchListDto.Condition;
+import org.example.knockin.dto.MatchListDto.ConditionWeight;
+import org.example.knockin.dto.MatchListDto.Lifestyle;
 import org.example.knockin.dto.MemberReportDto;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.member.Member;
-import org.example.knockin.entity.member.MemberDeclaration;
-import org.example.knockin.entity.member.MemberInterest;
 import org.example.knockin.entity.room.RoomProfileType;
-import org.example.knockin.exception.BusinessException;
-import org.example.knockin.exception.MemberErrorCode;
-import org.example.knockin.global.entity.DeclarationType;
 import org.example.knockin.global.util.DateUtils;
 import org.example.knockin.global.util.HasMemberId;
 import org.example.knockin.global.util.StringUtils;
-import org.example.knockin.repository.auth.AuthenticationRepository;
-import org.example.knockin.repository.life.MemberLifePatternRepository;
-import org.example.knockin.repository.life.PreferenceConditionRepository;
-import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
 import org.example.knockin.repository.life.row.MatchingLifestyleRow;
 import org.example.knockin.repository.life.row.MatchingPreferenceConditionRow;
 import org.example.knockin.repository.life.row.MatchingPreferenceConditionWeightRow;
-import org.example.knockin.repository.member.MemberDeclarationRepository;
-import org.example.knockin.repository.member.MemberInterestRepository;
-import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.row.MatchingBasicInfoRow;
-import org.example.knockin.repository.room.RoomOfferProfileRepository;
-import org.example.knockin.repository.room.RoomSeekerProfileRepository;
 import org.example.knockin.repository.room.row.MatchingOfferProfileRow;
 import org.example.knockin.repository.room.row.MatchingSeekerProfileRow;
 import org.example.knockin.repository.room.row.MatchingSeekerRegionRow;
@@ -52,15 +41,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class RoommateMatchingServiceImpl implements RoommateMatchingService {
-    private final MemberRepository memberRepository;
-    private final MemberInterestRepository memberInterestRepository;
-    private final RoomSeekerProfileRepository roomSeekerProfileRepository;
-    private final RoomOfferProfileRepository roomOfferProfileRepository;
-    private final MemberLifePatternRepository memberLifePatternRepository;
-    private final PreferenceConditionRepository preferenceConditionRepository;
-    private final PreferenceConditionWeightRepository preferenceConditionWeightRepository;
-    private final AuthenticationRepository authenticationRepository;
-    private final MemberDeclarationRepository memberDeclarationRepository;
+    private final MemberServiceImpl memberService;
+    private final MemberInterestServiceImpl memberInterestService;
+    private final RoomSeekerProfileServiceImpl roomSeekerProfileService;
+    private final RoomOfferProfileServiceImpl roomOfferProfileService;
+    private final MemberLifePatternService memberLifePatternService;
+    private final PreferenceConditionServiceImpl preferenceConditionService;
+    private final AuthenticationServiceImpl authenticationService;
+    private final DeclarationServiceImpl declarationService;
     private final RoommateScoreService roommateScoreService;
 
     @Override
@@ -69,7 +57,7 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
         int size = request.getSize();
         List<Long> excludeMemberIds = resolveExcludeMemberIds(memberId, request);
 
-        List<MatchingBasicInfoRow> rawRows = memberRepository.findMatchingBasicRow(excludeMemberIds, size + 1);
+        List<MatchingBasicInfoRow> rawRows = memberService.findMatchingBasicRow(excludeMemberIds, size + 1);
         boolean hasNext = rawRows.size() > size;
         List<MatchingBasicInfoRow> matchingListBasicRow = rawRows.stream().limit(size).toList();
         List<Long> memberIds = matchingListBasicRow.stream().map(MatchingBasicInfoRow::memberId).toList();
@@ -78,15 +66,15 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
             return new SliceImpl<>(List.of(), PageRequest.of(0, size), false);
         }
 
-        List<MatchingOfferProfileRow> matchingOfferProfileRows = roomOfferProfileRepository.findAllOfferProfileByMemberIdIn(memberIds);
+        List<MatchingOfferProfileRow> matchingOfferProfileRows = roomOfferProfileService.findAllOfferProfileByMemberIdIn(memberIds);
 
-        List<MatchingSeekerProfileRow> matchingSeekerProfileRows = roomSeekerProfileRepository.findAllSeekerProfileByMemberIdIn(memberIds);
-        List<MatchingSeekerRegionRow> matchingSeekerRegionRows = roomSeekerProfileRepository.findAllSeekerRegionByMemberIdIn(memberIds);
-        List<MatchingSeekerRoomTypeRow> matchingSeekerRoomTypeRows = roomSeekerProfileRepository.findAllSeekerRoomTypeByMemberIdIn(memberIds);
+        List<MatchingSeekerProfileRow> matchingSeekerProfileRows = roomSeekerProfileService.findAllSeekerProfileByMemberIdIn(memberIds);
+        List<MatchingSeekerRegionRow> matchingSeekerRegionRows = roomSeekerProfileService.findAllSeekerRegionByMemberIdIn(memberIds);
+        List<MatchingSeekerRoomTypeRow> matchingSeekerRoomTypeRows = roomSeekerProfileService.findAllSeekerRoomTypeByMemberIdIn(memberIds);
 
-        List<MatchingLifestyleRow> matchingLifestyleRows = memberLifePatternRepository.findAllLifestyleByMemberIdIn(memberIds);
-        List<MatchingPreferenceConditionRow> matchingPreferenceConditionRows = preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(memberIds);
-        List<MatchingPreferenceConditionWeightRow> matchingPreferenceConditionWeightRows = preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(memberIds);
+        List<MatchingLifestyleRow> matchingLifestyleRows = memberLifePatternService.findMatchingRowByMemberIdsIn(memberIds);
+        List<MatchingPreferenceConditionRow> matchingPreferenceConditionRows = preferenceConditionService.findRowByMemberIdsIn(memberIds);
+        List<MatchingPreferenceConditionWeightRow> matchingPreferenceConditionWeightRows = preferenceConditionService.findWeightRowByMemberIdsIn(memberIds);
         Map<Long, Compatibility> scoresByMemberId = Optional.ofNullable(roommateScoreService.calculateScores(memberId, memberIds))
                 .orElse(Map.of());
 
@@ -168,7 +156,7 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
             return Set.of();
         }
 
-        return Set.copyOf(memberInterestRepository.findActiveReceiverIdsBySenderIdAndReceiverIds(memberId, memberIds));
+        return Set.copyOf(memberInterestService.findActiveReceiverIdsBySenderIdAndReceiverIds(memberId, memberIds));
     }
 
     private MatchListDto.Lifestyle toLifestyle(MatchingLifestyleRow row) {
@@ -281,10 +269,9 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
     @Override
     @Transactional(readOnly = true)
     public MatchDetailDto.Response findMatchingDetail(Long targetMemberId, Long requesterId) {
-        MatchingBasicInfoRow basicInfoRow = memberRepository.findMatchingBasicRowById(targetMemberId)
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+        MatchingBasicInfoRow basicInfoRow = memberService.findMatchingBasicRowById(targetMemberId);
 
-        List<AuthenticationType> authenticationTypes = authenticationRepository.getAcceptedAuthenticationTypeByMemberId(targetMemberId);
+        List<AuthenticationType> authenticationTypes = authenticationService.findTypesByMemberId(targetMemberId);
 
         RoomProfileType roomProfileType = basicInfoRow.roomProfileType();
         MatchingOfferProfileRow offerProfileRow = null;
@@ -293,35 +280,47 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
         List<MatchingSeekerRoomTypeRow> seekerRoomTypeRows = List.of();
 
         if (roomProfileType == RoomProfileType.OFFER) {
-            offerProfileRow = roomOfferProfileRepository.findAllOfferProfileByMemberIdIn(List.of(targetMemberId))
+            offerProfileRow = roomOfferProfileService.findAllOfferProfileByMemberIdIn(List.of(targetMemberId))
                     .stream()
                     .findFirst()
                     .orElse(null);
         }
 
         if (roomProfileType == RoomProfileType.SEEKER) {
-            seekerProfileRow = roomSeekerProfileRepository.findAllSeekerProfileByMemberIdIn(List.of(targetMemberId))
+            seekerProfileRow = roomSeekerProfileService.findAllSeekerProfileByMemberIdIn(List.of(targetMemberId))
                     .stream()
                     .findFirst()
                     .orElse(null);
-            seekerRegionRows = roomSeekerProfileRepository.findAllSeekerRegionByMemberIdIn(List.of(targetMemberId));
-            seekerRoomTypeRows = roomSeekerProfileRepository.findAllSeekerRoomTypeByMemberIdIn(List.of(targetMemberId));
+            seekerRegionRows = roomSeekerProfileService.findAllSeekerRegionByMemberIdIn(List.of(targetMemberId));
+            seekerRoomTypeRows = roomSeekerProfileService.findAllSeekerRoomTypeByMemberIdIn(List.of(targetMemberId));
         }
 
-        List<MatchingLifestyleRow> lifestyleRows = memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(targetMemberId));
-        List<MatchingPreferenceConditionRow> preferenceConditionRows = preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(List.of(targetMemberId));
-        List<MatchingPreferenceConditionWeightRow> preferenceConditionWeightRows = preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(List.of(targetMemberId));
+        List<MatchingLifestyleRow> lifestyleRows = memberLifePatternService.findMatchingRowByMemberIdsIn(List.of(targetMemberId));
+        List<MatchingPreferenceConditionRow> preferenceConditionRows = preferenceConditionService.findRowByMemberIdsIn(List.of(targetMemberId));
+        List<MatchingPreferenceConditionWeightRow> preferenceConditionWeightRows = preferenceConditionService.findWeightRowByMemberIdsIn(List.of(targetMemberId));
         Compatibility compatibility = roommateScoreService.calculateScore(requesterId, targetMemberId);
 
-        boolean interested = requesterId != null && memberInterestRepository.existsBySenderIdAndReceiverId(requesterId, targetMemberId);
+        boolean interested = requesterId != null && memberInterestService.existsBySenderIdAndReceiverId(requesterId, targetMemberId);
 
         List<String> roomTypeNames = seekerRoomTypeRows.stream().map(MatchingSeekerRoomTypeRow::roomTypeName).toList();
         List<String> regionFullNames = seekerRegionRows.stream()
-                .map(row -> StringUtils.parseToRegionFullName(
-                        row.grandParentRegionName(),
-                        row.parentRegionName(),
-                        row.regionName()
+                .map(row -> StringUtils.parseToRegionFullName(row.grandParentRegionName(), row.parentRegionName(), row.regionName()
                 ))
+                .toList();
+
+        List<Lifestyle> lifestyles = lifestyleRows.stream()
+                .filter(row -> Objects.equals(row.memberId(), targetMemberId))
+                .map(this::toLifestyle)
+                .toList();
+
+        List<Condition> conditions = preferenceConditionRows.stream()
+                .filter(row -> Objects.equals(row.memberId(), targetMemberId))
+                .map(this::toCondition)
+                .toList();
+
+        List<ConditionWeight> conditionWeights = preferenceConditionWeightRows.stream()
+                .filter(row -> Objects.equals(row.memberId(), targetMemberId))
+                .map(this::toConditionWeight)
                 .toList();
 
         return MatchDetailDto.Response.builder()
@@ -334,18 +333,9 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
                 .roomProfileType(roomProfileType)
                 .offerProfile(roomProfileType == RoomProfileType.OFFER ? toOfferProfile(offerProfileRow) : null)
                 .seekerProfile(roomProfileType == RoomProfileType.SEEKER ? toSeekerProfile(seekerProfileRow, roomTypeNames, regionFullNames) : null)
-                .lifeStyles(lifestyleRows.stream()
-                        .filter(row -> Objects.equals(row.memberId(), targetMemberId))
-                        .map(this::toLifestyle)
-                        .toList())
-                .conditions(preferenceConditionRows.stream()
-                        .filter(row -> Objects.equals(row.memberId(), targetMemberId))
-                        .map(this::toCondition)
-                        .toList())
-                .conditionWeights(preferenceConditionWeightRows.stream()
-                        .filter(row -> Objects.equals(row.memberId(), targetMemberId))
-                        .map(this::toConditionWeight)
-                        .toList())
+                .lifeStyles(lifestyles)
+                .conditions(conditions)
+                .conditionWeights(conditionWeights)
                 .authentications(authenticationTypes)
                 .compatibility(compatibility)
                 .build();
@@ -358,60 +348,21 @@ public class RoommateMatchingServiceImpl implements RoommateMatchingService {
     @Override
     @Transactional
     public MatchDto.Response likeMatching(Long senderId, Long receiverId) {
-        Member sender = memberRepository.findById(senderId)
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
-
-        Member receiver = memberRepository.findById(receiverId)
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
-
-        Optional<MemberInterest> optionalMemberInterest =
-                memberInterestRepository.findBySenderIdAndReceiverIdForUpdate(senderId, receiverId);
-
-        optionalMemberInterest.ifPresentOrElse(
-                MemberInterest::toggle,
-                () -> saveMemberInterest(sender, receiver)
-        );
+        Member sender = memberService.findByIdOrThrow(senderId);
+        Member receiver = memberService.findByIdOrThrow(receiverId);
+        memberInterestService.toggle(sender, receiver);
 
         return new MatchDto.Response(LocalDateTime.now());
-    }
-
-    public void saveMemberInterest(Member sender, Member receiver) {
-        MemberInterest memberInterest = MemberInterest.builder()
-                .sender(sender)
-                .receiver(receiver)
-                .build();
-        memberInterestRepository.save(memberInterest);
     }
 
     @Override
     @Transactional
     public MemberReportDto.Response reportMatching(Long reporterId, Long reportedId, MemberReportDto.Request request) {
-        Member reporter = memberRepository.findById(reporterId)
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
-
-        Member reported = memberRepository.findById(reportedId)
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
-
-        boolean exist = memberDeclarationRepository.existsByReporterAndReported(reporter, reported);
-
-        if (exist) {
-            throw new BusinessException(MemberErrorCode.DECLARATION_DUPLICATE);
-        } else {
-            saveMemberDeclaration(reporter, reported, request.getContents());
-        }
+        Member reporter = memberService.findByIdOrThrow(reporterId);
+        Member reported = memberService.findByIdOrThrow(reportedId);
+        declarationService.reportMember(reporter, reported, request.getContents());
 
         return new MemberReportDto.Response(LocalDateTime.now());
-    }
-
-    private void saveMemberDeclaration(Member reporter, Member reported, String reason) {
-        MemberDeclaration memberDeclaration = MemberDeclaration.builder()
-                .reporter(reporter)
-                .reported(reported)
-                .reason(reason)
-                .declarationType(DeclarationType.PENDING)
-                .build();
-
-        memberDeclarationRepository.save(memberDeclaration);
     }
 
 }

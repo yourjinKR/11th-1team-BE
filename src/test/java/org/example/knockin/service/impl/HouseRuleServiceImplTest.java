@@ -22,8 +22,8 @@ import org.example.knockin.exception.BusinessException;
 import org.example.knockin.exception.MemberErrorCode;
 import org.example.knockin.exception.MyRoommateErrorCode;
 import org.example.knockin.repository.member.MemberRepository;
-import org.example.knockin.repository.room.MyRoommateRepository;
 import org.example.knockin.repository.room.RoommateHouseRuleRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,9 +37,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class HouseRuleServiceImplTest {
 
     @Mock
-    private MyRoommateRepository myRoommateRepository;
-
-    @Mock
     private MemberRepository memberRepository;
 
     @Mock
@@ -48,9 +45,17 @@ class HouseRuleServiceImplTest {
     @InjectMocks
     private HouseRuleServiceImpl houseRuleService;
 
+    @BeforeEach
+    void setUp() {
+        houseRuleService = new HouseRuleServiceImpl(
+                roommateHouseRuleRepository,
+                new MemberServiceImpl(memberRepository, null, null, null, null, null, null)
+        );
+    }
+
     @Test
     @DisplayName("내 룸메이트가 있으면 하우스룰을 저장하고 수정 시간을 반환한다")
-    void saveHouseRuleSavesRuleWhenMyRoommateExists() {
+    void saveWhenMyRoommateExists() {
         // Given
         Long memberId = 1L;
         Member member = member(memberId);
@@ -58,10 +63,9 @@ class HouseRuleServiceImplTest {
         HouseRuleDto.Request request = houseRuleRequest("청소 당번", "매주 일요일에 청소한다");
 
         given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
-        given(myRoommateRepository.findWithRequiredByMemberId(memberId)).willReturn(Optional.of(myRoommate));
 
         // When
-        HouseRuleDto.Response response = houseRuleService.saveHouseRule(request, memberId);
+        HouseRuleDto.Response response = houseRuleService.save(myRoommate, request, memberId);
 
         // Then
         ArgumentCaptor<RoommateHouseRule> captor = ArgumentCaptor.forClass(RoommateHouseRule.class);
@@ -77,36 +81,21 @@ class HouseRuleServiceImplTest {
 
     @Test
     @DisplayName("하우스룰 저장 시 회원이 없으면 회원 없음 예외를 던지고 저장하지 않는다")
-    void saveHouseRuleThrowsWhenMemberDoesNotExist() {
+    void saveThrowsWhenMemberDoesNotExist() {
         // Given
         Long memberId = 1L;
         given(memberRepository.findById(memberId)).willReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> houseRuleService.saveHouseRule(houseRuleRequest("제목", "내용"), memberId))
+        assertThatThrownBy(() -> houseRuleService.save(myRoommate(10L, memberId, 2L), houseRuleRequest("제목", "내용"), memberId))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
-        verifyNoInteractions(myRoommateRepository, roommateHouseRuleRepository);
-    }
-
-    @Test
-    @DisplayName("하우스룰 저장 시 내 룸메이트가 없으면 룸메이트 없음 예외를 던지고 저장하지 않는다")
-    void saveHouseRuleThrowsWhenMyRoommateDoesNotExist() {
-        // Given
-        Long memberId = 1L;
-        given(memberRepository.findById(memberId)).willReturn(Optional.of(member(memberId)));
-        given(myRoommateRepository.findWithRequiredByMemberId(memberId)).willReturn(Optional.empty());
-
-        // When & Then
-        assertThatThrownBy(() -> houseRuleService.saveHouseRule(houseRuleRequest("제목", "내용"), memberId))
-                .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
         verify(roommateHouseRuleRepository, never()).save(any(RoommateHouseRule.class));
     }
 
     @Test
     @DisplayName("내 룸메이트가 있으면 삭제되지 않은 하우스룰 목록을 응답 형식으로 반환한다")
-    void findHouseRuleListReturnsNotDeletedRules() {
+    void findListReturnsNotDeletedRules() {
         // Given
         Long memberId = 1L;
         MyRoommate myRoommate = myRoommate(10L, memberId, 2L);
@@ -114,12 +103,10 @@ class HouseRuleServiceImplTest {
                 houseRule(100L, "분리수거", "수요일 밤에 내놓기", myRoommate),
                 houseRule(101L, "소등", "자정 이후 거실 소등", myRoommate)
         );
-
-        given(myRoommateRepository.findWithRequiredByMemberId(memberId)).willReturn(Optional.of(myRoommate));
         given(roommateHouseRuleRepository.findByMyRoommateIdAndIsDeleted(10L, false)).willReturn(rules);
 
         // When
-        List<HouseRuleListDto.Response> responses = houseRuleService.findHouseRuleList(memberId);
+        List<HouseRuleListDto.Response> responses = houseRuleService.findList(myRoommate);
 
         // Then
         assertThat(responses).hasSize(2);
@@ -131,20 +118,6 @@ class HouseRuleServiceImplTest {
     }
 
     @Test
-    @DisplayName("하우스룰 목록 조회 시 내 룸메이트가 없으면 룸메이트 없음 예외를 던진다")
-    void findHouseRuleListThrowsWhenMyRoommateDoesNotExist() {
-        // Given
-        Long memberId = 1L;
-        given(myRoommateRepository.findWithRequiredByMemberId(memberId)).willReturn(Optional.empty());
-
-        // When & Then
-        assertThatThrownBy(() -> houseRuleService.findHouseRuleList(memberId))
-                .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
-        verifyNoInteractions(roommateHouseRuleRepository);
-    }
-
-    @Test
     @DisplayName("요청자가 하우스룰 상세를 조회하면 하우스룰 상세 정보를 반환한다")
     void findHouseRuleDetailReturnsRuleForRequester() {
         // Given
@@ -153,7 +126,7 @@ class HouseRuleServiceImplTest {
         given(roommateHouseRuleRepository.findWithFetchedById(100L)).willReturn(Optional.of(rule));
 
         // When
-        HouseRuleDetailDto.Response response = houseRuleService.findHouseRuleDetail(memberId, 100L);
+        HouseRuleDetailDto.Response response = houseRuleService.findDetail(memberId, 100L);
 
         // Then
         assertThat(response.getId()).isEqualTo(100L);
@@ -170,7 +143,7 @@ class HouseRuleServiceImplTest {
         given(roommateHouseRuleRepository.findWithFetchedById(100L)).willReturn(Optional.of(rule));
 
         // When
-        HouseRuleDetailDto.Response response = houseRuleService.findHouseRuleDetail(requesteeId, 100L);
+        HouseRuleDetailDto.Response response = houseRuleService.findDetail(requesteeId, 100L);
 
         // Then
         assertThat(response.getId()).isEqualTo(100L);
@@ -185,7 +158,7 @@ class HouseRuleServiceImplTest {
         given(roommateHouseRuleRepository.findWithFetchedById(100L)).willReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> houseRuleService.findHouseRuleDetail(1L, 100L))
+        assertThatThrownBy(() -> houseRuleService.findDetail(1L, 100L))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.HOUSE_RULE_NOT_FOUND));
     }
@@ -198,7 +171,7 @@ class HouseRuleServiceImplTest {
         given(roommateHouseRuleRepository.findWithFetchedById(100L)).willReturn(Optional.of(rule));
 
         // When & Then
-        assertThatThrownBy(() -> houseRuleService.findHouseRuleDetail(999L, 100L))
+        assertThatThrownBy(() -> houseRuleService.findDetail(999L, 100L))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.HOUSE_RULE_ACCESS_DENIED));
     }
@@ -213,7 +186,7 @@ class HouseRuleServiceImplTest {
         given(roommateHouseRuleRepository.findWithFetchedById(100L)).willReturn(Optional.of(rule));
 
         // When
-        HouseRuleDto.Response response = houseRuleService.modifyHouseRule(memberId, 100L, request);
+        HouseRuleDto.Response response = houseRuleService.modify(memberId, 100L, request);
 
         // Then
         assertThat(rule.getTitle()).isEqualTo("변경 제목");
@@ -223,14 +196,14 @@ class HouseRuleServiceImplTest {
 
     @Test
     @DisplayName("룸메이트 관계자가 하우스룰을 삭제하면 삭제 처리하고 수정 시간을 반환한다")
-    void deleteHouseRuleSoftDeletesRuleForParticipant() {
+    void deleteForParticipant() {
         // Given
         Long memberId = 1L;
         RoommateHouseRule rule = houseRule(100L, "소등", "자정 이후 거실 소등", myRoommate(10L, memberId, 2L));
         given(roommateHouseRuleRepository.findWithFetchedById(100L)).willReturn(Optional.of(rule));
 
         // When
-        HouseRuleDto.Response response = houseRuleService.deleteHouseRule(memberId, 100L);
+        HouseRuleDto.Response response = houseRuleService.delete(memberId, 100L);
 
         // Then
         assertThat(rule.getIsDeleted()).isTrue();
@@ -239,13 +212,13 @@ class HouseRuleServiceImplTest {
 
     @Test
     @DisplayName("룸메이트 관계자가 아니면 하우스룰을 삭제하지 않고 접근 거부 예외를 던진다")
-    void deleteHouseRuleThrowsWhenMemberIsNotRoommateParticipant() {
+    void deleteThrowsWhenMemberIsNotRoommateParticipant() {
         // Given
         RoommateHouseRule rule = houseRule(100L, "소등", "자정 이후 거실 소등", myRoommate(10L, 1L, 2L));
         given(roommateHouseRuleRepository.findWithFetchedById(100L)).willReturn(Optional.of(rule));
 
         // When & Then
-        assertThatThrownBy(() -> houseRuleService.deleteHouseRule(999L, 100L))
+        assertThatThrownBy(() -> houseRuleService.delete(999L, 100L))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.HOUSE_RULE_ACCESS_DENIED));
         assertThat(rule.getIsDeleted()).isFalse();

@@ -61,6 +61,7 @@ import org.example.knockin.repository.member.row.ChattingRoomBasicInfoRow;
 import org.example.knockin.repository.room.RoommateMatchingRequiredRepository;
 import org.example.knockin.service.FileService;
 import org.example.knockin.service.RoommateScoreService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -89,9 +90,6 @@ class ChatServiceImplTest {
 
     @Mock
     private ApplicationEventPublisher publisher;
-
-    @Mock
-    private ChatRoomAccessService chatRoomAccessService;
 
     @Mock
     private ChatRoomMessageRepository chatRoomMessageRepository;
@@ -128,6 +126,50 @@ class ChatServiceImplTest {
 
     @InjectMocks
     private ChatServiceImpl chatService;
+
+    @BeforeEach
+    void setUp() {
+        MemberServiceImpl memberService = new MemberServiceImpl(
+                memberRepository,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        BasicInformationServiceImpl basicInformationService = new BasicInformationServiceImpl(basicInformationRepository);
+        RoommateBoardServiceImpl roommateBoardService = new RoommateBoardServiceImpl(
+                roommateBoardRepository,
+                memberService,
+                null,
+                roommateScoreService,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        chatService = new ChatServiceImpl(
+                new ChattingRoomServiceImpl(chattingRoomRepository),
+                new ChatRoomMemberServiceImpl(chatRoomMemberRepository),
+                messagingTemplate,
+                publisher,
+                new ChatRoomMessageServiceImpl(chatRoomMessageRepository),
+                fileService,
+                new ChatRoomFileServiceImpl(chatRoomFileRepository),
+                basicInformationService,
+                new RoommateMatchingRequiredServiceImpl(roommateMatchingRequiredRepository),
+                roommateBoardService,
+                new ChattingRequiredServiceImpl(chattingRequiredRepository),
+                memberService,
+                roommateScoreService,
+                new ChattingScoreServiceImpl(chattingScoreRepository)
+        );
+    }
 
     @Test
     @DisplayName("회원 식별자로 채팅방 목록을 조회하고 결과를 그대로 반환한다")
@@ -418,8 +460,8 @@ class ChatServiceImplTest {
         Long memberId = 1L;
         MultipartFile multipartFile = multipartFile(false);
         File file = chatImage("chat-image.jpg");
-        when(fileService.upload(multipartFile, FileType.CHAT_ROOM_IMAGE)).thenReturn(file);
-        when(fileRepository.save(file)).thenReturn(file);
+        when(chatRoomMemberRepository.existsActiveMember(chatRoomId, memberId)).thenReturn(true);
+        when(fileService.save(multipartFile, FileType.CHAT_ROOM_IMAGE)).thenReturn(file);
 
         // When
         ChatRoomImageDto.Response response = chatService.uploadImage(
@@ -430,10 +472,10 @@ class ChatServiceImplTest {
 
         // Then
         assertThat(response.getImageUrl()).isEqualTo("chat-image.jpg");
-        InOrder inOrder = inOrder(chatRoomAccessService, fileService, fileRepository);
-        inOrder.verify(chatRoomAccessService).checkCanSendMessage(chatRoomId, memberId);
-        inOrder.verify(fileService).upload(multipartFile, FileType.CHAT_ROOM_IMAGE);
-        inOrder.verify(fileRepository).save(file);
+        InOrder inOrder = inOrder(chatRoomMemberRepository, fileService);
+        inOrder.verify(chatRoomMemberRepository).existsActiveMember(chatRoomId, memberId);
+        inOrder.verify(fileService).save(multipartFile, FileType.CHAT_ROOM_IMAGE);
+        verifyNoInteractions(fileRepository);
     }
 
     @Test
@@ -442,7 +484,7 @@ class ChatServiceImplTest {
         assertThatThrownBy(() -> chatService.uploadImage(10L, 1L, null))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(FileErrorCode.FILE_EMPTY));
-        verifyNoInteractions(chatRoomAccessService, fileService, fileRepository);
+        verifyNoInteractions(chatRoomMemberRepository, fileService, fileRepository);
     }
 
     @Test
@@ -455,19 +497,22 @@ class ChatServiceImplTest {
         assertThatThrownBy(() -> chatService.uploadImage(10L, 1L, emptyFile))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(FileErrorCode.FILE_EMPTY));
-        verifyNoInteractions(chatRoomAccessService, fileService, fileRepository);
+        verifyNoInteractions(chatRoomMemberRepository, fileService, fileRepository);
     }
 
     @Test
     @DisplayName("채팅방 이미지 업로드 중 실패하면 업로드 실패 예외를 던진다")
     void uploadImageThrowsWhenFileUploadFails() throws IOException {
         // Given
+        Long chatRoomId = 10L;
+        Long memberId = 1L;
         MultipartFile multipartFile = multipartFile(false);
-        when(fileService.upload(multipartFile, FileType.CHAT_ROOM_IMAGE))
+        when(chatRoomMemberRepository.existsActiveMember(chatRoomId, memberId)).thenReturn(true);
+        when(fileService.save(multipartFile, FileType.CHAT_ROOM_IMAGE))
                 .thenThrow(new IOException("upload failed"));
 
         // When & Then
-        assertThatThrownBy(() -> chatService.uploadImage(10L, 1L, multipartFile))
+        assertThatThrownBy(() -> chatService.uploadImage(chatRoomId, memberId, multipartFile))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(FileErrorCode.FILE_UPLOAD_FAILED));
         verifyNoInteractions(fileRepository);
@@ -532,8 +577,8 @@ class ChatServiceImplTest {
         when(chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatId, senderId))
                 .thenReturn(Optional.of(roomMember));
         when(chattingRoomRepository.findById(chatId)).thenReturn(Optional.of(chattingRoom));
-        when(fileRepository.findBySavedFileNameAndType("chat-image.jpg", FileType.CHAT_ROOM_IMAGE))
-                .thenReturn(Optional.of(file));
+        when(fileService.findBySavedFileNameAndType("chat-image.jpg", FileType.CHAT_ROOM_IMAGE))
+                .thenReturn(file);
         when(chatRoomMessageRepository.save(any(ChatRoomMessage.class))).thenReturn(savedMessage);
         when(chatRoomFileRepository.save(any(ChatRoomFile.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -574,8 +619,8 @@ class ChatServiceImplTest {
         when(chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatId, senderId))
                 .thenReturn(Optional.of(activeRoomMember(member, chattingRoom)));
         when(chattingRoomRepository.findById(chatId)).thenReturn(Optional.of(chattingRoom));
-        when(fileRepository.findBySavedFileNameAndType("unknown.jpg", FileType.CHAT_ROOM_IMAGE))
-                .thenReturn(Optional.empty());
+        when(fileService.findBySavedFileNameAndType("unknown.jpg", FileType.CHAT_ROOM_IMAGE))
+                .thenThrow(new BusinessException(FileErrorCode.FILE_NOT_FOUND));
 
         // When & Then
         assertThatThrownBy(() -> chatService.sendUserMessage(chatId, request, senderId))

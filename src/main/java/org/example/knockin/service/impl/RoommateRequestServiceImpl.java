@@ -1,6 +1,5 @@
 package org.example.knockin.service.impl;
 
-import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.ChatSocketResponse;
 import org.example.knockin.dto.EventType;
@@ -8,26 +7,15 @@ import org.example.knockin.dto.RoommateRequestDto;
 import org.example.knockin.dto.RoommateRequestDto.Response;
 import org.example.knockin.dto.RoommateRequestDto.RoommateMatchingRequiredInfo;
 import org.example.knockin.dto.RoommateRequestListDto;
-import org.example.knockin.entity.alarm.AlarmType;
 import org.example.knockin.entity.chat.ChatRoomMember;
 import org.example.knockin.entity.chat.ChattingRoom;
-import org.example.knockin.entity.member.BasicInformation;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.MemberPrivacy;
 import org.example.knockin.entity.member.MemberPrivacyType;
-import org.example.knockin.entity.room.MyRoommate;
 import org.example.knockin.entity.room.RoommateMatchingRequired;
-import org.example.knockin.entity.room.RoommateMatchingRequiredAlarm;
 import org.example.knockin.entity.room.RoommateRequiredStatus;
 import org.example.knockin.exception.BusinessException;
-import org.example.knockin.exception.ChattingErrorCode;
-import org.example.knockin.exception.MemberErrorCode;
 import org.example.knockin.exception.RequiredErrorCode;
-import org.example.knockin.repository.chat.ChatRoomMemberRepository;
-import org.example.knockin.repository.member.BasicInformationRepository;
-import org.example.knockin.repository.room.MyRoommateRepository;
-import org.example.knockin.repository.room.RoommateMatchingRequiredAlarmRepository;
-import org.example.knockin.repository.room.RoommateMatchingRequiredRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
@@ -39,34 +27,30 @@ import org.springframework.transaction.annotation.Transactional;
 public class RoommateRequestServiceImpl {
     private static final String REQUEST_PENDING_TEMPLATE = "%s님이 룸메이트 확정을 제안했어요";
     private static final String REQUEST_ACCEPTED_TEMPLATE = "%s님과 룸메이트가 확정되었어요";
-    private static final Integer ALARM_EXPIRE_DAYS = 7;
 
     private final SimpMessageSendingOperations messagingTemplate;
-    private final RoommateMatchingRequiredRepository roommateMatchingRequiredRepository;
-    private final ChatRoomMemberRepository chatRoomMemberRepository;
-    private final RoommateMatchingRequiredAlarmRepository roommateMatchingRequiredAlarmRepository;
-    private final AlarmServiceImpl alarmService;
-    private final BasicInformationRepository basicInformationRepository;
-    private final MyRoommateRepository myRoommateRepository;
+    private final RoommateMatchingRequiredServiceImpl roommateMatchingRequiredService;
+    private final ChatRoomMemberServiceImpl chatRoomMemberService;
+    private final RoommateMatchingRequiredAlarmServiceImpl roommateMatchingRequiredAlarmService;
+    private final MyRoomMateServiceImpl myRoomMateService;
     private final MemberPrivacyServiceImpl memberPrivacyService;
 
     @Transactional
     public RoommateRequestDto.Response saveRoommateRequest(Long requesterId, RoommateRequestDto.Request request) {
         Long chatRoomId = request.getChatRoomId();
-        ChatRoomMember chatRoomMember = chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatRoomId, requesterId)
-                .orElseThrow(() -> new BusinessException(ChattingErrorCode.ROOM_MEMBER_NOT_FOUND));
+        ChatRoomMember chatRoomMember = chatRoomMemberService.findActiveMemberByRoomIdAndMemberId(chatRoomId, requesterId);
         ChattingRoom chattingRoom = chatRoomMember.getChattingRoom();
         Member requester = chatRoomMember.getMember();
-        Member requestee = chatRoomMemberRepository.findPartnerMember(chatRoomMember, chattingRoom);
+        Member requestee = chatRoomMemberService.findPartnerMember(chatRoomMember, chattingRoom.getId());
 
-        RoommateMatchingRequired roommateMatchingRequired = roommateMatchingRequiredRepository.findLatest(chatRoomId)
+        RoommateMatchingRequired roommateMatchingRequired = roommateMatchingRequiredService.findLatest(chatRoomId)
                 .map(previous -> {
                     if (previous.getStatus().equals(RoommateRequiredStatus.PENDING)) {
                         throw new BusinessException(RequiredErrorCode.ROOMMATE_DUPLICATE);
                     }
-                    return saveRequired(requester, requestee, chattingRoom);
+                    return roommateMatchingRequiredService.savePending(requester, requestee, chattingRoom);
                 })
-                .orElseGet(() -> saveRequired(requester, requestee, chattingRoom));
+                .orElseGet(() -> roommateMatchingRequiredService.savePending(requester, requestee, chattingRoom));
 
         Response response = toDto(roommateMatchingRequired);
         sendAlarm(requestee, requester ,roommateMatchingRequired, REQUEST_PENDING_TEMPLATE);
@@ -74,34 +58,8 @@ public class RoommateRequestServiceImpl {
         return response;
     }
 
-    private RoommateMatchingRequired saveRequired(Member requester, Member requestee, ChattingRoom chattingRoom) {
-        RoommateMatchingRequired roommateMatchingRequired = RoommateMatchingRequired.builder()
-                .requester(requester)
-                .requestee(requestee)
-                .chattingRoom(chattingRoom)
-                .status(RoommateRequiredStatus.PENDING)
-                .build();
-
-        return roommateMatchingRequiredRepository.save(roommateMatchingRequired);
-    }
-
     private void sendAlarm(Member requestee, Member requester, RoommateMatchingRequired roommateMatchingRequired, String alarmTemplate) {
-        BasicInformation basicInformation = basicInformationRepository.findLatestBasicInformation(requester)
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.BASIC_INFO_NOT_FOUND));
-        String requesterName = basicInformation.getName();
-
-        RoommateMatchingRequiredAlarm alarm = RoommateMatchingRequiredAlarm.builder()
-                .member(requestee)
-                .title(String.format(alarmTemplate, requesterName))
-                .contents(String.format(alarmTemplate, requesterName))
-                .isRead(false)
-                .expiredAt(LocalDateTime.now().plusDays(ALARM_EXPIRE_DAYS))
-                .type(AlarmType.OFFER)
-                .roommateMatchingRequired(roommateMatchingRequired)
-                .build();
-
-        RoommateMatchingRequiredAlarm saved = roommateMatchingRequiredAlarmRepository.save(alarm);
-        alarmService.sendToClient(requestee.getId(), AlarmType.OFFER.name(), saved);
+        roommateMatchingRequiredAlarmService.send(requestee, requester, roommateMatchingRequired, alarmTemplate);
     }
 
     private RoommateRequestDto.Response toDto(RoommateMatchingRequired roommateMatchingRequired) {
@@ -130,8 +88,7 @@ public class RoommateRequestServiceImpl {
 
     @Transactional
     public RoommateRequestDto.Response acceptRequired(Long memberId, Long requestId) {
-        RoommateMatchingRequired roommateMatchingRequired = roommateMatchingRequiredRepository.findById(requestId)
-                .orElseThrow(() -> new BusinessException(RequiredErrorCode.ROOMMATE_NOT_FOUND));
+        RoommateMatchingRequired roommateMatchingRequired = roommateMatchingRequiredService.findByIdOrThrow(requestId);
 
         if (!roommateMatchingRequired.isRequestee(memberId)) {
             throw new BusinessException(RequiredErrorCode.ROOMMATE_ACCESS_DENIED);
@@ -139,7 +96,7 @@ public class RoommateRequestServiceImpl {
 
         validateRequired(roommateMatchingRequired);
         roommateMatchingRequired.accept();
-        saveMyRoommate(roommateMatchingRequired);
+        myRoomMateService.save(roommateMatchingRequired);
 
         Member requester = roommateMatchingRequired.getRequester();
         Member requestee = roommateMatchingRequired.getRequestee();
@@ -154,18 +111,9 @@ public class RoommateRequestServiceImpl {
         return response;
     }
 
-    public void saveMyRoommate(RoommateMatchingRequired roommateMatchingRequired) {
-        MyRoommate myRoommate = MyRoommate.builder()
-                .roommateMatchingRequired(roommateMatchingRequired)
-                .isDeleted(false)
-                .build();
-        myRoommateRepository.save(myRoommate);
-    }
-
     @Transactional
     public RoommateRequestDto.Response rejectRequired(Long memberId, Long requestId) {
-        RoommateMatchingRequired roommateMatchingRequired = roommateMatchingRequiredRepository.findById(requestId)
-                .orElseThrow(() -> new BusinessException(RequiredErrorCode.ROOMMATE_NOT_FOUND));
+        RoommateMatchingRequired roommateMatchingRequired = roommateMatchingRequiredService.findByIdOrThrow(requestId);
 
         if (!roommateMatchingRequired.isRequestee(memberId)) {
             throw new BusinessException(RequiredErrorCode.ROOMMATE_ACCESS_DENIED);
@@ -180,8 +128,7 @@ public class RoommateRequestServiceImpl {
 
     @Transactional
     public RoommateRequestDto.Response cancelRequired(Long memberId, Long requestId) {
-        RoommateMatchingRequired roommateMatchingRequired = roommateMatchingRequiredRepository.findById(requestId)
-                .orElseThrow(() -> new BusinessException(RequiredErrorCode.ROOMMATE_NOT_FOUND));
+        RoommateMatchingRequired roommateMatchingRequired = roommateMatchingRequiredService.findByIdOrThrow(requestId);
 
         if (!roommateMatchingRequired.isRequester(memberId)) {
             throw new BusinessException(RequiredErrorCode.ROOMMATE_ACCESS_DENIED);
@@ -195,7 +142,7 @@ public class RoommateRequestServiceImpl {
     }
 
     public Page<RoommateRequestListDto.Response> getRequiredList(Long memberId, Pageable pageable) {
-        return roommateMatchingRequiredRepository.findByRequesterIdAndRequesteeId(memberId, memberId, pageable).map(this::toListDto);
+        return roommateMatchingRequiredService.findByRequesterIdAndRequesteeId(memberId, memberId, pageable).map(this::toListDto);
     }
 
     private RoommateRequestListDto.Response toListDto(RoommateMatchingRequired roommateMatchingRequired) {

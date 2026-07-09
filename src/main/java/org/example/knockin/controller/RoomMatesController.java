@@ -9,8 +9,6 @@ import org.example.knockin.dto.*;
 import org.example.knockin.dto.HouseRuleDto.Response;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.dto.PrincipalDetails;
-import org.example.knockin.service.impl.CalendarServiceImpl;
-import org.example.knockin.service.impl.HouseRuleServiceImpl;
 import org.example.knockin.service.impl.MyRoomMateServiceImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,8 +20,6 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "8. 룸메이트 관리")
 public class RoomMatesController {
     private final MyRoomMateServiceImpl myRoomMateService;
-    private final HouseRuleServiceImpl houseRuleService;
-    private final CalendarServiceImpl calendarService;
 
     @GetMapping("/me")
     @Operation(summary = "내 룸메이트 조회")
@@ -48,7 +44,7 @@ public class RoomMatesController {
             @AuthenticationPrincipal PrincipalDetails details,
             @Valid @RequestBody HouseRuleDto.Request request
     ) {
-        Response response = houseRuleService.saveHouseRule(request, details.getMember().getId());
+        Response response = myRoomMateService.saveHouseRule(request, details.getMember().getId());
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
@@ -57,7 +53,7 @@ public class RoomMatesController {
     public CommonResponse<List<HouseRuleListDto.Response>> findHouseRuleList(
             @AuthenticationPrincipal PrincipalDetails details
     ) {
-        List<HouseRuleListDto.Response> responses = houseRuleService.findHouseRuleList(details.getMember().getId());
+        List<HouseRuleListDto.Response> responses = myRoomMateService.findHouseRuleList(details.getMember().getId());
         return CommonResponse.status(HttpStatus.OK).body(responses);
     }
 
@@ -67,7 +63,7 @@ public class RoomMatesController {
             @AuthenticationPrincipal PrincipalDetails details,
             @PathVariable Long id
     ) {
-        HouseRuleDetailDto.Response response = houseRuleService.findHouseRuleDetail(details.getMember().getId(), id);
+        HouseRuleDetailDto.Response response = myRoomMateService.findHouseRuleDetail(details.getMember().getId(), id);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
@@ -78,7 +74,7 @@ public class RoomMatesController {
             @PathVariable Long id,
             @Valid @RequestBody HouseRuleDto.Request request
     ) {
-        Response response = houseRuleService.modifyHouseRule(details.getMember().getId(), id, request);
+        Response response = myRoomMateService.modifyHouseRule(details.getMember().getId(), id, request);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
@@ -88,7 +84,7 @@ public class RoomMatesController {
             @AuthenticationPrincipal PrincipalDetails details,
             @PathVariable Long id
     ) {
-        Response response = houseRuleService.deleteHouseRule(details.getMember().getId(), id);
+        Response response = myRoomMateService.deleteHouseRule(details.getMember().getId(), id);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
@@ -99,7 +95,7 @@ public class RoomMatesController {
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) Integer month
     ) {
-        MyRoommateMonthlyCalendarListDto.Response response = calendarService.findMyMonthlyCalendarList(details.getMember().getId(), year, month);
+        MyRoommateMonthlyCalendarListDto.Response response = myRoomMateService.findMyMonthlyCalendarList(details.getMember().getId(), year, month);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
@@ -111,7 +107,7 @@ public class RoomMatesController {
             @RequestParam Integer month,
             @RequestParam Integer day
     ) {
-        MyRoommateDailyCalendarListDto.Response response = calendarService.findDailyCalendarList(details.getMember().getId(), year, month, day);
+        MyRoommateDailyCalendarListDto.Response response = myRoomMateService.findDailyCalendarList(details.getMember().getId(), year, month, day);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
@@ -124,7 +120,7 @@ public class RoomMatesController {
     @GetMapping("/me/calendar/categories")
     @Operation(summary = "캘린더 타입 조회")
     public CommonResponse<CalendarCategoryDto.Response> findCalendarType() {
-        return CommonResponse.status(HttpStatus.OK).body(CalendarCategoryDto.Response.builder().categoryNames(calendarService.findCategoryNames()).build());
+        return CommonResponse.status(HttpStatus.OK).body(CalendarCategoryDto.Response.builder().categoryNames(myRoomMateService.findCategoryNames()).build());
     }
 
     @GetMapping("/me/calendar/edit")
@@ -132,7 +128,7 @@ public class RoomMatesController {
     public CommonResponse<CalendarEditDto.Response> findCalendarEditForm(
             @AuthenticationPrincipal PrincipalDetails details
     ) {
-        CalendarEditDto.Response response = calendarService.getRoommateEditForm(details.getMember().getId());
+        CalendarEditDto.Response response = myRoomMateService.getRoommateCalendarEditForm(details.getMember().getId());
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
@@ -142,7 +138,7 @@ public class RoomMatesController {
             @AuthenticationPrincipal PrincipalDetails principalDetails,
             @Valid @RequestBody CalendarDto.Request request
     ) {
-        CalendarDto.Response response = calendarService.saveBasicCalendar(principalDetails.getMember().getId(), request);
+        CalendarDto.Response response = myRoomMateService.saveBasicCalendar(principalDetails.getMember().getId(), request);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
@@ -152,7 +148,7 @@ public class RoomMatesController {
             @AuthenticationPrincipal PrincipalDetails principalDetails,
             @Valid @RequestBody RepeatCalendarDto.Request request
     ) {
-        RepeatCalendarDto.Response response = calendarService.saveRepeatCalendar(principalDetails.getMember().getId(), request);
+        RepeatCalendarDto.Response response = myRoomMateService.saveRepeatCalendar(principalDetails.getMember().getId(), request);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
@@ -163,7 +159,7 @@ public class RoomMatesController {
             @Valid @RequestBody CalendarDto.Request request,
             @AuthenticationPrincipal PrincipalDetails details
     ) {
-        CalendarDto.Response response = calendarService.modifyCalendar(details.getMember().getId(), id, request);
+        CalendarDto.Response response = myRoomMateService.modifyCalendar(details.getMember().getId(), id, request);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
@@ -174,7 +170,7 @@ public class RoomMatesController {
             @Valid @RequestBody RepeatCalendarModifyDto.Request request,
             @AuthenticationPrincipal PrincipalDetails details
     ) {
-        RepeatCalendarModifyDto.Response response = calendarService.modifyRepeatCalendar(details.getMember().getId(), id, request);
+        RepeatCalendarModifyDto.Response response = myRoomMateService.modifyRepeatCalendar(details.getMember().getId(), id, request);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 
@@ -184,7 +180,7 @@ public class RoomMatesController {
             @AuthenticationPrincipal PrincipalDetails details,
             @PathVariable Long id
     ) {
-        CalendarDto.Response response = calendarService.deleteCalendar(details.getMember().getId(), id);
+        CalendarDto.Response response = myRoomMateService.deleteCalendar(details.getMember().getId(), id);
         return CommonResponse.status(HttpStatus.OK).body(response);
     }
 }

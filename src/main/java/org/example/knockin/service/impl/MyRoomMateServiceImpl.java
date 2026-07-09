@@ -4,10 +4,19 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.dto.CalendarDto;
+import org.example.knockin.dto.CalendarEditDto;
 import org.example.knockin.dto.Compatibility;
+import org.example.knockin.dto.HouseRuleDetailDto;
+import org.example.knockin.dto.HouseRuleDto;
+import org.example.knockin.dto.HouseRuleListDto;
 import org.example.knockin.dto.MyRoommateCardDto;
 import org.example.knockin.dto.MyRoommateCardDto.Response.MyRoommateInfo;
+import org.example.knockin.dto.MyRoommateDailyCalendarListDto;
 import org.example.knockin.dto.MyRoommateDto;
+import org.example.knockin.dto.MyRoommateMonthlyCalendarListDto;
+import org.example.knockin.dto.RepeatCalendarDto;
+import org.example.knockin.dto.RepeatCalendarModifyDto;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.MemberPrivacy;
 import org.example.knockin.entity.member.MemberPrivacyType;
@@ -32,9 +41,20 @@ public class MyRoomMateServiceImpl {
     private final MemberPrivacyServiceImpl memberPrivacyService;
     private final BasicInformationServiceImpl basicInformationService;
     private final MyRoommateScoreServiceImpl myRoommateScoreService;
+    private final CalendarServiceImpl calendarService;
+    private final HouseRuleServiceImpl houseRuleService;
 
     public boolean isExistRoomMate(Member member) {
         return myRoommateRepository.isExistRoomMate(member);
+    }
+
+    @Transactional
+    public MyRoommate save(RoommateMatchingRequired roommateMatchingRequired) {
+        MyRoommate myRoommate = MyRoommate.builder()
+                .roommateMatchingRequired(roommateMatchingRequired)
+                .isDeleted(false)
+                .build();
+        return myRoommateRepository.save(myRoommate);
     }
 
     @Transactional(readOnly = true)
@@ -99,5 +119,87 @@ public class MyRoomMateServiceImpl {
         Long requesteeId = myRoommate.getRoommateMatchingRequired().getRequestee().getId();
 
         return Objects.equals(memberId, requesterId) || (Objects.equals(memberId, requesteeId));
+    }
+
+    private MyRoommate findWithRequiredAndMembersByMemberId(Long memberId) {
+        return myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)
+                .orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+    }
+
+    @Transactional
+    public HouseRuleDto.Response saveHouseRule(HouseRuleDto.Request request, Long memberId) {
+        MyRoommate myRoommate = findWithRequiredAndMembersByMemberId(memberId);
+        return houseRuleService.save(myRoommate, request, memberId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<HouseRuleListDto.Response> findHouseRuleList(Long memberId) {
+        MyRoommate myRoommate = findWithRequiredAndMembersByMemberId(memberId);
+        return houseRuleService.findList(myRoommate);
+    }
+
+    @Transactional
+    public HouseRuleDetailDto.Response findHouseRuleDetail(Long memberId, Long houseRuleId) {
+        return houseRuleService.findDetail(memberId, houseRuleId);
+    }
+
+    @Transactional
+    public HouseRuleDto.Response modifyHouseRule(Long memberId, Long houseRuleId, HouseRuleDto.Request request) {
+        return houseRuleService.modify(memberId, houseRuleId, request);
+    }
+
+    @Transactional
+    public HouseRuleDto.Response deleteHouseRule(Long memberId, Long houseRuleId) {
+        return houseRuleService.delete(memberId, houseRuleId);
+    }
+
+    @Transactional
+    public CalendarDto.Response saveBasicCalendar(Long memberId, CalendarDto.Request request) {
+        MyRoommate myRoommate = findWithRequiredAndMembersByMemberId(memberId);
+        return calendarService.saveBasic(memberId, myRoommate, request);
+    }
+
+    @Transactional
+    public RepeatCalendarDto.Response saveRepeatCalendar(Long memberId, RepeatCalendarDto.Request request) {
+        MyRoommate myRoommate = findWithRequiredAndMembersByMemberId(memberId);
+        return calendarService.saveRepeat(memberId, myRoommate, request);
+    }
+
+    @Transactional
+    public MyRoommateDailyCalendarListDto.Response findDailyCalendarList(Long memberId, Integer year, Integer month, Integer day) {
+        MyRoommate myRoommate = findWithRequiredAndMembersByMemberId(memberId);
+        return calendarService.findDailyList(myRoommate, year, month, day);
+    }
+
+    @Transactional
+    public MyRoommateMonthlyCalendarListDto.Response findMyMonthlyCalendarList(Long memberId, Integer year, Integer month) {
+        MyRoommate myRoommate = findWithRequiredAndMembersByMemberId(memberId);
+        return calendarService.findMyMonthlyList(myRoommate, year, month);
+    }
+
+    public List<String> findCategoryNames() {
+        return calendarService.findCategoryNames();
+    }
+
+    @Transactional
+    public CalendarEditDto.Response getRoommateCalendarEditForm(Long memberId) {
+        MyRoommate myRoommate = findWithRequiredAndMembersByMemberId(memberId);
+        return calendarService.getEditForm(memberId, myRoommate);
+    }
+
+    @Transactional
+    public CalendarDto.Response modifyCalendar(Long memberId, Long calendarId, CalendarDto.Request request) {
+        return calendarService.modifyCalendar(memberId, calendarId, request);
+    }
+
+    @Transactional
+    public RepeatCalendarModifyDto.Response modifyRepeatCalendar(Long memberId, Long calendarId, RepeatCalendarModifyDto.Request request) {
+        MyRoommate myRoommate = findWithRequiredAndMembersByMemberId(memberId);
+        return calendarService.modifyRepeat(memberId, calendarId, myRoommate, request);
+    }
+
+    @Transactional
+    public CalendarDto.Response deleteCalendar(Long memberId, Long calendarId) {
+        return calendarService.delete(memberId, calendarId);
     }
 }
