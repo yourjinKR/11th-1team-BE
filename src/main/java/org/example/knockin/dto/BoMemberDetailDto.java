@@ -9,10 +9,9 @@ import lombok.NoArgsConstructor;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.member.Gender;
 import org.example.knockin.entity.member.MemberRole;
-import org.example.knockin.entity.member.State;
+import org.example.knockin.entity.member.MemberState;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -39,7 +38,7 @@ public class BoMemberDetailDto {
         @Schema(description = "권한")
         private MemberRole role;
         @Schema(description = "회원 상태")
-        private State state;
+        private MemberState state;
         @Schema(description = "성별")
         private Gender gender;
         @Schema(description = "생년월일")
