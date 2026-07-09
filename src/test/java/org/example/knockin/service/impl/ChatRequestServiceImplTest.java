@@ -123,7 +123,7 @@ class ChatRequestServiceImplTest {
                 memberService,
                 new ChattingRequiredServiceImpl(chattingRequiredRepository),
                 roommateBoardService,
-                new ChattingRequiredAlarmServiceImpl(chattingRequiredAlarmRepository, basicInformationService, alarmService),
+                new ChattingRequiredAlarmServiceImpl(basicInformationService, alarmService),
                 basicInformationService,
                 memberLifePatternService,
                 roommateScoreService
@@ -367,8 +367,6 @@ class ChatRequestServiceImplTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(basicInformationRepository.findLatestBasicInformation(requester))
                 .thenReturn(Optional.of(basicInformation(requester, "김중민")));
-        when(chattingRequiredAlarmRepository.save(any(ChattingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
         ChatRequestDto.Response response = chatRequestService.saveChatRequest(requesterId, request);
@@ -405,8 +403,6 @@ class ChatRequestServiceImplTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(basicInformationRepository.findLatestBasicInformation(requester))
                 .thenReturn(Optional.of(basicInformation(requester, "김중민")));
-        when(chattingRequiredAlarmRepository.save(any(ChattingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
         ChatRequestDto.Response response = chatRequestService.saveChatRequest(requesterId, request);
@@ -584,8 +580,6 @@ class ChatRequestServiceImplTest {
         when(chattingRequiredRepository.findById(requestId)).thenReturn(Optional.of(chattingRequired));
         when(basicInformationRepository.findLatestBasicInformation(requestee))
                 .thenReturn(Optional.of(basicInformation(requestee, "이수현")));
-        when(chattingRequiredAlarmRepository.save(any(ChattingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
         ChatRequestDto.Response response = chatRequestService.acceptRequired(requesteeId, requestId);
@@ -611,8 +605,6 @@ class ChatRequestServiceImplTest {
         when(chattingRequiredRepository.findById(requestId)).thenReturn(Optional.of(chattingRequired));
         when(basicInformationRepository.findLatestBasicInformation(requestee))
                 .thenReturn(Optional.of(basicInformation(requestee, "이수현")));
-        when(chattingRequiredAlarmRepository.save(any(ChattingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
         ChatRequestDto.Response response = chatRequestService.rejectRequired(requesteeId, requestId);
@@ -638,8 +630,6 @@ class ChatRequestServiceImplTest {
         when(chattingRequiredRepository.findById(requestId)).thenReturn(Optional.of(chattingRequired));
         when(basicInformationRepository.findLatestBasicInformation(requester))
                 .thenReturn(Optional.of(basicInformation(requester, "김중민")));
-        when(chattingRequiredAlarmRepository.save(any(ChattingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
         ChatRequestDto.Response response = chatRequestService.cancelRequired(requesterId, requestId);
@@ -770,7 +760,7 @@ class ChatRequestServiceImplTest {
 
     private void assertChattingRequiredAlarm(Member receiver, String message, ChattingRequired chattingRequired) {
         ArgumentCaptor<ChattingRequiredAlarm> alarmCaptor = ArgumentCaptor.forClass(ChattingRequiredAlarm.class);
-        verify(chattingRequiredAlarmRepository).save(alarmCaptor.capture());
+        verify(alarmService).sendToClient(eq(receiver.getId()), eq(AlarmType.CHATTING_REQUIRED.name()), alarmCaptor.capture());
         assertThat(alarmCaptor.getValue().getMember()).isSameAs(receiver);
         assertThat(alarmCaptor.getValue().getTitle()).isEqualTo(message);
         assertThat(alarmCaptor.getValue().getContents()).isEqualTo(message);

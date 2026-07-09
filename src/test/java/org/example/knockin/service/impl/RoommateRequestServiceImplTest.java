@@ -101,7 +101,7 @@ class RoommateRequestServiceImplTest {
                 messagingTemplate,
                 new RoommateMatchingRequiredServiceImpl(roommateMatchingRequiredRepository),
                 new ChatRoomMemberServiceImpl(chatRoomMemberRepository),
-                new RoommateMatchingRequiredAlarmServiceImpl(roommateMatchingRequiredAlarmRepository, basicInformationService, alarmService),
+                new RoommateMatchingRequiredAlarmServiceImpl(basicInformationService, alarmService),
                 myRoomMateService,
                 memberPrivacyService
         );
@@ -128,9 +128,6 @@ class RoommateRequestServiceImplTest {
                 .thenAnswer(invocation -> persistedRoommateRequest(invocation.getArgument(0), 1000L));
         when(basicInformationRepository.findLatestBasicInformation(requester))
                 .thenReturn(Optional.of(requesterBasicInformation));
-        when(roommateMatchingRequiredAlarmRepository.save(any(RoommateMatchingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
         RoommateRequestDto.Request request = request(chatRoomId);
 
         // When
@@ -153,13 +150,12 @@ class RoommateRequestServiceImplTest {
         assertThat(requestCaptor.getValue().getStatus()).isEqualTo(RoommateRequiredStatus.PENDING);
 
         ArgumentCaptor<RoommateMatchingRequiredAlarm> alarmCaptor = ArgumentCaptor.forClass(RoommateMatchingRequiredAlarm.class);
-        verify(roommateMatchingRequiredAlarmRepository).save(alarmCaptor.capture());
+        verify(alarmService).sendToClient(eq(requesteeId), eq(AlarmType.OFFER.name()), alarmCaptor.capture());
         assertThat(alarmCaptor.getValue().getMember()).isSameAs(requestee);
         assertThat(alarmCaptor.getValue().getTitle()).isEqualTo("김중민님이 룸메이트 확정을 제안했어요");
         assertThat(alarmCaptor.getValue().getContents()).isEqualTo("김중민님이 룸메이트 확정을 제안했어요");
         assertThat(alarmCaptor.getValue().getType()).isEqualTo(AlarmType.OFFER);
         assertThat(alarmCaptor.getValue().getRoommateMatchingRequired().getId()).isEqualTo(1000L);
-        verify(alarmService).sendToClient(eq(requesteeId), eq(AlarmType.OFFER.name()), any(RoommateMatchingRequiredAlarm.class));
 
         ArgumentCaptor<Object> socketCaptor = ArgumentCaptor.forClass(Object.class);
         verify(messagingTemplate).convertAndSend(eq("/sub/chats/10"), socketCaptor.capture());
@@ -222,9 +218,6 @@ class RoommateRequestServiceImplTest {
                 .thenAnswer(invocation -> persistedRoommateRequest(invocation.getArgument(0), 1001L));
         when(basicInformationRepository.findLatestBasicInformation(requester))
                 .thenReturn(Optional.of(basicInformation(requester, "이수현")));
-        when(roommateMatchingRequiredAlarmRepository.save(any(RoommateMatchingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
         // When
         RoommateRequestDto.Response response = roommateRequestService.saveRoommateRequest(requesterId, request(chatRoomId));
 
@@ -283,8 +276,6 @@ class RoommateRequestServiceImplTest {
         when(roommateMatchingRequiredRepository.findById(requestId)).thenReturn(Optional.of(roommateRequest));
         when(basicInformationRepository.findLatestBasicInformation(requestee))
                 .thenReturn(Optional.of(basicInformation(requestee, "이수현")));
-        when(roommateMatchingRequiredAlarmRepository.save(any(RoommateMatchingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
         MemberPrivacy requesteePrivacy = MemberPrivacy.builder()
                 .type(MemberPrivacyType.PUBLIC)
                 .build();
@@ -309,12 +300,11 @@ class RoommateRequestServiceImplTest {
         verify(memberPrivacyService).findByMemberId(requesteeId);
 
         ArgumentCaptor<RoommateMatchingRequiredAlarm> alarmCaptor = ArgumentCaptor.forClass(RoommateMatchingRequiredAlarm.class);
-        verify(roommateMatchingRequiredAlarmRepository).save(alarmCaptor.capture());
+        verify(alarmService).sendToClient(eq(requesterId), eq(AlarmType.OFFER.name()), alarmCaptor.capture());
         assertThat(alarmCaptor.getValue().getMember()).isSameAs(requester);
         assertThat(alarmCaptor.getValue().getTitle()).isEqualTo("이수현님과 룸메이트가 확정되었어요");
         assertThat(alarmCaptor.getValue().getContents()).isEqualTo("이수현님과 룸메이트가 확정되었어요");
         assertThat(alarmCaptor.getValue().getRoommateMatchingRequired()).isSameAs(roommateRequest);
-        verify(alarmService).sendToClient(eq(requesterId), eq(AlarmType.OFFER.name()), any(RoommateMatchingRequiredAlarm.class));
 
         assertSocketResponse(chatRoomId, response);
     }

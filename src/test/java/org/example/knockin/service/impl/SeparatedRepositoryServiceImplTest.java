@@ -3,6 +3,7 @@ package org.example.knockin.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -38,13 +39,11 @@ import org.example.knockin.exception.MemberErrorCode;
 import org.example.knockin.exception.MyRoommateErrorCode;
 import org.example.knockin.exception.RequiredErrorCode;
 import org.example.knockin.repository.chat.ChatRoomMemberRepository;
-import org.example.knockin.repository.chat.ChattingRequiredAlarmRepository;
 import org.example.knockin.repository.chat.ChattingRequiredRepository;
 import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.MemberInterestRepository;
 import org.example.knockin.repository.room.RepeatRoommateCalendarRepository;
 import org.example.knockin.repository.room.RoommateCalendarRepository;
-import org.example.knockin.repository.room.RoommateMatchingRequiredAlarmRepository;
 import org.example.knockin.repository.room.RoommateMatchingRequiredRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -68,16 +67,10 @@ class SeparatedRepositoryServiceImplTest {
     private ChattingRequiredRepository chattingRequiredRepository;
 
     @Mock
-    private ChattingRequiredAlarmRepository chattingRequiredAlarmRepository;
-
-    @Mock
     private ChatRoomMemberRepository chatRoomMemberRepository;
 
     @Mock
     private RoommateMatchingRequiredRepository roommateMatchingRequiredRepository;
-
-    @Mock
-    private RoommateMatchingRequiredAlarmRepository roommateMatchingRequiredAlarmRepository;
 
     @Mock
     private MemberInterestRepository memberInterestRepository;
@@ -290,7 +283,6 @@ class SeparatedRepositoryServiceImplTest {
         // Given
         BasicInformationServiceImpl basicInformationService = new BasicInformationServiceImpl(basicInformationRepository);
         ChattingRequiredAlarmServiceImpl service = new ChattingRequiredAlarmServiceImpl(
-                chattingRequiredAlarmRepository,
                 basicInformationService,
                 alarmService
         );
@@ -304,23 +296,20 @@ class SeparatedRepositoryServiceImplTest {
 
         when(basicInformationRepository.findLatestBasicInformation(actor))
                 .thenReturn(Optional.of(basicInformation(actor, "김중민")));
-        when(chattingRequiredAlarmRepository.save(any(ChattingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
-        ChattingRequiredAlarm saved = service.send(receiver, actor, required, "%s님이 매칭을 요청했어요");
+        service.send(receiver, actor, required, "%s님이 매칭을 요청했어요");
 
         // Then
         ArgumentCaptor<ChattingRequiredAlarm> captor = ArgumentCaptor.forClass(ChattingRequiredAlarm.class);
-        verify(chattingRequiredAlarmRepository).save(captor.capture());
-        assertThat(saved).isSameAs(captor.getValue());
-        assertThat(saved.getMember()).isSameAs(receiver);
-        assertThat(saved.getTitle()).isEqualTo("김중민님이 매칭을 요청했어요");
-        assertThat(saved.getContents()).isEqualTo("김중민님이 매칭을 요청했어요");
-        assertThat(saved.getType()).isEqualTo(AlarmType.CHATTING_REQUIRED);
-        assertThat(saved.getChattingRequired()).isSameAs(required);
-        assertThat(saved.getExpiredAt()).isAfter(LocalDateTime.now().plusDays(6));
-        verify(alarmService).sendToClient(receiver.getId(), AlarmType.CHATTING_REQUIRED.name(), saved);
+        verify(alarmService).sendToClient(eq(receiver.getId()), eq(AlarmType.CHATTING_REQUIRED.name()), captor.capture());
+        ChattingRequiredAlarm alarm = captor.getValue();
+        assertThat(alarm.getMember()).isSameAs(receiver);
+        assertThat(alarm.getTitle()).isEqualTo("김중민님이 매칭을 요청했어요");
+        assertThat(alarm.getContents()).isEqualTo("김중민님이 매칭을 요청했어요");
+        assertThat(alarm.getType()).isEqualTo(AlarmType.CHATTING_REQUIRED);
+        assertThat(alarm.getChattingRequired()).isSameAs(required);
+        assertThat(alarm.getExpiredAt()).isAfter(LocalDateTime.now().plusDays(6));
     }
 
     @Test
@@ -329,7 +318,6 @@ class SeparatedRepositoryServiceImplTest {
         // Given
         BasicInformationServiceImpl basicInformationService = new BasicInformationServiceImpl(basicInformationRepository);
         RoommateMatchingRequiredAlarmServiceImpl service = new RoommateMatchingRequiredAlarmServiceImpl(
-                roommateMatchingRequiredAlarmRepository,
                 basicInformationService,
                 alarmService
         );
@@ -345,23 +333,20 @@ class SeparatedRepositoryServiceImplTest {
 
         when(basicInformationRepository.findLatestBasicInformation(actor))
                 .thenReturn(Optional.of(basicInformation(actor, "이수현")));
-        when(roommateMatchingRequiredAlarmRepository.save(any(RoommateMatchingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
-        RoommateMatchingRequiredAlarm saved = service.send(receiver, actor, required, "%s님이 룸메이트 확정을 제안했어요");
+        service.send(receiver, actor, required, "%s님이 룸메이트 확정을 제안했어요");
 
         // Then
         ArgumentCaptor<RoommateMatchingRequiredAlarm> captor = ArgumentCaptor.forClass(RoommateMatchingRequiredAlarm.class);
-        verify(roommateMatchingRequiredAlarmRepository).save(captor.capture());
-        assertThat(saved).isSameAs(captor.getValue());
-        assertThat(saved.getMember()).isSameAs(receiver);
-        assertThat(saved.getTitle()).isEqualTo("이수현님이 룸메이트 확정을 제안했어요");
-        assertThat(saved.getContents()).isEqualTo("이수현님이 룸메이트 확정을 제안했어요");
-        assertThat(saved.getType()).isEqualTo(AlarmType.OFFER);
-        assertThat(saved.getRoommateMatchingRequired()).isSameAs(required);
-        assertThat(saved.getExpiredAt()).isAfter(LocalDateTime.now().plusDays(6));
-        verify(alarmService).sendToClient(receiver.getId(), AlarmType.OFFER.name(), saved);
+        verify(alarmService).sendToClient(eq(receiver.getId()), eq(AlarmType.OFFER.name()), captor.capture());
+        RoommateMatchingRequiredAlarm alarm = captor.getValue();
+        assertThat(alarm.getMember()).isSameAs(receiver);
+        assertThat(alarm.getTitle()).isEqualTo("이수현님이 룸메이트 확정을 제안했어요");
+        assertThat(alarm.getContents()).isEqualTo("이수현님이 룸메이트 확정을 제안했어요");
+        assertThat(alarm.getType()).isEqualTo(AlarmType.OFFER);
+        assertThat(alarm.getRoommateMatchingRequired()).isSameAs(required);
+        assertThat(alarm.getExpiredAt()).isAfter(LocalDateTime.now().plusDays(6));
     }
 
     @Test
@@ -370,7 +355,6 @@ class SeparatedRepositoryServiceImplTest {
         // Given
         BasicInformationServiceImpl basicInformationService = new BasicInformationServiceImpl(basicInformationRepository);
         ChattingRequiredAlarmServiceImpl service = new ChattingRequiredAlarmServiceImpl(
-                chattingRequiredAlarmRepository,
                 basicInformationService,
                 alarmService
         );
@@ -387,7 +371,7 @@ class SeparatedRepositoryServiceImplTest {
         assertThatThrownBy(() -> service.send(receiver, actor, required, "%s님이 매칭을 요청했어요"))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.BASIC_INFO_NOT_FOUND));
-        verifyNoInteractions(chattingRequiredAlarmRepository, alarmService);
+        verifyNoInteractions(alarmService);
     }
 
     private BasicInformation basicInformation(Member member, String name) {

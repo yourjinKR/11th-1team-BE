@@ -7,7 +7,6 @@ import org.example.knockin.entity.member.BasicInformation;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.room.RoommateMatchingRequired;
 import org.example.knockin.entity.room.RoommateMatchingRequiredAlarm;
-import org.example.knockin.repository.room.RoommateMatchingRequiredAlarmRepository;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -16,11 +15,10 @@ public class RoommateMatchingRequiredAlarmServiceImpl {
 
     private static final Integer ALARM_EXPIRE_DAYS = 7;
 
-    private final RoommateMatchingRequiredAlarmRepository roommateMatchingRequiredAlarmRepository;
     private final BasicInformationServiceImpl basicInformationService;
     private final AlarmServiceImpl alarmService;
 
-    public RoommateMatchingRequiredAlarm send(Member receiver, Member actor, RoommateMatchingRequired required, String alarmTemplate) {
+    public void send(Member receiver, Member actor, RoommateMatchingRequired required, String alarmTemplate) {
         BasicInformation basicInformation = basicInformationService.findLatestBasicInformation(actor);
         String actorName = basicInformation.getName();
         String message = String.format(alarmTemplate, actorName);
@@ -35,8 +33,6 @@ public class RoommateMatchingRequiredAlarmServiceImpl {
                 .roommateMatchingRequired(required)
                 .build();
 
-        RoommateMatchingRequiredAlarm saved = roommateMatchingRequiredAlarmRepository.save(alarm);
-        alarmService.sendToClient(receiver.getId(), AlarmType.OFFER.name(), saved);
-        return saved;
+        alarmService.sendToClient(receiver.getId(), AlarmType.OFFER.name(), alarm);
     }
 }
