@@ -1,6 +1,8 @@
 package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.dto.BoardDetailDto.Response.Condition;
+import org.example.knockin.dto.BoardDetailDto.Response.ConditionWeight;
 import org.example.knockin.entity.life.PreferenceCondition;
 import org.example.knockin.entity.life.PreferenceConditionLog;
 import org.example.knockin.entity.life.PreferenceConditionWeight;
@@ -10,6 +12,8 @@ import org.example.knockin.repository.life.PreferenceConditionLogRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
 import org.example.knockin.repository.life.PreferenceConditionWeightLogRepository;
 import org.example.knockin.repository.life.PreferenceConditionWeightRepository;
+import org.example.knockin.repository.life.row.MatchingPreferenceConditionRow;
+import org.example.knockin.repository.life.row.MatchingPreferenceConditionWeightRow;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +53,22 @@ public class PreferenceConditionServiceImpl {
 
     public List<PreferenceConditionWeight> findPreferenceConditionWeightByMember(Member member) {
         return preferenceConditionWeightRepository.findByMember(member);
+    }
+
+    public List<MatchingPreferenceConditionRow> findRowByMemberIdsIn(List<Long> memberIds) {
+        return preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(memberIds);
+    }
+
+    public List<MatchingPreferenceConditionWeightRow> findWeightRowByMemberIdsIn(List<Long> memberIds) {
+        return preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(memberIds);
+    }
+
+    public List<Condition> findAllConditionByMemberId(Long memberId) {
+        return preferenceConditionRepository.getConditionDtoByMemberId(memberId);
+    }
+
+    public List<ConditionWeight> findAllConditionWeightByMemberId(Long memberId) {
+        return preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(memberId);
     }
 
     @Transactional

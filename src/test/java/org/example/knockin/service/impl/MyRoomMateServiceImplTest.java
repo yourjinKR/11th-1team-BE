@@ -27,10 +27,8 @@ import org.example.knockin.exception.CommonErrorCode;
 import org.example.knockin.exception.MemberErrorCode;
 import org.example.knockin.exception.MyRoommateErrorCode;
 import org.example.knockin.global.util.DateUtils;
-import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.row.ChattingRoomBasicInfoRow;
 import org.example.knockin.repository.room.MyRoommateRepository;
-import org.example.knockin.repository.room.RoommateScoreRepository;
 import org.example.knockin.service.RoommateScoreService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,16 +45,16 @@ class MyRoomMateServiceImplTest {
     private MyRoommateRepository myRoommateRepository;
 
     @Mock
-    private BasicInformationRepository basicInformationRepository;
-
-    @Mock
-    private RoommateScoreRepository roommateScoreRepository;
-
-    @Mock
     private RoommateScoreService roommateScoreService;
 
     @Mock
     private MemberPrivacyServiceImpl memberPrivacyService;
+
+    @Mock
+    private BasicInformationServiceImpl basicInformationService;
+
+    @Mock
+    private MyRoommateScoreServiceImpl myRoommateScoreService;
 
     @InjectMocks
     private MyRoomMateServiceImpl myRoomMateService;
@@ -93,8 +91,8 @@ class MyRoomMateServiceImplTest {
         );
 
         when(myRoommateRepository.findWithRequiredByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
-        when(basicInformationRepository.findChattingRoomBasicInfoRow(opponentId)).thenReturn(Optional.of(basicInfoRow));
-        when(roommateScoreRepository.findWithScoreDetailsByMyRoommateId(10L)).thenReturn(roommateScores);
+        when(basicInformationService.findChattingRoomBasicInfoRowByMemberId(opponentId)).thenReturn(basicInfoRow);
+        when(myRoommateScoreService.findByRoommateId(10L)).thenReturn(roommateScores);
         when(roommateScoreService.calculateRoommateCompatibility(memberId, roommateScores))
                 .thenReturn(new Compatibility(92, List.of()));
 
@@ -110,8 +108,8 @@ class MyRoomMateServiceImplTest {
         assertThat(response.getMyRoommateInfo().getMemberAge()).isEqualTo(DateUtils.calculateAge(opponentBirth));
         assertThat(response.getMyRoommateInfo().getGender()).isEqualTo(Gender.FEMALE);
         assertThat(response.getMyRoommateInfo().getMemberProfileImageUrl()).isEqualTo("opponent-profile.jpg");
-        verify(basicInformationRepository).findChattingRoomBasicInfoRow(opponentId);
-        verify(roommateScoreRepository).findWithScoreDetailsByMyRoommateId(10L);
+        verify(basicInformationService).findChattingRoomBasicInfoRowByMemberId(opponentId);
+        verify(myRoommateScoreService).findByRoommateId(10L);
         verify(roommateScoreService).calculateRoommateCompatibility(memberId, roommateScores);
     }
 
@@ -126,7 +124,7 @@ class MyRoomMateServiceImplTest {
         assertThatThrownBy(() -> myRoomMateService.findMyRoommate(memberId))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
-        verifyNoInteractions(basicInformationRepository, roommateScoreRepository, roommateScoreService);
+        verifyNoInteractions(basicInformationService, myRoommateScoreService, roommateScoreService);
     }
 
     @Test
@@ -137,13 +135,14 @@ class MyRoomMateServiceImplTest {
         Long opponentId = 2L;
         MyRoommate myRoommate = myRoommate(10L, memberId, opponentId, 100L);
         when(myRoommateRepository.findWithRequiredByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
-        when(basicInformationRepository.findChattingRoomBasicInfoRow(opponentId)).thenReturn(Optional.empty());
+        when(basicInformationService.findChattingRoomBasicInfoRowByMemberId(opponentId))
+                .thenThrow(new BusinessException(MemberErrorCode.BASIC_INFO_NOT_FOUND));
 
         // When & Then
         assertThatThrownBy(() -> myRoomMateService.findMyRoommate(memberId))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.BASIC_INFO_NOT_FOUND));
-        verifyNoInteractions(roommateScoreRepository, roommateScoreService);
+        verifyNoInteractions(myRoommateScoreService, roommateScoreService);
     }
 
     @Test

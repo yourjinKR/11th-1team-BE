@@ -56,6 +56,9 @@ public class BoardDto {
         @Schema(description = "이미지 목록")
         private List<FileDto> images;
 
+        @Schema(description = "방 추가옵션 고유 식별 ID")
+        private List<Long> extraOptionIds;
+
         @AssertTrue(message = "이미지를 등록하는 경우 썸네일 이미지는 1개여야 합니다.")
         @Schema(hidden = true)
         public boolean isThumbnailValid() {
