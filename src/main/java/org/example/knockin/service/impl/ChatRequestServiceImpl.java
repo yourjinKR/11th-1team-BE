@@ -9,31 +9,20 @@ import org.example.knockin.dto.ChatRequestDetailDto.Response.Lifestyle;
 import org.example.knockin.dto.ChatRequestDetailDto.Response.MemberInfo;
 import org.example.knockin.dto.ChatRequestDto;
 import org.example.knockin.dto.ChatRequestListDto;
-import org.example.knockin.entity.alarm.AlarmType;
 import org.example.knockin.entity.board.RoommateBoard;
 import org.example.knockin.entity.chat.ChattingRequired;
-import org.example.knockin.entity.chat.ChattingRequiredAlarm;
 import org.example.knockin.entity.chat.ChattingRequiredStatus;
-import org.example.knockin.entity.member.BasicInformation;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.exception.BusinessException;
 import org.example.knockin.exception.CommonErrorCode;
 import org.example.knockin.exception.MemberErrorCode;
 import org.example.knockin.exception.RequiredErrorCode;
-import org.example.knockin.exception.RoommateBoardErrorCode;
 import org.example.knockin.global.util.DateUtils;
 import org.example.knockin.global.util.HasMemberId;
-import org.example.knockin.repository.board.RoommateBoardRepository;
-import org.example.knockin.repository.chat.ChattingRequiredAlarmRepository;
-import org.example.knockin.repository.chat.ChattingRequiredRepository;
 import org.example.knockin.repository.chat.row.ChatRequestListRow;
-import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.row.MatchingLifestyleRow;
-import org.example.knockin.repository.member.BasicInformationRepository;
-import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.row.ChattingRoomBasicInfoRow;
 import org.example.knockin.service.RoommateScoreService;
-import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,23 +36,19 @@ public class ChatRequestServiceImpl {
             ChattingRequiredStatus.REJECTED, "%s님이 매칭 요청을 거절했어요",
             ChattingRequiredStatus.CANCELED, "%s님이 매칭 요청을 취소했어요"
     );
-    private static final Integer ALARM_EXPIRE_DAYS = 7;
-
-    private final MemberRepository memberRepository;
-    private final ChattingRequiredRepository chattingRequiredRepository;
-    private final RoommateBoardRepository roommateBoardRepository;
-    private final AlarmServiceImpl alarmService;
-    private final ChattingRequiredAlarmRepository chattingRequiredAlarmRepository;
-    private final BasicInformationRepository basicInformationRepository;
-    private final MemberLifePatternRepository memberLifePatternRepository;
+    private final MemberServiceImpl memberService;
+    private final ChattingRequiredServiceImpl chattingRequiredService;
+    private final RoommateBoardServiceImpl roommateBoardService;
+    private final ChattingRequiredAlarmServiceImpl chattingRequiredAlarmService;
+    private final BasicInformationServiceImpl basicInformationService;
+    private final MemberLifePatternService memberLifePatternService;
     private final RoommateScoreService roommateScoreService;
 
     @Transactional(readOnly = true)
     public List<ChatRequestListDto.Response> getPendingChatRequestList(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+        Member member = memberService.findByIdOrThrow(memberId);
 
-        List<ChatRequestListRow> requestListRows = chattingRequiredRepository.findAllPendingByRequestee(member);
+        List<ChatRequestListRow> requestListRows = chattingRequiredService.findAllPendingByRequestee(member);
         List<Long> requesterIds = requestListRows.stream()
                 .map(ChatRequestListRow::memberId)
                 .distinct()
@@ -92,8 +77,7 @@ public class ChatRequestServiceImpl {
 
     @Transactional(readOnly = true)
     public ChatRequestDetailDto.Response getChatRequestDetail(Long memberId, Long requestId) {
-        ChattingRequired chattingRequired = chattingRequiredRepository.findById(requestId)
-                .orElseThrow(() -> new BusinessException(RequiredErrorCode.CHATTING_NOT_FOUND));
+        ChattingRequired chattingRequired = chattingRequiredService.findByIdOrThrow(requestId);
 
         boolean isRequester = isRequester(memberId, chattingRequired);
         Member requester = chattingRequired.getRequester();
@@ -101,10 +85,10 @@ public class ChatRequestServiceImpl {
         Long myId = isRequester ? requester.getId() : requestee.getId();
         Long opponentId = isRequester ? requestee.getId() : requester.getId();
 
-        List<ChattingRoomBasicInfoRow> basicInfoRows = basicInformationRepository.findChattingRoomBasicInfoRows(List.of(myId, opponentId));
+        List<ChattingRoomBasicInfoRow> basicInfoRows = basicInformationService.findChattingRoomBasicInfoRows(List.of(myId, opponentId));
         Map<Long, ChattingRoomBasicInfoRow> basicInfoRowMap = HasMemberId.toMapByMemberId(basicInfoRows);
 
-        List<MatchingLifestyleRow> lifestyleRows = memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(myId, opponentId));
+        List<MatchingLifestyleRow> lifestyleRows = memberLifePatternService.findMatchingRowByMemberIdsIn(List.of(myId, opponentId));
         Map<Long, List<MatchingLifestyleRow>> lifeStyleRowMap = HasMemberId.groupingByMemberId(lifestyleRows);
 
         MemberInfo meInfo = toMemberInfo(myId, basicInfoRowMap.get(myId), lifeStyleRowMap.get(myId));
@@ -176,16 +160,16 @@ public class ChatRequestServiceImpl {
     public ChatRequestDto.Response saveChatRequest(Long requesterId, ChatRequestDto.Request request) {
         validateChatRequest(requesterId, request);
 
-        Member requester = memberRepository.findById(requesterId)
-                        .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+        Member requester = memberService.findByIdOrThrow(requesterId);
 
-        Member requestee = memberRepository.findById(request.getRequesteeId())
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+        Member requestee = memberService.findByIdOrThrow(request.getRequesteeId());
 
         validateDuplicatePendingRequest(requester, requestee);
 
-        RoommateBoard roommateBoard = findRoommateBoardNullSafety(request.getBoardId());
-        ChattingRequired chattingRequired = saveChattingRequired(requester, requestee, roommateBoard);
+        RoommateBoard roommateBoard = request.getBoardId() == null
+                ? null
+                : roommateBoardService.findById(request.getBoardId());
+        ChattingRequired chattingRequired = chattingRequiredService.savePending(requester, requestee, roommateBoard);
         sendAlarm(requestee, requester, chattingRequired);
 
         return new ChatRequestDto.Response(LocalDateTime.now());
@@ -193,8 +177,7 @@ public class ChatRequestServiceImpl {
 
     @Transactional
     public ChatRequestDto.Response acceptRequired(Long memberId, Long requestId) {
-        ChattingRequired required = chattingRequiredRepository.findById(requestId)
-                .orElseThrow(() -> new BusinessException(RequiredErrorCode.CHATTING_NOT_FOUND));
+        ChattingRequired required = chattingRequiredService.findByIdOrThrow(requestId);
 
         if (!memberId.equals(required.getRequestee().getId())) throw new BusinessException(RequiredErrorCode.CHATTING_ACCESS_DENIED);
         if (!required.isPending()) throw new BusinessException(RequiredErrorCode.CHATTING_INVALID_STATUS);
@@ -206,8 +189,7 @@ public class ChatRequestServiceImpl {
 
     @Transactional
     public ChatRequestDto.Response rejectRequired(Long memberId, Long requestId) {
-        ChattingRequired required = chattingRequiredRepository.findById(requestId)
-                .orElseThrow(() -> new BusinessException(RequiredErrorCode.CHATTING_NOT_FOUND));
+        ChattingRequired required = chattingRequiredService.findByIdOrThrow(requestId);
 
         if (!memberId.equals(required.getRequestee().getId())) throw new BusinessException(RequiredErrorCode.CHATTING_ACCESS_DENIED);
         if (!required.isPending()) throw new BusinessException(RequiredErrorCode.CHATTING_INVALID_STATUS);
@@ -219,8 +201,7 @@ public class ChatRequestServiceImpl {
 
     @Transactional
     public ChatRequestDto.Response cancelRequired(Long memberId, Long requestId) {
-        ChattingRequired required = chattingRequiredRepository.findById(requestId)
-                .orElseThrow(() -> new BusinessException(RequiredErrorCode.CHATTING_NOT_FOUND));
+        ChattingRequired required = chattingRequiredService.findByIdOrThrow(requestId);
 
         if (!memberId.equals(required.getRequester().getId())) throw new BusinessException(RequiredErrorCode.CHATTING_ACCESS_DENIED);
         if (!required.isPending()) throw new BusinessException(RequiredErrorCode.CHATTING_INVALID_STATUS);
@@ -237,49 +218,14 @@ public class ChatRequestServiceImpl {
     }
 
     private void validateDuplicatePendingRequest(Member requester, Member requestee) {
-        chattingRequiredRepository.findLatest(requester, requestee)
+        chattingRequiredService.findLatest(requester, requestee)
                 .filter(ChattingRequired::isPending)
                 .ifPresent(required -> {
                     throw new BusinessException(RequiredErrorCode.CHATTING_DUPLICATE);
                 });
     }
 
-    private RoommateBoard findRoommateBoardNullSafety(@Nullable Long boardId) {
-        if (boardId == null) return null;
-
-        return roommateBoardRepository.findById(boardId)
-                .orElseThrow(() -> new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
-    }
-
-    private ChattingRequired saveChattingRequired(Member requester, Member requestee, @Nullable RoommateBoard roommateBoard) {
-        ChattingRequired chattingRequired = ChattingRequired.builder()
-                .requester(requester)
-                .requestee(requestee)
-                .roommateBoard(roommateBoard)
-                .status(ChattingRequiredStatus.PENDING)
-                .build();
-
-        return chattingRequiredRepository.save(chattingRequired);
-    }
-
     private void sendAlarm(Member requestee, Member requester, ChattingRequired chattingRequired) {
-        BasicInformation basicInformation = basicInformationRepository.findLatestBasicInformation(requester)
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.BASIC_INFO_NOT_FOUND));
-        String requesterName = basicInformation.getName();
-
-        String formattedTemplate = String.format(templateMap.get(chattingRequired.getStatus()), requesterName);
-
-        ChattingRequiredAlarm alarm = ChattingRequiredAlarm.builder()
-                .member(requestee)
-                .title(formattedTemplate)
-                .contents(formattedTemplate)
-                .isRead(false)
-                .expiredAt(LocalDateTime.now().plusDays(ALARM_EXPIRE_DAYS))
-                .type(AlarmType.CHATTING_REQUIRED)
-                .chattingRequired(chattingRequired)
-                .build();
-
-        ChattingRequiredAlarm saved = chattingRequiredAlarmRepository.save(alarm);
-        alarmService.sendToClient(requestee.getId(), AlarmType.CHATTING_REQUIRED.name(), saved);
+        chattingRequiredAlarmService.send(requestee, requester, chattingRequired, templateMap.get(chattingRequired.getStatus()));
     }
 }

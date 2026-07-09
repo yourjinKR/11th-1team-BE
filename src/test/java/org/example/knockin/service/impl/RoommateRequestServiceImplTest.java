@@ -38,6 +38,7 @@ import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.room.MyRoommateRepository;
 import org.example.knockin.repository.room.RoommateMatchingRequiredAlarmRepository;
 import org.example.knockin.repository.room.RoommateMatchingRequiredRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -84,6 +85,28 @@ class RoommateRequestServiceImplTest {
     @InjectMocks
     private RoommateRequestServiceImpl roommateRequestService;
 
+    @BeforeEach
+    void setUp() {
+        BasicInformationServiceImpl basicInformationService = new BasicInformationServiceImpl(basicInformationRepository);
+        MyRoomMateServiceImpl myRoomMateService = new MyRoomMateServiceImpl(
+                myRoommateRepository,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        roommateRequestService = new RoommateRequestServiceImpl(
+                messagingTemplate,
+                new RoommateMatchingRequiredServiceImpl(roommateMatchingRequiredRepository),
+                new ChatRoomMemberServiceImpl(chatRoomMemberRepository),
+                new RoommateMatchingRequiredAlarmServiceImpl(basicInformationService, alarmService),
+                myRoomMateService,
+                memberPrivacyService
+        );
+    }
+
     @Test
     @DisplayName("대기 중인 요청이 없으면 룸메이트 확정 요청을 저장하고 알림과 채팅방 소켓 이벤트를 발행한다")
     void saveRoommateRequestCreatesRequestAndPublishesAlarmAndSocketEvent() {
@@ -93,21 +116,18 @@ class RoommateRequestServiceImplTest {
         Long requesteeId = 2L;
         Member requester = member(requesterId);
         Member requestee = member(requesteeId);
-        ChattingRoom chattingRoom = chattingRoom(100L);
+        ChattingRoom chattingRoom = chattingRoom(chatRoomId);
         ChatRoomMember roomMember = roomMember(requester, chattingRoom);
         BasicInformation requesterBasicInformation = basicInformation(requester, "김중민");
 
         when(chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatRoomId, requesterId))
                 .thenReturn(Optional.of(roomMember));
-        when(chatRoomMemberRepository.findPartnerMember(roomMember, chattingRoom)).thenReturn(requestee);
+        when(chatRoomMemberRepository.findPartnerMember(roomMember, chatRoomId)).thenReturn(requestee);
         when(roommateMatchingRequiredRepository.findLatest(chatRoomId)).thenReturn(Optional.empty());
         when(roommateMatchingRequiredRepository.save(any(RoommateMatchingRequired.class)))
                 .thenAnswer(invocation -> persistedRoommateRequest(invocation.getArgument(0), 1000L));
         when(basicInformationRepository.findLatestBasicInformation(requester))
                 .thenReturn(Optional.of(requesterBasicInformation));
-        when(roommateMatchingRequiredAlarmRepository.save(any(RoommateMatchingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
         RoommateRequestDto.Request request = request(chatRoomId);
 
         // When
@@ -130,13 +150,12 @@ class RoommateRequestServiceImplTest {
         assertThat(requestCaptor.getValue().getStatus()).isEqualTo(RoommateRequiredStatus.PENDING);
 
         ArgumentCaptor<RoommateMatchingRequiredAlarm> alarmCaptor = ArgumentCaptor.forClass(RoommateMatchingRequiredAlarm.class);
-        verify(roommateMatchingRequiredAlarmRepository).save(alarmCaptor.capture());
+        verify(alarmService).sendToClient(eq(requesteeId), eq(AlarmType.OFFER.name()), alarmCaptor.capture());
         assertThat(alarmCaptor.getValue().getMember()).isSameAs(requestee);
         assertThat(alarmCaptor.getValue().getTitle()).isEqualTo("김중민님이 룸메이트 확정을 제안했어요");
         assertThat(alarmCaptor.getValue().getContents()).isEqualTo("김중민님이 룸메이트 확정을 제안했어요");
         assertThat(alarmCaptor.getValue().getType()).isEqualTo(AlarmType.OFFER);
         assertThat(alarmCaptor.getValue().getRoommateMatchingRequired().getId()).isEqualTo(1000L);
-        verify(alarmService).sendToClient(eq(requesteeId), eq(AlarmType.OFFER.name()), any(RoommateMatchingRequiredAlarm.class));
 
         ArgumentCaptor<Object> socketCaptor = ArgumentCaptor.forClass(Object.class);
         verify(messagingTemplate).convertAndSend(eq("/sub/chats/10"), socketCaptor.capture());
@@ -160,13 +179,13 @@ class RoommateRequestServiceImplTest {
         Long requesterId = 1L;
         Member requester = member(requesterId);
         Member requestee = member(2L);
-        ChattingRoom chattingRoom = chattingRoom(100L);
+        ChattingRoom chattingRoom = chattingRoom(chatRoomId);
         ChatRoomMember roomMember = roomMember(requester, chattingRoom);
         RoommateMatchingRequired previous = roommateRequest(requestee, requester, chattingRoom, RoommateRequiredStatus.PENDING);
 
         when(chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatRoomId, requesterId))
                 .thenReturn(Optional.of(roomMember));
-        when(chatRoomMemberRepository.findPartnerMember(roomMember, chattingRoom)).thenReturn(requestee);
+        when(chatRoomMemberRepository.findPartnerMember(roomMember, chatRoomId)).thenReturn(requestee);
         when(roommateMatchingRequiredRepository.findLatest(chatRoomId)).thenReturn(Optional.of(previous));
 
         // When & Then
@@ -187,21 +206,18 @@ class RoommateRequestServiceImplTest {
         Member previousRequester = member(1L);
         Member requester = member(requesterId);
         Member requestee = member(requesteeId);
-        ChattingRoom chattingRoom = chattingRoom(100L);
+        ChattingRoom chattingRoom = chattingRoom(chatRoomId);
         ChatRoomMember roomMember = roomMember(requester, chattingRoom);
         RoommateMatchingRequired previous = roommateRequest(previousRequester, requester, chattingRoom, RoommateRequiredStatus.REJECTED);
 
         when(chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatRoomId, requesterId))
                 .thenReturn(Optional.of(roomMember));
-        when(chatRoomMemberRepository.findPartnerMember(roomMember, chattingRoom)).thenReturn(requestee);
+        when(chatRoomMemberRepository.findPartnerMember(roomMember, chatRoomId)).thenReturn(requestee);
         when(roommateMatchingRequiredRepository.findLatest(chatRoomId)).thenReturn(Optional.of(previous));
         when(roommateMatchingRequiredRepository.save(any(RoommateMatchingRequired.class)))
                 .thenAnswer(invocation -> persistedRoommateRequest(invocation.getArgument(0), 1001L));
         when(basicInformationRepository.findLatestBasicInformation(requester))
                 .thenReturn(Optional.of(basicInformation(requester, "이수현")));
-        when(roommateMatchingRequiredAlarmRepository.save(any(RoommateMatchingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
         // When
         RoommateRequestDto.Response response = roommateRequestService.saveRoommateRequest(requesterId, request(chatRoomId));
 
@@ -222,12 +238,12 @@ class RoommateRequestServiceImplTest {
         Long requesterId = 1L;
         Member requester = member(requesterId);
         Member requestee = member(2L);
-        ChattingRoom chattingRoom = chattingRoom(100L);
+        ChattingRoom chattingRoom = chattingRoom(chatRoomId);
         ChatRoomMember roomMember = roomMember(requester, chattingRoom);
 
         when(chatRoomMemberRepository.findActiveMemberByRoomIdAndMemberId(chatRoomId, requesterId))
                 .thenReturn(Optional.of(roomMember));
-        when(chatRoomMemberRepository.findPartnerMember(roomMember, chattingRoom)).thenReturn(requestee);
+        when(chatRoomMemberRepository.findPartnerMember(roomMember, chatRoomId)).thenReturn(requestee);
         when(roommateMatchingRequiredRepository.findLatest(chatRoomId)).thenReturn(Optional.empty());
         when(roommateMatchingRequiredRepository.save(any(RoommateMatchingRequired.class)))
                 .thenAnswer(invocation -> persistedRoommateRequest(invocation.getArgument(0), 1000L));
@@ -260,8 +276,6 @@ class RoommateRequestServiceImplTest {
         when(roommateMatchingRequiredRepository.findById(requestId)).thenReturn(Optional.of(roommateRequest));
         when(basicInformationRepository.findLatestBasicInformation(requestee))
                 .thenReturn(Optional.of(basicInformation(requestee, "이수현")));
-        when(roommateMatchingRequiredAlarmRepository.save(any(RoommateMatchingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
         MemberPrivacy requesteePrivacy = MemberPrivacy.builder()
                 .type(MemberPrivacyType.PUBLIC)
                 .build();
@@ -286,12 +300,11 @@ class RoommateRequestServiceImplTest {
         verify(memberPrivacyService).findByMemberId(requesteeId);
 
         ArgumentCaptor<RoommateMatchingRequiredAlarm> alarmCaptor = ArgumentCaptor.forClass(RoommateMatchingRequiredAlarm.class);
-        verify(roommateMatchingRequiredAlarmRepository).save(alarmCaptor.capture());
+        verify(alarmService).sendToClient(eq(requesterId), eq(AlarmType.OFFER.name()), alarmCaptor.capture());
         assertThat(alarmCaptor.getValue().getMember()).isSameAs(requester);
         assertThat(alarmCaptor.getValue().getTitle()).isEqualTo("이수현님과 룸메이트가 확정되었어요");
         assertThat(alarmCaptor.getValue().getContents()).isEqualTo("이수현님과 룸메이트가 확정되었어요");
         assertThat(alarmCaptor.getValue().getRoommateMatchingRequired()).isSameAs(roommateRequest);
-        verify(alarmService).sendToClient(eq(requesterId), eq(AlarmType.OFFER.name()), any(RoommateMatchingRequiredAlarm.class));
 
         assertSocketResponse(chatRoomId, response);
     }

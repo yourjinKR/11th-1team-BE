@@ -10,7 +10,7 @@ import org.example.knockin.exception.AuthException;
 import org.example.knockin.auth.util.PrincipalMemberResolver;
 import org.example.knockin.auth.util.TokenConstants;
 import org.example.knockin.auth.util.TokenProvider;
-import org.example.knockin.service.impl.ChatRoomAccessService;
+import org.example.knockin.service.impl.ChatRoomMemberServiceImpl;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
@@ -28,7 +28,7 @@ public class StompAuthenticationChannelInterceptor implements ChannelInterceptor
     private final TokenProvider tokenProvider;
     private final StompDestinationResolver stompDestinationResolver;
     private final PrincipalMemberResolver principalMemberResolver;
-    private final ChatRoomAccessService chatRoomAccessService;
+    private final ChatRoomMemberServiceImpl chatRoomMemberService;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -94,7 +94,7 @@ public class StompAuthenticationChannelInterceptor implements ChannelInterceptor
             return;
         }
         Long memberId = principalMemberResolver.resolveMemberId(accessor.getUser());
-        chatRoomAccessService.checkCanSubscribe(chatRoomId.get(), memberId);
+        chatRoomMemberService.checkCanSubscribe(chatRoomId.get(), memberId);
     }
 
     private String resolveAccessToken(StompHeaderAccessor accessor) {

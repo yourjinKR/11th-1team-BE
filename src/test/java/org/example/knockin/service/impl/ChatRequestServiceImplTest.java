@@ -45,6 +45,7 @@ import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.row.ChattingRoomBasicInfoRow;
 import org.example.knockin.service.RoommateScoreService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -90,6 +91,44 @@ class ChatRequestServiceImplTest {
 
     @InjectMocks
     private ChatRequestServiceImpl chatRequestService;
+
+    @BeforeEach
+    void setUp() {
+        MemberServiceImpl memberService = new MemberServiceImpl(
+                memberRepository,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        BasicInformationServiceImpl basicInformationService = new BasicInformationServiceImpl(basicInformationRepository);
+        MemberLifePatternService memberLifePatternService = new MemberLifePatternService(memberLifePatternRepository, null);
+        RoommateBoardServiceImpl roommateBoardService = new RoommateBoardServiceImpl(
+                roommateBoardRepository,
+                memberService,
+                null,
+                roommateScoreService,
+                null,
+                null,
+                memberLifePatternService,
+                null,
+                null,
+                null,
+                null
+        );
+
+        chatRequestService = new ChatRequestServiceImpl(
+                memberService,
+                new ChattingRequiredServiceImpl(chattingRequiredRepository),
+                roommateBoardService,
+                new ChattingRequiredAlarmServiceImpl(basicInformationService, alarmService),
+                basicInformationService,
+                memberLifePatternService,
+                roommateScoreService
+        );
+    }
 
     @Test
     @DisplayName("대기 중인 채팅 요청 목록을 조회하면 요청자 정보와 임시 점수를 반환한다")
@@ -328,8 +367,6 @@ class ChatRequestServiceImplTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(basicInformationRepository.findLatestBasicInformation(requester))
                 .thenReturn(Optional.of(basicInformation(requester, "김중민")));
-        when(chattingRequiredAlarmRepository.save(any(ChattingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
         ChatRequestDto.Response response = chatRequestService.saveChatRequest(requesterId, request);
@@ -366,8 +403,6 @@ class ChatRequestServiceImplTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(basicInformationRepository.findLatestBasicInformation(requester))
                 .thenReturn(Optional.of(basicInformation(requester, "김중민")));
-        when(chattingRequiredAlarmRepository.save(any(ChattingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
         ChatRequestDto.Response response = chatRequestService.saveChatRequest(requesterId, request);
@@ -545,8 +580,6 @@ class ChatRequestServiceImplTest {
         when(chattingRequiredRepository.findById(requestId)).thenReturn(Optional.of(chattingRequired));
         when(basicInformationRepository.findLatestBasicInformation(requestee))
                 .thenReturn(Optional.of(basicInformation(requestee, "이수현")));
-        when(chattingRequiredAlarmRepository.save(any(ChattingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
         ChatRequestDto.Response response = chatRequestService.acceptRequired(requesteeId, requestId);
@@ -572,8 +605,6 @@ class ChatRequestServiceImplTest {
         when(chattingRequiredRepository.findById(requestId)).thenReturn(Optional.of(chattingRequired));
         when(basicInformationRepository.findLatestBasicInformation(requestee))
                 .thenReturn(Optional.of(basicInformation(requestee, "이수현")));
-        when(chattingRequiredAlarmRepository.save(any(ChattingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
         ChatRequestDto.Response response = chatRequestService.rejectRequired(requesteeId, requestId);
@@ -599,8 +630,6 @@ class ChatRequestServiceImplTest {
         when(chattingRequiredRepository.findById(requestId)).thenReturn(Optional.of(chattingRequired));
         when(basicInformationRepository.findLatestBasicInformation(requester))
                 .thenReturn(Optional.of(basicInformation(requester, "김중민")));
-        when(chattingRequiredAlarmRepository.save(any(ChattingRequiredAlarm.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
         ChatRequestDto.Response response = chatRequestService.cancelRequired(requesterId, requestId);
@@ -731,7 +760,7 @@ class ChatRequestServiceImplTest {
 
     private void assertChattingRequiredAlarm(Member receiver, String message, ChattingRequired chattingRequired) {
         ArgumentCaptor<ChattingRequiredAlarm> alarmCaptor = ArgumentCaptor.forClass(ChattingRequiredAlarm.class);
-        verify(chattingRequiredAlarmRepository).save(alarmCaptor.capture());
+        verify(alarmService).sendToClient(eq(receiver.getId()), eq(AlarmType.CHATTING_REQUIRED.name()), alarmCaptor.capture());
         assertThat(alarmCaptor.getValue().getMember()).isSameAs(receiver);
         assertThat(alarmCaptor.getValue().getTitle()).isEqualTo(message);
         assertThat(alarmCaptor.getValue().getContents()).isEqualTo(message);

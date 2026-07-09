@@ -37,7 +37,6 @@ import org.example.knockin.exception.MyRoommateErrorCode;
 import org.example.knockin.repository.member.MemberRepository;
 import org.example.knockin.repository.member.row.MemberWithNameRow;
 import org.example.knockin.repository.room.ExcludeRoommateCalendarRepository;
-import org.example.knockin.repository.room.MyRoommateRepository;
 import org.example.knockin.repository.room.RepeatRoommateCalendarRepository;
 import org.example.knockin.repository.room.RoommateCalendarCategoryRepository;
 import org.example.knockin.repository.room.RoommateCalendarMemberRepository;
@@ -46,6 +45,7 @@ import org.example.knockin.repository.room.row.DailyCalendarMemberRow;
 import org.example.knockin.repository.room.row.DailyCalendarRow;
 import org.example.knockin.repository.room.row.MonthlyCalendarRow;
 import org.example.knockin.repository.room.row.RepeatCalendarExcludeRow;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,9 +60,6 @@ class CalendarServiceImplTest {
 
     @Mock
     private RoommateCalendarCategoryRepository roommateCalendarCategoryRepository;
-
-    @Mock
-    private MyRoommateRepository myRoommateRepository;
 
     @Mock
     private RoommateCalendarRepository roommateCalendarRepository;
@@ -82,6 +79,27 @@ class CalendarServiceImplTest {
     @InjectMocks
     private CalendarServiceImpl calendarService;
 
+    @BeforeEach
+    void setUp() {
+        MemberServiceImpl memberService = new MemberServiceImpl(
+                memberRepository,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        calendarService = new CalendarServiceImpl(
+                new RoommateCalendarCategoryServiceImpl(roommateCalendarCategoryRepository),
+                new RoommateCalendarServiceImpl(roommateCalendarRepository),
+                new RoommateCalendarMemberServiceImpl(roommateCalendarMemberRepository),
+                new RepeatRoommateCalendarServiceImpl(repeatRoommateCalendarRepository),
+                memberService,
+                new ExcludeRoommateCalendarServiceImpl(excludeRoommateCalendarRepository)
+        );
+    }
+
     @Test
     @DisplayName("내 룸메이트가 있으면 일반 일정의 카테고리와 캘린더와 담당자를 저장하고 수정 시간을 반환한다")
     void saveCalendarSavesCategoryBasicCalendarAndMembersWhenMyRoommateExists() {
@@ -97,15 +115,13 @@ class CalendarServiceImplTest {
                 "생활",
                 List.of(requesterId, requesteeId)
         );
-
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
         given(roommateCalendarCategoryRepository.save(any(RoommateCalendarCategory.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
         given(roommateCalendarRepository.save(any(RoommateCalendar.class)))
                 .willAnswer(invocation -> savedCalendar(100L, invocation.getArgument(0)));
 
         // When
-        CalendarDto.Response response = calendarService.saveBasicCalendar(requesterId, request);
+        CalendarDto.Response response = calendarService.saveBasic(requesterId, myRoommate, request);
 
         // Then
         ArgumentCaptor<RoommateCalendarCategory> categoryCaptor = ArgumentCaptor.forClass(RoommateCalendarCategory.class);
@@ -143,41 +159,16 @@ class CalendarServiceImplTest {
     }
 
     @Test
-    @DisplayName("일반 일정 저장 시 내 룸메이트가 없으면 룸메이트 없음 예외를 던지고 저장하지 않는다")
-    void saveBasicCalendarThrowsWhenMyRoommateDoesNotExist() {
-        // Given
-        Long memberId = 1L;
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).willReturn(Optional.empty());
-
-        // When & Then
-        assertThatThrownBy(() -> calendarService.saveBasicCalendar(memberId, calendarRequest(
-                "장보기",
-                "저녁 재료 사오기",
-                LocalDateTime.of(2026, 7, 4, 10, 0),
-                LocalDateTime.of(2026, 7, 4, 11, 0),
-                "생활",
-                List.of(memberId)
-        )))
-                .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
-        verifyNoInteractions(roommateCalendarCategoryRepository, roommateCalendarRepository);
-        verify(roommateCalendarMemberRepository, never()).saveAll(any());
-        verify(repeatRoommateCalendarRepository, never()).save(any(RepeatRoommateCalendar.class));
-    }
-
-    @Test
     @DisplayName("일반 일정 저장 시 룸메이트 구성원이 아닌 담당자가 포함되면 접근 거부 예외를 던지고 담당자를 저장하지 않는다")
-    void saveBasicCalendarThrowsWhenMemberIdsContainNonRoommateMember() {
+    void saveBasicThrowsWhenMemberIdsContainNonRoommateMember() {
         // Given
         Long requesterId = 1L;
         Long requesteeId = 2L;
         Long nonRoommateMemberId = 999L;
         MyRoommate myRoommate = myRoommate(10L, requesterId, requesteeId);
 
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
-
         // When & Then
-        assertThatThrownBy(() -> calendarService.saveBasicCalendar(requesterId, calendarRequest(
+        assertThatThrownBy(() -> calendarService.saveBasic(requesterId, myRoommate, calendarRequest(
                 "장보기",
                 "저녁 재료 사오기",
                 LocalDateTime.of(2026, 7, 4, 10, 0),
@@ -208,15 +199,13 @@ class CalendarServiceImplTest {
                 RepeatType.WEEKLY,
                 List.of(requesterId, requesteeId)
         );
-
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
         given(roommateCalendarCategoryRepository.save(any(RoommateCalendarCategory.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
         given(roommateCalendarRepository.save(any(RoommateCalendar.class)))
                 .willAnswer(invocation -> savedCalendar(200L, invocation.getArgument(0)));
 
         // When
-        RepeatCalendarDto.Response response = calendarService.saveRepeatCalendar(requesterId, request);
+        RepeatCalendarDto.Response response = calendarService.saveRepeat(requesterId, myRoommate, request);
 
         // Then
         ArgumentCaptor<RoommateCalendarCategory> categoryCaptor = ArgumentCaptor.forClass(RoommateCalendarCategory.class);
@@ -253,43 +242,16 @@ class CalendarServiceImplTest {
     }
 
     @Test
-    @DisplayName("반복 일정 저장 시 내 룸메이트가 없으면 룸메이트 없음 예외를 던지고 저장하지 않는다")
-    void saveRepeatCalendarThrowsWhenMyRoommateDoesNotExist() {
-        // Given
-        Long memberId = 1L;
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).willReturn(Optional.empty());
-
-        // When & Then
-        assertThatThrownBy(() -> calendarService.saveRepeatCalendar(memberId, repeatCalendarRequest(
-                "청소",
-                "거실 청소하기",
-                LocalDateTime.of(2026, 7, 4, 9, 0),
-                LocalDateTime.of(2026, 7, 4, 10, 0),
-                "청소",
-                LocalDateTime.of(2026, 8, 1, 10, 0),
-                RepeatType.WEEKLY,
-                List.of(memberId)
-        )))
-                .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
-        verifyNoInteractions(roommateCalendarCategoryRepository, roommateCalendarRepository);
-        verify(roommateCalendarMemberRepository, never()).saveAll(any());
-        verify(repeatRoommateCalendarRepository, never()).save(any(RepeatRoommateCalendar.class));
-    }
-
-    @Test
     @DisplayName("반복 일정 저장 시 룸메이트 구성원이 아닌 담당자가 포함되면 접근 거부 예외를 던지고 담당자와 반복 정보를 저장하지 않는다")
-    void saveRepeatCalendarThrowsWhenMemberIdsContainNonRoommateMember() {
+    void saveRepeatThrowsWhenMemberIdsContainNonRoommateMember() {
         // Given
         Long requesterId = 1L;
         Long requesteeId = 2L;
         Long nonRoommateMemberId = 999L;
         MyRoommate myRoommate = myRoommate(10L, requesterId, requesteeId);
 
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
-
         // When & Then
-        assertThatThrownBy(() -> calendarService.saveRepeatCalendar(requesterId, repeatCalendarRequest(
+        assertThatThrownBy(() -> calendarService.saveRepeat(requesterId, myRoommate, repeatCalendarRequest(
                 "청소",
                 "거실 청소하기",
                 LocalDateTime.of(2026, 7, 4, 9, 0),
@@ -307,13 +269,11 @@ class CalendarServiceImplTest {
 
     @Test
     @DisplayName("내 룸메이트가 있으면 캘린더 편집 폼에 반복 타입과 담당자 목록과 카테고리명을 반환한다")
-    void getRoommateEditFormReturnsRepeatTypesMembersAndCategoryNamesWhenMyRoommateExists() {
+    void getRoommateEditFormReturnsRepeatTypesMembersAndCategoryNamesWhenMyExists() {
         // Given
         Long requesterId = 1L;
         Long requesteeId = 2L;
         MyRoommate myRoommate = myRoommate(10L, requesterId, requesteeId);
-
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesteeId)).willReturn(Optional.of(myRoommate));
         given(memberRepository.findAllWithNameRowById(List.of(requesterId, requesteeId)))
                 .willReturn(List.of(
                         new MemberWithNameRow(requesterId, "요청자"),
@@ -321,7 +281,7 @@ class CalendarServiceImplTest {
                 ));
 
         // When
-        CalendarEditDto.Response response = calendarService.getRoommateEditForm(requesteeId);
+        CalendarEditDto.Response response = calendarService.getEditForm(requesteeId, myRoommate);
 
         // Then
         assertThat(response.getRepeatType()).containsExactly(RepeatType.WEEKLY, RepeatType.BI_WEEKLY, RepeatType.MONTHLY);
@@ -338,23 +298,8 @@ class CalendarServiceImplTest {
     }
 
     @Test
-    @DisplayName("캘린더 편집 폼 조회 시 내 룸메이트가 없으면 룸메이트 없음 예외를 던지고 담당자를 조회하지 않는다")
-    void getRoommateEditFormThrowsWhenMyRoommateDoesNotExist() {
-        // Given
-        Long memberId = 1L;
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).willReturn(Optional.empty());
-
-        // When & Then
-        assertThatThrownBy(() -> calendarService.getRoommateEditForm(memberId))
-                .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
-        verifyNoInteractions(memberRepository, roommateCalendarCategoryRepository, roommateCalendarRepository,
-                roommateCalendarMemberRepository, repeatRoommateCalendarRepository);
-    }
-
-    @Test
     @DisplayName("특정일 일정 조회 시 일반 일정과 반복 일정 발생분을 담당자와 함께 반환한다")
-    void findDailyCalendarListReturnsBasicAndRepeatOccurrenceWithMembers() {
+    void findDailyListReturnsBasicAndRepeatOccurrenceWithMembers() {
         // Given
         Long requesterId = 1L;
         Long requesteeId = 2L;
@@ -383,20 +328,18 @@ class CalendarServiceImplTest {
                 LocalDateTime.of(2026, 7, 26, 16, 0),
                 RepeatType.WEEKLY
         );
-
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
         given(roommateCalendarRepository.findDailyCalendarList(myRoommate.getId(), from, to))
                 .willReturn(List.of(basicCalendar, repeatCalendar));
-        given(roommateCalendarRepository.findDailyCalendarMembers(List.of(100L, 200L)))
+        given(roommateCalendarMemberRepository.findDailyCalendarMembers(List.of(100L, 200L)))
                 .willReturn(List.of(
                         new DailyCalendarMemberRow(100L, requesterId, "요청자"),
                         new DailyCalendarMemberRow(200L, requesterId, "요청자"),
                         new DailyCalendarMemberRow(200L, requesteeId, "요청받은 사람")
                 ));
-        given(roommateCalendarRepository.findRepeatCalendarExcludes(List.of(300L))).willReturn(List.of());
+        given(excludeRoommateCalendarRepository.findRepeatCalendarExcludes(List.of(300L))).willReturn(List.of());
 
         // When
-        MyRoommateDailyCalendarListDto.Response response = calendarService.findDailyCalendarList(requesterId, 2026, 7, 12);
+        MyRoommateDailyCalendarListDto.Response response = calendarService.findDailyList(myRoommate, 2026, 7, 12);
 
         // Then
         assertThat(response.getTargetDay()).isEqualTo(LocalDateTime.of(2026, 7, 12, 0, 0).toLocalDate());
@@ -416,13 +359,13 @@ class CalendarServiceImplTest {
                         tuple(requesterId, "요청자"),
                         tuple(requesteeId, "요청받은 사람")
                 );
-        verify(roommateCalendarRepository).findDailyCalendarMembers(List.of(100L, 200L));
-        verify(roommateCalendarRepository).findRepeatCalendarExcludes(List.of(300L));
+        verify(roommateCalendarMemberRepository).findDailyCalendarMembers(List.of(100L, 200L));
+        verify(excludeRoommateCalendarRepository).findRepeatCalendarExcludes(List.of(300L));
     }
 
     @Test
     @DisplayName("특정일 일정 조회 시 제외된 반복 발생분은 반환하지 않고 대체 단일 일정만 반환한다")
-    void findDailyCalendarListSkipsExcludedRepeatOccurrence() {
+    void findDailyListSkipsExcludedRepeatOccurrence() {
         // Given
         Long requesterId = 1L;
         Long requesteeId = 2L;
@@ -451,20 +394,18 @@ class CalendarServiceImplTest {
                 LocalDateTime.of(2026, 7, 26, 16, 0),
                 RepeatType.WEEKLY
         );
-
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
         given(roommateCalendarRepository.findDailyCalendarList(myRoommate.getId(), from, to))
                 .willReturn(List.of(replacementCalendar, repeatCalendar));
-        given(roommateCalendarRepository.findDailyCalendarMembers(List.of(201L, 200L)))
+        given(roommateCalendarMemberRepository.findDailyCalendarMembers(List.of(201L, 200L)))
                 .willReturn(List.of(
                         new DailyCalendarMemberRow(201L, requesterId, "요청자"),
                         new DailyCalendarMemberRow(200L, requesteeId, "요청받은 사람")
                 ));
-        given(roommateCalendarRepository.findRepeatCalendarExcludes(List.of(300L)))
+        given(excludeRoommateCalendarRepository.findRepeatCalendarExcludes(List.of(300L)))
                 .willReturn(List.of(new RepeatCalendarExcludeRow(300L, LocalDateTime.of(2026, 7, 12, 14, 0))));
 
         // When
-        MyRoommateDailyCalendarListDto.Response response = calendarService.findDailyCalendarList(requesterId, 2026, 7, 12);
+        MyRoommateDailyCalendarListDto.Response response = calendarService.findDailyList(myRoommate, 2026, 7, 12);
 
         // Then
         assertThat(response.getTargetDay()).isEqualTo(LocalDateTime.of(2026, 7, 12, 0, 0).toLocalDate());
@@ -476,7 +417,7 @@ class CalendarServiceImplTest {
 
     @Test
     @DisplayName("특정일 일정 조회 시 연속일 반복 일정이 조회일에 걸치면 해당 발생분을 반환한다")
-    void findDailyCalendarListReturnsMultiDayRepeatOccurrenceWhenItOverlapsTargetDay() {
+    void findDailyListReturnsMultiDayRepeatOccurrenceWhenItOverlapsTargetDay() {
         // Given
         Long requesterId = 1L;
         Long requesteeId = 2L;
@@ -494,16 +435,14 @@ class CalendarServiceImplTest {
                 LocalDateTime.of(2026, 7, 26, 16, 0),
                 RepeatType.WEEKLY
         );
-
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
         given(roommateCalendarRepository.findDailyCalendarList(myRoommate.getId(), from, to))
                 .willReturn(List.of(repeatCalendar));
-        given(roommateCalendarRepository.findDailyCalendarMembers(List.of(200L)))
+        given(roommateCalendarMemberRepository.findDailyCalendarMembers(List.of(200L)))
                 .willReturn(List.of(new DailyCalendarMemberRow(200L, requesteeId, "요청받은 사람")));
-        given(roommateCalendarRepository.findRepeatCalendarExcludes(List.of(300L))).willReturn(List.of());
+        given(excludeRoommateCalendarRepository.findRepeatCalendarExcludes(List.of(300L))).willReturn(List.of());
 
         // When
-        MyRoommateDailyCalendarListDto.Response response = calendarService.findDailyCalendarList(requesterId, 2026, 7, 13);
+        MyRoommateDailyCalendarListDto.Response response = calendarService.findDailyList(myRoommate, 2026, 7, 13);
 
         // Then
         assertThat(response.getTargetDay()).isEqualTo(LocalDateTime.of(2026, 7, 13, 0, 0).toLocalDate());
@@ -514,22 +453,8 @@ class CalendarServiceImplTest {
     }
 
     @Test
-    @DisplayName("특정일 일정 조회 시 내 룸메이트가 없으면 룸메이트 없음 예외를 던지고 일정을 조회하지 않는다")
-    void findDailyCalendarListThrowsWhenMyRoommateDoesNotExist() {
-        // Given
-        Long memberId = 1L;
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).willReturn(Optional.empty());
-
-        // When & Then
-        assertThatThrownBy(() -> calendarService.findDailyCalendarList(memberId, 2026, 7, 12))
-                .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
-        verifyNoInteractions(roommateCalendarRepository);
-    }
-
-    @Test
     @DisplayName("월별 일정 조회 시 일반 일정과 반복 일정이 존재하는 날짜를 표시하고 제외된 반복일은 표시하지 않는다")
-    void findMyMonthlyCalendarListReturnsExistingDaysForBasicAndRepeatCalendars() {
+    void findMyMonthlyListReturnsExistingDaysForBasicAndRepeatCalendars() {
         // Given
         Long requesterId = 1L;
         Long requesteeId = 2L;
@@ -560,15 +485,13 @@ class CalendarServiceImplTest {
                 LocalDateTime.of(2026, 7, 26, 16, 0),
                 RepeatType.WEEKLY
         );
-
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(requesterId)).willReturn(Optional.of(myRoommate));
         given(roommateCalendarRepository.findMonthlyCalendarList(myRoommate.getId(), from, to))
                 .willReturn(List.of(multiDayCalendar, basicCalendar, repeatCalendar));
-        given(roommateCalendarRepository.findRepeatCalendarExcludes(List.of(300L)))
+        given(excludeRoommateCalendarRepository.findRepeatCalendarExcludes(List.of(300L)))
                 .willReturn(List.of(new RepeatCalendarExcludeRow(300L, LocalDateTime.of(2026, 7, 12, 14, 0))));
 
         // When
-        MyRoommateMonthlyCalendarListDto.Response response = calendarService.findMyMonthlyCalendarList(requesterId, 2026, 7);
+        MyRoommateMonthlyCalendarListDto.Response response = calendarService.findMyMonthlyList(myRoommate, 2026, 7);
 
         // Then
         assertThat(response.getTargetMonth()).isEqualTo(YearMonth.of(2026, 7));
@@ -588,21 +511,7 @@ class CalendarServiceImplTest {
                 .filteredOn(calendarDay -> calendarDay.getTargetDate().equals(LocalDate.of(2026, 7, 12)))
                 .extracting(MyRoommateMonthlyCalendarListDto.CalendarDay::getExists)
                 .containsExactly(false);
-        verify(roommateCalendarRepository, never()).findDailyCalendarMembers(any());
-    }
-
-    @Test
-    @DisplayName("월별 일정 조회 시 내 룸메이트가 없으면 룸메이트 없음 예외를 던지고 일정을 조회하지 않는다")
-    void findMyMonthlyCalendarListThrowsWhenMyRoommateDoesNotExist() {
-        // Given
-        Long memberId = 1L;
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).willReturn(Optional.empty());
-
-        // When & Then
-        assertThatThrownBy(() -> calendarService.findMyMonthlyCalendarList(memberId, 2026, 7))
-                .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
-        verifyNoInteractions(roommateCalendarRepository);
+        verify(roommateCalendarMemberRepository, never()).findDailyCalendarMembers(any());
     }
 
     @Test
@@ -805,7 +714,7 @@ class CalendarServiceImplTest {
 
     @Test
     @DisplayName("작성자가 일정을 삭제하면 캘린더를 삭제 상태로 변경하고 수정 시간을 반환한다")
-    void deleteCalendarSoftDeletesCalendarWhenOwnerRequests() {
+    void deleteCalendarSoftDeletesWhenOwnerRequests() {
         // Given
         Long calendarId = 100L;
         Long ownerId = 1L;
@@ -825,7 +734,7 @@ class CalendarServiceImplTest {
         given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.of(calendar));
 
         // When
-        CalendarDto.Response response = calendarService.deleteCalendar(ownerId, calendarId);
+        CalendarDto.Response response = calendarService.delete(ownerId, calendarId);
 
         // Then
         assertThat(calendar.getIsDeleted()).isTrue();
@@ -835,14 +744,14 @@ class CalendarServiceImplTest {
 
     @Test
     @DisplayName("일정 삭제 시 캘린더가 없으면 캘린더 없음 예외를 던지고 삭제하지 않는다")
-    void deleteCalendarThrowsWhenCalendarDoesNotExist() {
+    void deleteCalendarThrowsWhenDoesNotExist() {
         // Given
         Long memberId = 1L;
         Long calendarId = 100L;
         given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> calendarService.deleteCalendar(memberId, calendarId))
+        assertThatThrownBy(() -> calendarService.delete(memberId, calendarId))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.CALENDER_NOT_FOUND));
         verifyNoInteractions(memberRepository, roommateCalendarMemberRepository, repeatRoommateCalendarRepository, excludeRoommateCalendarRepository);
@@ -850,7 +759,7 @@ class CalendarServiceImplTest {
 
     @Test
     @DisplayName("일정 삭제 시 작성자가 아니면 접근 거부 예외를 던지고 삭제하지 않는다")
-    void deleteCalendarThrowsWhenMemberIsNotOwner() {
+    void deleteThrowsWhenMemberIsNotOwner() {
         // Given
         Long ownerId = 1L;
         Long requesterId = 2L;
@@ -870,7 +779,7 @@ class CalendarServiceImplTest {
         given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.of(calendar));
 
         // When & Then
-        assertThatThrownBy(() -> calendarService.deleteCalendar(requesterId, calendarId))
+        assertThatThrownBy(() -> calendarService.delete(requesterId, calendarId))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.CALENDER_ACCESS_DENIED));
         assertThat(calendar.getIsDeleted()).isFalse();
@@ -879,7 +788,7 @@ class CalendarServiceImplTest {
 
     @Test
     @DisplayName("반복 일정 중 하나만 수정하면 원래 반복 일자를 제외하고 요청 일정으로 단일 일정을 저장한다")
-    void modifyRepeatCalendarThisSavesSingleCalendarAndExcludesOriginalOccurrence() {
+    void modifyRepeatCalendarThisSavesSingleAndExcludesOriginalOccurrence() {
         // Given
         Long calendarId = 100L;
         Long ownerId = 1L;
@@ -917,14 +826,13 @@ class CalendarServiceImplTest {
 
         given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.of(masterCalendar));
         given(repeatRoommateCalendarRepository.findOneByRoommateCalendar(masterCalendar)).willReturn(Optional.of(repeatCalendar));
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(ownerId)).willReturn(Optional.of(myRoommate));
         given(roommateCalendarCategoryRepository.save(any(RoommateCalendarCategory.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
         given(roommateCalendarRepository.save(any(RoommateCalendar.class)))
                 .willAnswer(invocation -> savedCalendar(300L, invocation.getArgument(0)));
 
         // When
-        RepeatCalendarModifyDto.Response response = calendarService.modifyRepeatCalendar(ownerId, calendarId, request);
+        RepeatCalendarModifyDto.Response response = calendarService.modifyRepeat(ownerId, calendarId, myRoommate, request);
 
         // Then
         ArgumentCaptor<RoommateCalendar> calendarCaptor = ArgumentCaptor.forClass(RoommateCalendar.class);
@@ -945,7 +853,7 @@ class CalendarServiceImplTest {
 
     @Test
     @DisplayName("반복 일정 중 선택 일자부터 수정하면 기존 반복을 직전까지 끊고 요청 일정으로 새 반복을 저장한다")
-    void modifyRepeatCalendarThisAndFollowingSplitsRepeatCalendar() {
+    void modifyRepeatCalendarThisAndFollowingSplitsRepeat() {
         // Given
         Long calendarId = 100L;
         Long ownerId = 1L;
@@ -983,14 +891,13 @@ class CalendarServiceImplTest {
 
         given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.of(masterCalendar));
         given(repeatRoommateCalendarRepository.findOneByRoommateCalendar(masterCalendar)).willReturn(Optional.of(repeatCalendar));
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(ownerId)).willReturn(Optional.of(myRoommate));
         given(roommateCalendarCategoryRepository.save(any(RoommateCalendarCategory.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
         given(roommateCalendarRepository.save(any(RoommateCalendar.class)))
                 .willAnswer(invocation -> savedCalendar(300L, invocation.getArgument(0)));
 
         // When
-        RepeatCalendarModifyDto.Response response = calendarService.modifyRepeatCalendar(ownerId, calendarId, request);
+        RepeatCalendarModifyDto.Response response = calendarService.modifyRepeat(ownerId, calendarId, myRoommate, request);
 
         // Then
         assertThat(repeatCalendar.getEndDate()).isEqualTo(LocalDateTime.of(2026, 7, 5, 18, 0));
@@ -1050,14 +957,13 @@ class CalendarServiceImplTest {
 
         given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.of(masterCalendar));
         given(repeatRoommateCalendarRepository.findOneByRoommateCalendar(masterCalendar)).willReturn(Optional.of(repeatCalendar));
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(ownerId)).willReturn(Optional.of(myRoommate));
         given(roommateCalendarCategoryRepository.save(any(RoommateCalendarCategory.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
         given(roommateCalendarRepository.save(any(RoommateCalendar.class)))
                 .willAnswer(invocation -> savedCalendar(300L, invocation.getArgument(0)));
 
         // When
-        calendarService.modifyRepeatCalendar(ownerId, calendarId, request);
+        calendarService.modifyRepeat(ownerId, calendarId, myRoommate, request);
 
         // Then
         assertThat(repeatCalendar.getEndDate()).isEqualTo(LocalDateTime.of(2026, 7, 5, 18, 0));
@@ -1104,14 +1010,13 @@ class CalendarServiceImplTest {
 
         given(roommateCalendarRepository.findById(calendarId)).willReturn(Optional.of(masterCalendar));
         given(repeatRoommateCalendarRepository.findOneByRoommateCalendar(masterCalendar)).willReturn(Optional.of(repeatCalendar));
-        given(myRoommateRepository.findWithRequiredAndMembersByMemberId(ownerId)).willReturn(Optional.of(myRoommate));
         given(roommateCalendarCategoryRepository.save(any(RoommateCalendarCategory.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
         given(roommateCalendarRepository.save(any(RoommateCalendar.class)))
                 .willAnswer(invocation -> savedCalendar(300L, invocation.getArgument(0)));
 
         // When
-        calendarService.modifyRepeatCalendar(ownerId, calendarId, request);
+        calendarService.modifyRepeat(ownerId, calendarId, myRoommate, request);
 
         // Then
         assertThat(repeatCalendar.getEndDate()).isEqualTo(LocalDateTime.of(2026, 7, 31, 18, 0));
@@ -1120,7 +1025,7 @@ class CalendarServiceImplTest {
 
     @Test
     @DisplayName("반복 일정 전체를 수정하면 원래 반복 일자와 요청 일정의 차이를 마스터 일정에 반영한다")
-    void modifyRepeatCalendarAllAppliesOccurrenceDeltaToMasterCalendar() {
+    void modifyRepeatCalendarAllAppliesOccurrenceDeltaToMaster() {
         // Given
         Long calendarId = 100L;
         Long ownerId = 1L;
@@ -1162,7 +1067,7 @@ class CalendarServiceImplTest {
                 .willReturn(List.of(RoommateCalendarMember.of(masterCalendar, member(ownerId))));
 
         // When
-        RepeatCalendarModifyDto.Response response = calendarService.modifyRepeatCalendar(ownerId, calendarId, request);
+        RepeatCalendarModifyDto.Response response = calendarService.modifyRepeat(ownerId, calendarId, myRoommate, request);
 
         // Then
         assertThat(masterCalendar.getTitle()).isEqualTo("수정 반복");

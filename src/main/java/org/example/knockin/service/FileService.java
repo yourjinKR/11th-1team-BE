@@ -11,5 +11,7 @@ public interface FileService {
 
     File save(MultipartFile multipartFile, FileType type) throws IOException;
 
+    File findBySavedFileNameAndType(String savedFileName, FileType type);
+
     void deleteAll(List<File> files);
 }

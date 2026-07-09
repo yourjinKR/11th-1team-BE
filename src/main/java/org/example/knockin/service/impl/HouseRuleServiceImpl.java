@@ -14,8 +14,6 @@ import org.example.knockin.entity.room.RoommateMatchingRequired;
 import org.example.knockin.exception.BusinessException;
 import org.example.knockin.exception.MemberErrorCode;
 import org.example.knockin.exception.MyRoommateErrorCode;
-import org.example.knockin.repository.member.MemberRepository;
-import org.example.knockin.repository.room.MyRoommateRepository;
 import org.example.knockin.repository.room.RoommateHouseRuleRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,15 +22,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class HouseRuleServiceImpl {
 
-    private final MyRoommateRepository myRoommateRepository;
-    private final MemberRepository memberRepository;
     private final RoommateHouseRuleRepository roommateHouseRuleRepository;
+    private final MemberServiceImpl memberService;
 
     @Transactional
-    public HouseRuleDto.Response saveHouseRule(HouseRuleDto.Request request, Long memberId) {
-        Member member = memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
-        MyRoommate myRoommate = myRoommateRepository.findWithRequiredByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
-
+    public HouseRuleDto.Response save(MyRoommate myRoommate, HouseRuleDto.Request request, Long memberId) {
+        Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
         RoommateHouseRule roommateHouseRule = RoommateHouseRule.builder()
                 .member(member)
                 .myRoommate(myRoommate)
@@ -44,8 +39,7 @@ public class HouseRuleServiceImpl {
     }
 
     @Transactional(readOnly = true)
-    public List<HouseRuleListDto.Response> findHouseRuleList(Long memberId) {
-        MyRoommate myRoommate = myRoommateRepository.findWithRequiredByMemberId(memberId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.NOT_FOUND));
+    public List<HouseRuleListDto.Response> findList(MyRoommate myRoommate) {
         List<RoommateHouseRule> myRoommateRules = roommateHouseRuleRepository.findByMyRoommateIdAndIsDeleted(myRoommate.getId(), false);
         return myRoommateRules.stream().map(this::toListDto).toList();
     }
@@ -59,7 +53,7 @@ public class HouseRuleServiceImpl {
     }
 
     @Transactional(readOnly = true)
-    public HouseRuleDetailDto.Response findHouseRuleDetail(Long memberId, Long houseRuleId) {
+    public HouseRuleDetailDto.Response findDetail(Long memberId, Long houseRuleId) {
         RoommateHouseRule roommateHouseRule = roommateHouseRuleRepository.findWithFetchedById(houseRuleId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.HOUSE_RULE_NOT_FOUND));
         validateHouseRule(memberId, roommateHouseRule);
 
@@ -71,7 +65,7 @@ public class HouseRuleServiceImpl {
     }
 
     @Transactional
-    public HouseRuleDto.Response modifyHouseRule(Long memberId, Long houseRuleId, HouseRuleDto.Request request) {
+    public HouseRuleDto.Response modify(Long memberId, Long houseRuleId, HouseRuleDto.Request request) {
         RoommateHouseRule roommateHouseRule = roommateHouseRuleRepository.findWithFetchedById(houseRuleId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.HOUSE_RULE_NOT_FOUND));
         validateHouseRule(memberId, roommateHouseRule);
         roommateHouseRule.modify(request.getTitle(), request.getContents());
@@ -79,7 +73,7 @@ public class HouseRuleServiceImpl {
     }
 
     @Transactional
-    public HouseRuleDto.Response deleteHouseRule(Long memberId, Long houseRuleId) {
+    public HouseRuleDto.Response delete(Long memberId, Long houseRuleId) {
         RoommateHouseRule roommateHouseRule = roommateHouseRuleRepository.findWithFetchedById(houseRuleId).orElseThrow(() -> new BusinessException(MyRoommateErrorCode.HOUSE_RULE_NOT_FOUND));
         validateHouseRule(memberId, roommateHouseRule);
         roommateHouseRule.softDelete();

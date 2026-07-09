@@ -9,16 +9,26 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.example.knockin.dto.CalendarDto;
+import org.example.knockin.dto.CalendarEditDto;
 import org.example.knockin.dto.Compatibility;
+import org.example.knockin.dto.HouseRuleDto;
+import org.example.knockin.dto.HouseRuleListDto;
 import org.example.knockin.dto.MyRoommateCardDto;
+import org.example.knockin.dto.MyRoommateDailyCalendarListDto;
+import org.example.knockin.dto.MyRoommateMonthlyCalendarListDto;
+import org.example.knockin.dto.RepeatCalendarModifyDto;
+import org.example.knockin.dto.RepeatCalendarModifyType;
 import org.example.knockin.entity.chat.ChattingRoom;
 import org.example.knockin.entity.member.Gender;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.MemberPrivacy;
 import org.example.knockin.entity.member.MemberPrivacyType;
 import org.example.knockin.entity.room.MyRoommate;
+import org.example.knockin.entity.room.RepeatType;
 import org.example.knockin.entity.room.RoommateMatchingRequired;
 import org.example.knockin.entity.room.RoommateRequiredStatus;
 import org.example.knockin.entity.room.RoommateScore;
@@ -55,6 +65,12 @@ class MyRoomMateServiceImplTest {
 
     @Mock
     private MyRoommateScoreServiceImpl myRoommateScoreService;
+
+    @Mock
+    private CalendarServiceImpl calendarService;
+
+    @Mock
+    private HouseRuleServiceImpl houseRuleService;
 
     @InjectMocks
     private MyRoomMateServiceImpl myRoomMateService;
@@ -197,6 +213,246 @@ class MyRoomMateServiceImplTest {
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
         verifyNoInteractions(memberPrivacyService);
+    }
+
+    @Test
+    @DisplayName("하우스룰 저장 시 내 룸메이트를 조회해 하우스룰 서비스에 전달한다")
+    void saveHouseRuleFindsMyRoommateAndDelegates() {
+        // Given
+        Long memberId = 1L;
+        MyRoommate myRoommate = myRoommate(10L, memberId, 2L, 100L);
+        HouseRuleDto.Request request = houseRuleRequest("청소", "매주 일요일 청소");
+        HouseRuleDto.Response expected = HouseRuleDto.Response.builder()
+                .updatedAt(LocalDateTime.of(2026, 7, 9, 12, 0))
+                .build();
+
+        when(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
+        when(houseRuleService.save(myRoommate, request, memberId)).thenReturn(expected);
+
+        // When
+        HouseRuleDto.Response response = myRoomMateService.saveHouseRule(request, memberId);
+
+        // Then
+        assertThat(response).isSameAs(expected);
+        verify(houseRuleService).save(myRoommate, request, memberId);
+    }
+
+    @Test
+    @DisplayName("하우스룰 저장 시 내 룸메이트가 없으면 하우스룰 서비스에 위임하지 않고 예외를 던진다")
+    void saveHouseRuleThrowsWhenMyRoommateDoesNotExist() {
+        // Given
+        Long memberId = 1L;
+        HouseRuleDto.Request request = houseRuleRequest("청소", "매주 일요일 청소");
+        when(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> myRoomMateService.saveHouseRule(request, memberId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
+        verifyNoInteractions(houseRuleService);
+    }
+
+    @Test
+    @DisplayName("하우스룰 목록 조회 시 내 룸메이트를 조회해 하우스룰 서비스에 전달한다")
+    void findHouseRuleListFindsMyRoommateAndDelegates() {
+        // Given
+        Long memberId = 1L;
+        MyRoommate myRoommate = myRoommate(10L, memberId, 2L, 100L);
+        List<HouseRuleListDto.Response> expected = List.of(HouseRuleListDto.Response.builder()
+                .id(1L)
+                .title("청소")
+                .contents("매주 일요일 청소")
+                .build());
+
+        when(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
+        when(houseRuleService.findList(myRoommate)).thenReturn(expected);
+
+        // When
+        List<HouseRuleListDto.Response> response = myRoomMateService.findHouseRuleList(memberId);
+
+        // Then
+        assertThat(response).isSameAs(expected);
+        verify(houseRuleService).findList(myRoommate);
+    }
+
+    @Test
+    @DisplayName("일반 일정 저장 시 내 룸메이트를 조회해 캘린더 서비스에 전달한다")
+    void saveBasicCalendarFindsMyRoommateAndDelegates() {
+        // Given
+        Long memberId = 1L;
+        MyRoommate myRoommate = myRoommate(10L, memberId, 2L, 100L);
+        CalendarDto.Request request = calendarRequest("장보기", "저녁 재료", List.of(memberId, 2L));
+        CalendarDto.Response expected = CalendarDto.Response.builder()
+                .updatedAt(LocalDateTime.of(2026, 7, 9, 12, 0))
+                .build();
+
+        when(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
+        when(calendarService.saveBasic(memberId, myRoommate, request)).thenReturn(expected);
+
+        // When
+        CalendarDto.Response response = myRoomMateService.saveBasicCalendar(memberId, request);
+
+        // Then
+        assertThat(response).isSameAs(expected);
+        verify(calendarService).saveBasic(memberId, myRoommate, request);
+    }
+
+    @Test
+    @DisplayName("일반 일정 저장 시 내 룸메이트가 없으면 캘린더 서비스에 위임하지 않고 예외를 던진다")
+    void saveBasicCalendarThrowsWhenMyRoommateDoesNotExist() {
+        // Given
+        Long memberId = 1L;
+        CalendarDto.Request request = calendarRequest("장보기", "저녁 재료", List.of(memberId));
+        when(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> myRoomMateService.saveBasicCalendar(memberId, request))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo(MyRoommateErrorCode.NOT_FOUND));
+        verifyNoInteractions(calendarService);
+    }
+
+    @Test
+    @DisplayName("특정일 일정 조회 시 내 룸메이트를 조회해 캘린더 서비스에 전달한다")
+    void findDailyCalendarListFindsMyRoommateAndDelegates() {
+        // Given
+        Long memberId = 1L;
+        MyRoommate myRoommate = myRoommate(10L, memberId, 2L, 100L);
+        MyRoommateDailyCalendarListDto.Response expected = MyRoommateDailyCalendarListDto.Response.builder()
+                .targetDay(LocalDate.of(2026, 7, 12))
+                .calendars(List.of())
+                .build();
+
+        when(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
+        when(calendarService.findDailyList(myRoommate, 2026, 7, 12)).thenReturn(expected);
+
+        // When
+        MyRoommateDailyCalendarListDto.Response response = myRoomMateService.findDailyCalendarList(memberId, 2026, 7, 12);
+
+        // Then
+        assertThat(response).isSameAs(expected);
+        verify(calendarService).findDailyList(myRoommate, 2026, 7, 12);
+    }
+
+    @Test
+    @DisplayName("월별 일정 조회 시 내 룸메이트를 조회해 캘린더 서비스에 전달한다")
+    void findMyMonthlyCalendarListFindsMyRoommateAndDelegates() {
+        // Given
+        Long memberId = 1L;
+        MyRoommate myRoommate = myRoommate(10L, memberId, 2L, 100L);
+        MyRoommateMonthlyCalendarListDto.Response expected = MyRoommateMonthlyCalendarListDto.Response.builder()
+                .calendarDays(List.of())
+                .build();
+
+        when(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
+        when(calendarService.findMyMonthlyList(myRoommate, 2026, 7)).thenReturn(expected);
+
+        // When
+        MyRoommateMonthlyCalendarListDto.Response response = myRoomMateService.findMyMonthlyCalendarList(memberId, 2026, 7);
+
+        // Then
+        assertThat(response).isSameAs(expected);
+        verify(calendarService).findMyMonthlyList(myRoommate, 2026, 7);
+    }
+
+    @Test
+    @DisplayName("캘린더 편집 폼 조회 시 내 룸메이트를 조회해 캘린더 서비스에 전달한다")
+    void getRoommateCalendarEditFormFindsMyRoommateAndDelegates() {
+        // Given
+        Long memberId = 1L;
+        MyRoommate myRoommate = myRoommate(10L, memberId, 2L, 100L);
+        CalendarEditDto.Response expected = CalendarEditDto.Response.builder()
+                .repeatType(List.of(RepeatType.WEEKLY))
+                .members(List.of())
+                .categoryNames(List.of("청소"))
+                .build();
+
+        when(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
+        when(calendarService.getEditForm(memberId, myRoommate)).thenReturn(expected);
+
+        // When
+        CalendarEditDto.Response response = myRoomMateService.getRoommateCalendarEditForm(memberId);
+
+        // Then
+        assertThat(response).isSameAs(expected);
+        verify(calendarService).getEditForm(memberId, myRoommate);
+    }
+
+    @Test
+    @DisplayName("반복 일정 수정 시 내 룸메이트를 조회해 캘린더 서비스에 전달한다")
+    void modifyRepeatCalendarFindsMyRoommateAndDelegates() {
+        // Given
+        Long memberId = 1L;
+        Long calendarId = 100L;
+        MyRoommate myRoommate = myRoommate(10L, memberId, 2L, 100L);
+        RepeatCalendarModifyDto.Request request = repeatModifyRequest(List.of(memberId, 2L));
+        RepeatCalendarModifyDto.Response expected = RepeatCalendarModifyDto.Response.builder()
+                .updatedAt(LocalDateTime.of(2026, 7, 9, 12, 0))
+                .build();
+
+        when(myRoommateRepository.findWithRequiredAndMembersByMemberId(memberId)).thenReturn(Optional.of(myRoommate));
+        when(calendarService.modifyRepeat(memberId, calendarId, myRoommate, request)).thenReturn(expected);
+
+        // When
+        RepeatCalendarModifyDto.Response response = myRoomMateService.modifyRepeatCalendar(memberId, calendarId, request);
+
+        // Then
+        assertThat(response).isSameAs(expected);
+        verify(calendarService).modifyRepeat(memberId, calendarId, myRoommate, request);
+    }
+
+    @Test
+    @DisplayName("카테고리명 조회 시 캘린더 서비스의 카테고리명을 반환한다")
+    void findCategoryNamesDelegatesToCalendarService() {
+        // Given
+        List<String> expected = List.of("청소", "공과금", "기타");
+        when(calendarService.findCategoryNames()).thenReturn(expected);
+
+        // When
+        List<String> response = myRoomMateService.findCategoryNames();
+
+        // Then
+        assertThat(response).isSameAs(expected);
+        verify(calendarService).findCategoryNames();
+    }
+
+    private HouseRuleDto.Request houseRuleRequest(String title, String contents) {
+        HouseRuleDto.Request request = new HouseRuleDto.Request();
+        request.setTitle(title);
+        request.setContents(contents);
+        return request;
+    }
+
+    private CalendarDto.Request calendarRequest(String title, String contents, List<Long> memberIds) {
+        CalendarDto.Request request = new CalendarDto.Request();
+        request.setCalendar(CalendarDto.CalendarInfoDto.builder()
+                .myRoommateId(10L)
+                .title(title)
+                .contents(contents)
+                .startDate(LocalDateTime.of(2026, 7, 12, 9, 0))
+                .endDate(LocalDateTime.of(2026, 7, 12, 10, 0))
+                .build());
+        request.setCategoryName("청소");
+        request.setMemberIds(memberIds);
+        return request;
+    }
+
+    private RepeatCalendarModifyDto.Request repeatModifyRequest(List<Long> memberIds) {
+        RepeatCalendarModifyDto.OriginalCalendar originalCalendar = new RepeatCalendarModifyDto.OriginalCalendar();
+        originalCalendar.setStartDate(LocalDateTime.of(2026, 7, 12, 9, 0));
+        originalCalendar.setEndDate(LocalDateTime.of(2026, 7, 12, 10, 0));
+
+        RepeatCalendarModifyDto.Request request = new RepeatCalendarModifyDto.Request();
+        request.setCalendar(calendarRequest("청소", "거실 청소", memberIds).getCalendar());
+        request.setCategoryName("청소");
+        request.setRepeatInfo(org.example.knockin.dto.RepeatCalendarDto.RepeatCalendarInfo.builder()
+                .endDate(LocalDateTime.of(2026, 8, 12, 10, 0))
+                .repeatType(RepeatType.WEEKLY)
+                .build());
+        request.setMemberIds(memberIds);
+        request.setModifyType(RepeatCalendarModifyType.THIS);
+        request.setOriginalCalendar(originalCalendar);
+        return request;
     }
 
     private MyRoommate myRoommate(Long myRoommateId, Long requesterId, Long requesteeId, Long chatRoomId) {

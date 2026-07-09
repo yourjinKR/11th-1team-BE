@@ -15,10 +15,13 @@ import org.example.knockin.dto.OAuth2UserInfo;
 import org.example.knockin.exception.AuthErrorCode;
 import org.example.knockin.auth.service.Oauth2DeleteFactory;
 import org.example.knockin.exception.BusinessException;
+import org.example.knockin.exception.MemberErrorCode;
 import org.example.knockin.repository.alarm.AlarmSettingRepository;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.member.BasicInformationRepository;
 import org.example.knockin.repository.member.MemberRepository;
+import org.example.knockin.repository.member.row.MatchingBasicInfoRow;
+import org.example.knockin.repository.member.row.MemberWithNameRow;
 import org.example.knockin.repository.member.StateRepository;
 import org.example.knockin.repository.room.RoomProfileRepository;
 import org.springframework.data.domain.Pageable;
@@ -95,6 +98,24 @@ public class MemberServiceImpl {
 
     public Optional<Member> findById(Long id) {
         return memberRepository.findById(id);
+    }
+
+    public Member findByIdOrThrow(Long id) {
+        return memberRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    public List<MemberWithNameRow> findAllWithNameRowById(List<Long> ids) {
+        return memberRepository.findAllWithNameRowById(ids);
+    }
+
+    public List<MatchingBasicInfoRow> findMatchingBasicRow(List<Long> excludeMemberIds, int limit) {
+        return memberRepository.findMatchingBasicRow(excludeMemberIds, limit);
+    }
+
+    public MatchingBasicInfoRow findMatchingBasicRowById(Long memberId) {
+        return memberRepository.findMatchingBasicRowById(memberId)
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
     }
 
     public MyProfileAllDto.Response findProfileAll(Member member) {

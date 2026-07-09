@@ -47,6 +47,7 @@ import org.example.knockin.repository.room.row.MatchingSeekerProfileRow;
 import org.example.knockin.repository.room.row.MatchingSeekerRegionRow;
 import org.example.knockin.repository.room.row.MatchingSeekerRoomTypeRow;
 import org.example.knockin.service.RoommateScoreService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -92,6 +93,45 @@ class RoommateMatchingServiceImplTest {
 
     @InjectMocks
     private RoommateMatchingServiceImpl roommateMatchingService;
+
+    @BeforeEach
+    void setUp() {
+        MemberServiceImpl memberService = new MemberServiceImpl(
+                memberRepository,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        MemberLifePatternService memberLifePatternService = new MemberLifePatternService(memberLifePatternRepository, null);
+        PreferenceConditionServiceImpl preferenceConditionService = new PreferenceConditionServiceImpl(
+                preferenceConditionRepository,
+                null,
+                preferenceConditionWeightRepository,
+                null
+        );
+        AuthenticationServiceImpl authenticationService = new AuthenticationServiceImpl(
+                authenticationRepository,
+                null,
+                memberService,
+                null,
+                null
+        );
+
+        roommateMatchingService = new RoommateMatchingServiceImpl(
+                memberService,
+                new MemberInterestServiceImpl(memberInterestRepository),
+                new RoomSeekerProfileServiceImpl(roomSeekerProfileRepository),
+                new RoomOfferProfileServiceImpl(roomOfferProfileRepository),
+                memberLifePatternService,
+                preferenceConditionService,
+                authenticationService,
+                new DeclarationServiceImpl(memberDeclarationRepository, null),
+                roommateScoreService
+        );
+    }
 
     @Test
     @DisplayName("관심 이력이 없으면 매칭 대상 회원을 관심 목록에 활성 상태로 저장한다")

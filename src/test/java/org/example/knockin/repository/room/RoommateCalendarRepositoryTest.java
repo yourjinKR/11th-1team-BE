@@ -46,6 +46,12 @@ class RoommateCalendarRepositoryTest {
     private RoommateCalendarRepository roommateCalendarRepository;
 
     @Autowired
+    private RoommateCalendarMemberRepository roommateCalendarMemberRepository;
+
+    @Autowired
+    private ExcludeRoommateCalendarRepository excludeRoommateCalendarRepository;
+
+    @Autowired
     private EntityManager entityManager;
 
     @Test
@@ -91,10 +97,10 @@ class RoommateCalendarRepositoryTest {
 
         // When
         List<DailyCalendarRow> calendars = roommateCalendarRepository.findDailyCalendarList(myRoommate.getId(), from, to);
-        List<DailyCalendarMemberRow> members = roommateCalendarRepository.findDailyCalendarMembers(
+        List<DailyCalendarMemberRow> members = roommateCalendarMemberRepository.findDailyCalendarMembers(
                 List.of(basicCalendar.getId(), repeatMaster.getId())
         );
-        List<RepeatCalendarExcludeRow> excludes = roommateCalendarRepository.findRepeatCalendarExcludes(
+        List<RepeatCalendarExcludeRow> excludes = excludeRoommateCalendarRepository.findRepeatCalendarExcludes(
                 List.of(repeatCalendar.getId())
         );
         List<MonthlyCalendarRow> monthlyCalendars = roommateCalendarRepository.findMonthlyCalendarList(myRoommate.getId(), from, to);

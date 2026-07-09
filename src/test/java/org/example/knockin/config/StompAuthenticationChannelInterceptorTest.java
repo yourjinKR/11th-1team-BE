@@ -18,7 +18,7 @@ import org.example.knockin.auth.util.PrincipalMemberResolver;
 import org.example.knockin.auth.util.TokenProvider;
 import org.example.knockin.exception.BusinessException;
 import org.example.knockin.exception.ChattingErrorCode;
-import org.example.knockin.service.impl.ChatRoomAccessService;
+import org.example.knockin.service.impl.ChatRoomMemberServiceImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,7 +40,7 @@ class StompAuthenticationChannelInterceptorTest {
     private TokenProvider tokenProvider;
 
     @Mock
-    private ChatRoomAccessService chatRoomAccessService;
+    private ChatRoomMemberServiceImpl chatRoomMemberService;
 
     @Mock
     private StompDestinationResolver stompDestinationResolver;
@@ -66,7 +66,7 @@ class StompAuthenticationChannelInterceptorTest {
         Message<?> result = interceptor.preSend(message, null);
 
         // Then
-        verify(chatRoomAccessService).checkCanSubscribe(chatRoomId, memberId);
+        verify(chatRoomMemberService).checkCanSubscribe(chatRoomId, memberId);
         assertThat(result).isSameAs(message);
     }
 
@@ -82,7 +82,7 @@ class StompAuthenticationChannelInterceptorTest {
         when(stompDestinationResolver.resolveChatSubscribeRoomId(destination)).thenReturn(Optional.of(chatRoomId));
         when(principalMemberResolver.resolveMemberId(authentication)).thenReturn(memberId);
         doThrow(new BusinessException(ChattingErrorCode.ROOM_ACCESS_DENIED))
-                .when(chatRoomAccessService)
+                .when(chatRoomMemberService)
                 .checkCanSubscribe(chatRoomId, memberId);
 
         // When & Then
@@ -103,7 +103,7 @@ class StompAuthenticationChannelInterceptorTest {
         Message<?> result = interceptor.preSend(message, null);
 
         // Then
-        verifyNoInteractions(chatRoomAccessService, principalMemberResolver);
+        verifyNoInteractions(chatRoomMemberService, principalMemberResolver);
         assertThat(result).isSameAs(message);
     }
 

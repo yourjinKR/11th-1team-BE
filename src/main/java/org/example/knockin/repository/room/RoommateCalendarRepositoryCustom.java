@@ -11,8 +11,4 @@ public interface RoommateCalendarRepositoryCustom {
     List<DailyCalendarRow> findDailyCalendarList(Long myRoommateId, LocalDateTime from, LocalDateTime to);
 
     List<MonthlyCalendarRow> findMonthlyCalendarList(Long myRoommateId, LocalDateTime from, LocalDateTime to);
-
-    List<DailyCalendarMemberRow> findDailyCalendarMembers(List<Long> calendarIds);
-
-    List<RepeatCalendarExcludeRow> findRepeatCalendarExcludes(List<Long> repeatCalendarIds);
 }
