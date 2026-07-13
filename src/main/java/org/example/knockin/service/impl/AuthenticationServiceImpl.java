@@ -58,7 +58,7 @@ public class AuthenticationServiceImpl {
         return EmailSendDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public EmailSendDto.Response sendAuthNumCompany(EmailSendDto.Request request, Long memberId) {
         Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
         String code = generateAuthCode();
