@@ -49,13 +49,15 @@ import org.example.knockin.exception.MetaErrorCode;
 import org.example.knockin.exception.RoommateBoardErrorCode;
 import org.example.knockin.exception.RoomTypeErrorCode;
 import org.example.knockin.repository.auth.AuthenticationRepository;
+import org.example.knockin.repository.auth.row.MemberAuthenticationRow;
 import org.example.knockin.repository.board.RoommateBoardDeclarationRepository;
 import org.example.knockin.repository.board.RoommateBoardFileRepository;
 import org.example.knockin.repository.board.RoommateBoardInterestRepository;
 import org.example.knockin.repository.board.RoommateBoardOptionRepository;
-import org.example.knockin.repository.board.RoommateBoardSearchCondition;
 import org.example.knockin.repository.board.RoommateBoardRepository;
 import org.example.knockin.repository.board.row.BasicInfoRow;
+import org.example.knockin.repository.board.row.BoardBaseRow;
+import org.example.knockin.repository.board.row.BoardThumbnailRow;
 import org.example.knockin.repository.board.row.EditFormRow;
 import org.example.knockin.repository.file.FileRepository;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
@@ -78,6 +80,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -175,7 +178,7 @@ class RoommateBoardServiceImplTest {
     private ArgumentCaptor<List<File>> uploadedFilesCaptor;
 
     @Captor
-    private ArgumentCaptor<RoommateBoardSearchCondition> searchConditionCaptor;
+    private ArgumentCaptor<LocalDateTime> endDateCaptor;
 
     @Captor
     private ArgumentCaptor<RoommateBoardInterest> roommateBoardInterestCaptor;
@@ -830,17 +833,69 @@ class RoommateBoardServiceImplTest {
         Pageable pageable = PageRequest.of(0, 20);
         LocalDateTime beforeEndDate = LocalDateTime.now()
                 .minusDays(RoommateBoard.COMEABLE_DATE_VISIBLE_GRACE_DAYS);
-        when(roommateBoardRepository.search(any(RoommateBoardSearchCondition.class)))
+        when(roommateBoardRepository.search(eq(request), eq(pageable), any(LocalDateTime.class)))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
         roommateBoardService.getBoardList(request, pageable);
 
         LocalDateTime afterEndDate = LocalDateTime.now()
                 .minusDays(RoommateBoard.COMEABLE_DATE_VISIBLE_GRACE_DAYS);
-        verify(roommateBoardRepository).search(searchConditionCaptor.capture());
-        RoommateBoardSearchCondition condition = searchConditionCaptor.getValue();
-        assertThat(condition.endDate()).isBetween(beforeEndDate, afterEndDate);
-        assertThat(condition.pageable()).isSameAs(pageable);
+        verify(roommateBoardRepository).search(eq(request), eq(pageable), endDateCaptor.capture());
+        assertThat(endDateCaptor.getValue()).isBetween(beforeEndDate, afterEndDate);
+        verifyNoInteractions(roommateBoardFileService, authenticationService);
+    }
+
+    @Test
+    @DisplayName("목록 조회는 게시글 기본 행에 썸네일과 인증 정보를 조합해 응답한다")
+    void getBoardListComposesResponseInService() {
+        // Given
+        BoardListDto.Request request = new BoardListDto.Request();
+        Pageable pageable = PageRequest.of(0, 20);
+        LocalDateTime comeableDate = LocalDateTime.of(2026, 8, 1, 9, 0);
+        BoardBaseRow baseRow = new BoardBaseRow(
+                1L,
+                "룸메이트를 구합니다",
+                1_000,
+                50,
+                10,
+                comeableDate,
+                7L,
+                "원룸",
+                "역삼동",
+                "강남구",
+                "서울",
+                11L,
+                "작성자"
+        );
+        when(roommateBoardRepository.search(eq(request), eq(pageable), any(LocalDateTime.class)))
+                .thenReturn(new PageImpl<>(List.of(baseRow), pageable, 1));
+        when(roommateBoardFileService.findThumbnailsByBoardIds(List.of(1L)))
+                .thenReturn(List.of(new BoardThumbnailRow(1L, "thumbnail.jpg")));
+        when(authenticationService.findAcceptedByMemberIds(List.of(11L)))
+                .thenReturn(List.of(
+                        new MemberAuthenticationRow(11L, AuthenticationType.STUDENT),
+                        new MemberAuthenticationRow(11L, AuthenticationType.COMPANY)
+                ));
+
+        // When
+        Page<BoardListDto.Response> result = roommateBoardService.getBoardList(request, pageable);
+
+        // Then
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent()).singleElement().satisfies(response -> {
+            assertThat(response.getId()).isEqualTo(1L);
+            assertThat(response.getImageUrl()).isEqualTo("thumbnail.jpg");
+            assertThat(response.getTitle()).isEqualTo("룸메이트를 구합니다");
+            assertThat(response.getRoomTypes()).containsExactly("원룸");
+            assertThat(response.getComeableDate()).isEqualTo(comeableDate);
+            assertThat(response.getRegionFullName()).isEqualTo("서울 강남구 역삼동");
+            assertThat(response.getMemberName()).isEqualTo("작성자");
+            assertThat(response.getAuthentications())
+                    .containsExactly(AuthenticationType.STUDENT, AuthenticationType.COMPANY);
+            assertThat(response.getBadges()).isEmpty();
+        });
+        verify(roommateBoardFileService).findThumbnailsByBoardIds(List.of(1L));
+        verify(authenticationService).findAcceptedByMemberIds(List.of(11L));
     }
 
     @Test

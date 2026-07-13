@@ -10,6 +10,7 @@ import org.example.knockin.entity.board.RoommateBoardFile;
 import org.example.knockin.entity.file.File;
 import org.example.knockin.entity.file.FileType;
 import org.example.knockin.repository.board.RoommateBoardFileRepository;
+import org.example.knockin.repository.board.row.BoardThumbnailRow;
 import org.example.knockin.service.FileService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -51,6 +52,10 @@ public class RoommateBoardFileServiceImpl {
 
     public List<FileDetailDto> findFileDetailDtoByBoardId(Long boardId) {
         return roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId);
+    }
+
+    public List<BoardThumbnailRow> findThumbnailsByBoardIds(List<Long> boardIds) {
+        return roommateBoardFileRepository.findThumbnailsByBoardIds(boardIds);
     }
 
     public List<RoommateBoardFile> findAllByRoommateBoard(RoommateBoard roommateBoard) {

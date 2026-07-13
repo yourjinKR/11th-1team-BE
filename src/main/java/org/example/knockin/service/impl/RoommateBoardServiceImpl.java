@@ -41,10 +41,11 @@ import org.example.knockin.exception.MetaErrorCode;
 import org.example.knockin.exception.RoommateBoardErrorCode;
 import org.example.knockin.global.util.DateUtils;
 import org.example.knockin.global.util.StringUtils;
-import org.example.knockin.repository.board.RoommateBoardListRow;
 import org.example.knockin.repository.board.RoommateBoardRepository;
-import org.example.knockin.repository.board.RoommateBoardSearchCondition;
+import org.example.knockin.repository.auth.row.MemberAuthenticationRow;
 import org.example.knockin.repository.board.row.BasicInfoRow;
+import org.example.knockin.repository.board.row.BoardBaseRow;
+import org.example.knockin.repository.board.row.BoardThumbnailRow;
 import org.example.knockin.repository.board.row.EditFormRow;
 import org.example.knockin.repository.board.row.MyRoommateBoardRow;
 import org.example.knockin.repository.life.row.MatchingLifestyleRow;
@@ -130,38 +131,63 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<BoardListDto.Response> getBoardList(BoardListDto.Request request, Pageable pageable) {
-        RoommateBoardSearchCondition condition = new RoommateBoardSearchCondition(
-                request.getRegionIds(),
-                request.getRoomTypeIds(),
-                request.getGender(),
-                request.getMinDeposit(),
-                request.getMaxDeposit(),
-                request.getMinMounthRent(),
-                request.getMaxMounthRent(),
-                LocalDateTime.now().minusDays(RoommateBoard.COMEABLE_DATE_VISIBLE_GRACE_DAYS),
-                pageable
-        );
+        LocalDateTime endDate = LocalDateTime.now()
+                .minusDays(RoommateBoard.COMEABLE_DATE_VISIBLE_GRACE_DAYS);
+        Page<BoardBaseRow> baseRows = roommateBoardRepository.search(request, pageable, endDate);
 
-        return roommateBoardRepository.search(condition)
-                .map(this::toResponse);
+        if (baseRows.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, baseRows.getTotalElements());
+        }
+
+        List<Long> boardIds = baseRows.stream()
+                .map(BoardBaseRow::boardId)
+                .toList();
+        List<Long> memberIds = baseRows.stream()
+                .map(BoardBaseRow::memberId)
+                .distinct()
+                .toList();
+
+        Map<Long, String> thumbnailByBoardId = roommateBoardFileService.findThumbnailsByBoardIds(boardIds).stream()
+                .collect(Collectors.toMap(
+                        BoardThumbnailRow::boardId,
+                        BoardThumbnailRow::imageUrl,
+                        (first, second) -> first
+                ));
+        Map<Long, List<AuthenticationType>> authenticationsByMemberId =
+                authenticationService.findAcceptedByMemberIds(memberIds).stream()
+                        .collect(Collectors.groupingBy(
+                                MemberAuthenticationRow::memberId,
+                                Collectors.mapping(MemberAuthenticationRow::type, Collectors.toList())
+                        ));
+
+        return baseRows.map(row -> toResponse(row, thumbnailByBoardId, authenticationsByMemberId));
     }
 
-    private BoardListDto.Response toResponse(RoommateBoardListRow row) {
+    private BoardListDto.Response toResponse(
+            BoardBaseRow row,
+            Map<Long, String> thumbnailByBoardId,
+            Map<Long, List<AuthenticationType>> authenticationsByMemberId
+    ) {
         return BoardListDto.Response.builder()
-                .id(row.id())
-                .imageUrl(row.imageUrl())
+                .id(row.boardId())
+                .imageUrl(thumbnailByBoardId.get(row.boardId()))
                 .title(row.title())
                 .deposit(row.deposit())
                 .monthlyRent(row.monthlyRent())
                 .managementCost(row.managementCost())
-                .roomTypes(row.roomTypes())
+                .roomTypes(List.of(row.roomTypeName()))
                 .comeableDate(row.comeableDate())
-                .regionFullName(row.regionFullName())
+                .regionFullName(StringUtils.parseToRegionFullName(
+                        row.grandParentRegionName(),
+                        row.parentRegionName(),
+                        row.regionName()
+                ))
                 .memberName(row.memberName())
-                .authentications(row.authentications())
+                .authentications(authenticationsByMemberId.getOrDefault(row.memberId(), List.of()))
                 .hits(row.hits())
-                .badges(row.badges())
+                .badges(List.of())
                 .build();
     }
 

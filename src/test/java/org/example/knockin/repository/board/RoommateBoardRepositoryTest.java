@@ -10,6 +10,7 @@ import java.util.List;
 import jakarta.persistence.EntityManager;
 import org.example.knockin.config.QueryDslConfig;
 import org.example.knockin.dto.BoardEditDto;
+import org.example.knockin.dto.BoardListDto;
 import org.example.knockin.entity.auth.Authentication;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.entity.auth.LoginProviderType;
@@ -33,7 +34,10 @@ import org.example.knockin.entity.room.Region;
 import org.example.knockin.entity.room.RoomExtraOption;
 import org.example.knockin.entity.room.RoomType;
 import org.example.knockin.repository.auth.AuthenticationRepository;
+import org.example.knockin.repository.auth.row.MemberAuthenticationRow;
 import org.example.knockin.repository.board.row.BasicInfoRow;
+import org.example.knockin.repository.board.row.BoardBaseRow;
+import org.example.knockin.repository.board.row.BoardThumbnailRow;
 import org.example.knockin.repository.board.row.EditFormRow;
 import org.example.knockin.repository.life.MemberLifePatternRepository;
 import org.example.knockin.repository.life.PreferenceConditionRepository;
@@ -92,15 +96,16 @@ class RoommateBoardRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        RoommateBoardSearchCondition condition = defaultCondition(visibleEndDate, PageRequest.of(0, 20));
+        BoardListDto.Request request = defaultRequest();
+        PageRequest pageable = PageRequest.of(0, 20);
 
         // When
-        Page<RoommateBoardListRow> result = roommateBoardRepository.search(condition);
+        Page<BoardBaseRow> result = roommateBoardRepository.search(request, pageable, visibleEndDate);
 
         // Then
         assertThat(result.getTotalElements()).isEqualTo(2);
         assertThat(result.getContent())
-                .extracting(RoommateBoardListRow::title)
+                .extracting(BoardBaseRow::title)
                 .containsExactlyInAnyOrder("기준일 게시글", "미래 게시글")
                 .doesNotContain("숨김 게시글");
     }
@@ -119,14 +124,15 @@ class RoommateBoardRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        RoommateBoardSearchCondition condition = defaultCondition(visibleEndDate, PageRequest.of(0, 20));
+        BoardListDto.Request request = defaultRequest();
+        PageRequest pageable = PageRequest.of(0, 20);
 
         // When
-        Page<RoommateBoardListRow> result = roommateBoardRepository.search(condition);
+        Page<BoardBaseRow> result = roommateBoardRepository.search(request, pageable, visibleEndDate);
 
         // Then
         assertThat(result.getContent())
-                .extracting(RoommateBoardListRow::title)
+                .extracting(BoardBaseRow::title)
                 .containsExactly("협의 가능 게시글");
         assertThat(result.getTotalElements()).isEqualTo(1);
     }
@@ -144,10 +150,11 @@ class RoommateBoardRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        RoommateBoardSearchCondition condition = defaultCondition(visibleEndDate, PageRequest.of(1, 20));
+        BoardListDto.Request request = defaultRequest();
+        PageRequest pageable = PageRequest.of(1, 20);
 
         // When
-        Page<RoommateBoardListRow> result = roommateBoardRepository.search(condition);
+        Page<BoardBaseRow> result = roommateBoardRepository.search(request, pageable, visibleEndDate);
 
         // Then
         assertThat(result.getContent()).isEmpty();
@@ -168,39 +175,36 @@ class RoommateBoardRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        RoommateBoardSearchCondition femaleCondition = condition(
+        BoardListDto.Request femaleRequest = request(
                 null,
                 null,
                 Gender.FEMALE,
                 null,
                 null,
                 null,
-                null,
-                visibleEndDate,
-                PageRequest.of(0, 20)
+                null
         );
-        RoommateBoardSearchCondition maleCondition = condition(
+        BoardListDto.Request maleRequest = request(
                 null,
                 null,
                 Gender.MALE,
                 null,
                 null,
                 null,
-                null,
-                visibleEndDate,
-                PageRequest.of(0, 20)
+                null
         );
+        PageRequest pageable = PageRequest.of(0, 20);
 
         // When
-        Page<RoommateBoardListRow> femaleResult = roommateBoardRepository.search(femaleCondition);
-        Page<RoommateBoardListRow> maleResult = roommateBoardRepository.search(maleCondition);
+        Page<BoardBaseRow> femaleResult = roommateBoardRepository.search(femaleRequest, pageable, visibleEndDate);
+        Page<BoardBaseRow> maleResult = roommateBoardRepository.search(maleRequest, pageable, visibleEndDate);
 
         // Then
         assertThat(femaleResult.getContent())
-                .extracting(RoommateBoardListRow::title)
+                .extracting(BoardBaseRow::title)
                 .containsExactly("최신 성별 기준 게시글");
         assertThat(femaleResult.getContent())
-                .extracting(RoommateBoardListRow::memberName)
+                .extracting(BoardBaseRow::memberName)
                 .containsExactly("최신정보");
         assertThat(maleResult.getContent()).isEmpty();
     }
@@ -331,6 +335,42 @@ class RoommateBoardRepositoryTest {
         assertThat(images).hasSize(10);
         assertThat(images.getFirst().getBoardFileId()).isEqualTo(thumbnailBoardFile.getId());
         assertThat(images.getFirst().getUrl()).isEqualTo("thumbnail.jpg");
+    }
+
+    @Test
+    @DisplayName("게시글 ID 목록의 삭제되지 않은 대표 이미지를 한 번에 조회한다")
+    void findThumbnailsByBoardIdsReturnsOnlyActiveThumbnails() {
+        // Given
+        Member member = persistMember("provider-list-thumbnails");
+        Region region = persistRegion("역삼동", 3, null);
+        RoomType roomType = persistRoomType("원룸");
+        RoommateBoard firstBoard = persistBoard(
+                "첫 게시글", member, roomType, region, LocalDateTime.of(2026, 7, 1, 9, 0));
+        RoommateBoard secondBoard = persistBoard(
+                "두 번째 게시글", member, roomType, region, LocalDateTime.of(2026, 7, 2, 9, 0));
+        RoommateBoard excludedBoard = persistBoard(
+                "조회 제외 게시글", member, roomType, region, LocalDateTime.of(2026, 7, 3, 9, 0));
+        persistBoardFile(firstBoard, persistFile("first-normal.jpg"), false);
+        persistBoardFile(firstBoard, persistFile("first-thumbnail.jpg"), true);
+        File deletedThumbnail = persistFile("deleted-thumbnail.jpg");
+        deletedThumbnail.softDelete();
+        persistBoardFile(firstBoard, deletedThumbnail, true);
+        persistBoardFile(secondBoard, persistFile("second-thumbnail.jpg"), true);
+        persistBoardFile(excludedBoard, persistFile("excluded-thumbnail.jpg"), true);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<BoardThumbnailRow> rows = roommateBoardFileRepository.findThumbnailsByBoardIds(
+                List.of(firstBoard.getId(), secondBoard.getId()));
+
+        // Then
+        assertThat(rows)
+                .extracting(BoardThumbnailRow::boardId, BoardThumbnailRow::imageUrl)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple(firstBoard.getId(), "first-thumbnail.jpg"),
+                        org.assertj.core.groups.Tuple.tuple(secondBoard.getId(), "second-thumbnail.jpg")
+                );
     }
 
     @Test
@@ -485,6 +525,36 @@ class RoommateBoardRepositoryTest {
     }
 
     @Test
+    @DisplayName("회원 ID 목록의 승인되고 삭제되지 않은 인증을 한 번에 조회한다")
+    void findAcceptedByMemberIdsReturnsOnlyAcceptedActiveAuthentications() {
+        // Given
+        Member firstMember = persistMember("provider-list-auth-first");
+        Member secondMember = persistMember("provider-list-auth-second");
+        Member excludedMember = persistMember("provider-list-auth-excluded");
+        persistAuthentication(firstMember, AuthenticationType.STUDENT);
+        Authentication notAccepted = persistAuthentication(firstMember, AuthenticationType.COMPANY);
+        ReflectionTestUtils.setField(notAccepted, "isAccepted", false);
+        persistAuthentication(secondMember, AuthenticationType.COMPANY);
+        Authentication deleted = persistAuthentication(secondMember, AuthenticationType.STUDENT);
+        ReflectionTestUtils.setField(deleted, "isDeleted", true);
+        persistAuthentication(excludedMember, AuthenticationType.STUDENT);
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<MemberAuthenticationRow> rows = authenticationRepository.findAcceptedByMemberIds(
+                List.of(firstMember.getId(), secondMember.getId()));
+
+        // Then
+        assertThat(rows)
+                .extracting(MemberAuthenticationRow::memberId, MemberAuthenticationRow::type)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple(firstMember.getId(), AuthenticationType.STUDENT),
+                        org.assertj.core.groups.Tuple.tuple(secondMember.getId(), AuthenticationType.COMPANY)
+                );
+    }
+
+    @Test
     @DisplayName("조회수 증가 쿼리는 삭제되지 않은 게시글의 조회수를 1 증가시킨다")
     void increaseHitsByIdIncrementsVisibleBoardHits() {
         // Given
@@ -529,32 +599,28 @@ class RoommateBoardRepositoryTest {
         assertThat(foundBoard.getHits()).isZero();
     }
 
-    private RoommateBoardSearchCondition defaultCondition(LocalDateTime endDate, PageRequest pageRequest) {
-        return condition(null, null, null, null, null, null, null, endDate, pageRequest);
+    private BoardListDto.Request defaultRequest() {
+        return request(null, null, null, null, null, null, null);
     }
 
-    private RoommateBoardSearchCondition condition(
+    private BoardListDto.Request request(
             List<Long> regionIds,
             List<Long> roomTypeIds,
             Gender gender,
             Integer minDeposit,
             Integer maxDeposit,
             Integer minMounthRent,
-            Integer maxMounthRent,
-            LocalDateTime endDate,
-            PageRequest pageRequest
+            Integer maxMounthRent
     ) {
-        return new RoommateBoardSearchCondition(
-                regionIds,
-                roomTypeIds,
-                gender,
-                minDeposit,
-                maxDeposit,
-                minMounthRent,
-                maxMounthRent,
-                endDate,
-                pageRequest
-        );
+        BoardListDto.Request request = new BoardListDto.Request();
+        request.setRegionIds(regionIds);
+        request.setRoomTypeIds(roomTypeIds);
+        request.setGender(gender);
+        request.setMinDeposit(minDeposit);
+        request.setMaxDeposit(maxDeposit);
+        request.setMinMounthRent(minMounthRent);
+        request.setMaxMounthRent(maxMounthRent);
+        return request;
     }
 
     private Member persistMember(String providerId) {
