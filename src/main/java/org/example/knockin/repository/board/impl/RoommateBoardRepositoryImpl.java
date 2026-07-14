@@ -1,6 +1,5 @@
 package org.example.knockin.repository.board.impl;
 
-import static org.example.knockin.entity.auth.QAuthentication.authentication;
 import static org.example.knockin.entity.board.QRoommateBoard.roommateBoard;
 import static org.example.knockin.entity.board.QRoommateBoardFile.roommateBoardFile;
 import static org.example.knockin.entity.file.QBasicInformationFile.basicInformationFile;
@@ -18,29 +17,22 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.BoBoardDetailDto;
 import org.example.knockin.dto.BoBoardListDto;
-import org.example.knockin.entity.auth.AuthenticationType;
-import org.example.knockin.entity.file.QFile;
+import org.example.knockin.dto.BoardListDto;
 import org.example.knockin.entity.member.Gender;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.entity.member.QBasicInformation;
 import org.example.knockin.entity.room.QRegion;
 import org.example.knockin.global.util.QueryDslUtils;
-import org.example.knockin.repository.board.row.BasicInfoRow;
-import org.example.knockin.repository.board.RoommateBoardListRow;
 import org.example.knockin.repository.board.RoommateBoardRepositoryCustom;
-import org.example.knockin.repository.board.RoommateBoardSearchCondition;
-import org.example.knockin.repository.board.row.MyRoommateBoardRow;
+import org.example.knockin.repository.board.row.BasicInfoRow;
+import org.example.knockin.repository.board.row.BoardBaseRow;
 import org.example.knockin.repository.board.row.EditFormRow;
-import org.jspecify.annotations.NonNull;
+import org.example.knockin.repository.board.row.MyRoommateBoardRow;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -54,77 +46,23 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
     private final JPAQueryFactory jpaQueryFactory;
 
     @Override
-    public Page<RoommateBoardListRow> search(@NonNull RoommateBoardSearchCondition condition) {
-
-        SearchAliases aliases = new SearchAliases(
-                new QRegion("boardRegion"),
-                new QRegion("parentRegion"),
-                new QRegion("grandParentRegion"),
-                new QBasicInformation("latestBasicInformation"),
-                new QBasicInformation("maxBasicInformation")
-        );
+    public Page<BoardBaseRow> search(BoardListDto.Request request, Pageable pageable, LocalDateTime endDate) {
+        QRegion boardRegion = new QRegion("searchBoardRegion");
+        QRegion parentRegion = new QRegion("searchParentRegion");
+        QRegion grandParentRegion = new QRegion("searchGrandParentRegion");
+        QBasicInformation latestBasicInformation = new QBasicInformation("searchLatestBasicInformation");
 
         Predicate[] searchCondition = {
-                regionIn(condition.regionIds(), aliases.boardRegion(), aliases.parentRegion(), aliases.grandParentRegion()),
-                roomTypeIn(condition.roomTypeIds()),
-                genderEq(condition.gender(), aliases),
-                depositBetween(condition.minDeposit(), condition.maxDeposit()),
-                mounthRentBetween(condition.minMounthRent(), condition.maxMounthRent()),
+                regionIn(request.getRegionIds(), boardRegion, parentRegion, grandParentRegion),
+                roomTypeIn(request.getRoomTypeIds()),
+                genderEq(request.getGender()),
+                depositBetween(request.getMinDeposit(), request.getMaxDeposit()),
+                monthlyRentBetween(request.getMinMounthRent(), request.getMaxMounthRent()),
                 isNotDeleted(),
-                comeableDateNotExpired(condition.endDate())
+                comeableDateNotExpired(endDate)
         };
 
-        Pageable pageable = condition.pageable();
-        List<Long> boardIds = fetchBoardIds(searchCondition, pageable, aliases);
-        Long total = countBoards(searchCondition, aliases);
-
-        if (boardIds.isEmpty()) {
-            return new PageImpl<>(List.of(), pageable, total == null ? 0 : total);
-        }
-
-        List<BoardBaseRow> baseRows = fetchBaseRows(boardIds, aliases);
-        Map<Long, BoardBaseRow> baseRowByBoardId = mapBaseRowsByBoardId(baseRows);
-        Map<Long, String> thumbnailByBoardId = fetchThumbnailByBoardId(boardIds);
-        Map<Long, List<AuthenticationType>> authByMemberId = fetchAuthenticationsByMemberId(baseRows);
-        List<RoommateBoardListRow> rows = toRows(
-                boardIds,
-                baseRowByBoardId,
-                thumbnailByBoardId,
-                authByMemberId
-        );
-
-        return new PageImpl<>(rows, pageable, total == null ? 0 : total);
-    }
-
-    private List<Long> fetchBoardIds(Predicate[] searchCondition, Pageable pageable, SearchAliases aliases) {
-        return jpaQueryFactory
-                .select(roommateBoard.id)
-                .from(roommateBoard)
-                .join(roommateBoard.region, aliases.boardRegion())
-                .leftJoin(aliases.boardRegion().parent, aliases.parentRegion())
-                .leftJoin(aliases.parentRegion().parent, aliases.grandParentRegion())
-                .join(roommateBoard.member, member)
-                .where(searchCondition)
-                .orderBy(toBoardOrderSpecifiers(pageable.getSort()))
-                .offset(pageable.getOffset())
-                .limit(pageable.getPageSize())
-                .fetch();
-    }
-
-    private Long countBoards(Predicate[] searchCondition, SearchAliases aliases) {
-        return jpaQueryFactory
-                .select(roommateBoard.countDistinct())
-                .from(roommateBoard)
-                .join(roommateBoard.region, aliases.boardRegion())
-                .leftJoin(aliases.boardRegion().parent, aliases.parentRegion())
-                .leftJoin(aliases.parentRegion().parent, aliases.grandParentRegion())
-                .join(roommateBoard.member, member)
-                .where(searchCondition)
-                .fetchOne();
-    }
-
-    private List<BoardBaseRow> fetchBaseRows(List<Long> boardIds, SearchAliases aliases) {
-        return jpaQueryFactory
+        List<BoardBaseRow> content = jpaQueryFactory
                 .select(Projections.constructor(
                         BoardBaseRow.class,
                         roommateBoard.id,
@@ -135,114 +73,36 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
                         roommateBoard.comeableDate,
                         roommateBoard.hits,
                         roomType.name,
-                        region.name,
-                        aliases.parentRegion().name,
-                        aliases.grandParentRegion().name,
+                        boardRegion.name,
+                        parentRegion.name,
+                        grandParentRegion.name,
                         member.id,
-                        basicInformation.name
+                        latestBasicInformation.name
                 ))
                 .from(roommateBoard)
                 .join(roommateBoard.roomType, roomType)
-                .join(roommateBoard.region, region)
-                .leftJoin(region.parent, aliases.parentRegion())
-                .leftJoin(aliases.parentRegion().parent, aliases.grandParentRegion())
+                .join(roommateBoard.region, boardRegion)
+                .leftJoin(boardRegion.parent, parentRegion)
+                .leftJoin(parentRegion.parent, grandParentRegion)
                 .join(roommateBoard.member, member)
-                .leftJoin(member.basicInformations, basicInformation)
-                .on(latestBasicInformationIdEq(aliases))
-                .where(roommateBoard.id.in(boardIds))
-                .fetch();
-    }
-
-    private Map<Long, BoardBaseRow> mapBaseRowsByBoardId(List<BoardBaseRow> baseRows) {
-        return baseRows.stream()
-                .collect(Collectors.toMap(
-                        BoardBaseRow::boardId,
-                        Function.identity(),
-                        (first, second) -> first
-                ));
-    }
-
-    private Map<Long, String> fetchThumbnailByBoardId(List<Long> boardIds) {
-        QFile file = new QFile("file");
-
-        List<BoardThumbnailRow> thumbnailRows = jpaQueryFactory
-                .select(Projections.constructor(
-                        BoardThumbnailRow.class,
-                        roommateBoardFile.roommateBoard.id,
-                        file.savedFileName
-                ))
-                .from(roommateBoardFile)
-                .join(roommateBoardFile.file, file)
-                .where(
-                        roommateBoardFile.roommateBoard.id.in(boardIds),
-                        roommateBoardFile.isThumbnail.isTrue()
-                )
+                .leftJoin(member.basicInformations, latestBasicInformation)
+                .on(latestBasicInformationIdEq(latestBasicInformation))
+                .where(searchCondition)
+                .orderBy(toBoardOrderSpecifiers(pageable.getSort()))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
                 .fetch();
 
-        return thumbnailRows.stream()
-                .collect(Collectors.toMap(
-                        BoardThumbnailRow::boardId,
-                        BoardThumbnailRow::imageUrl,
-                        (first, second) -> first
-                ));
-    }
+        Long total = jpaQueryFactory
+                .select(roommateBoard.count())
+                .from(roommateBoard)
+                .join(roommateBoard.region, boardRegion)
+                .leftJoin(boardRegion.parent, parentRegion)
+                .leftJoin(parentRegion.parent, grandParentRegion)
+                .where(searchCondition)
+                .fetchOne();
 
-    private Map<Long, List<AuthenticationType>> fetchAuthenticationsByMemberId(List<BoardBaseRow> baseRows) {
-        List<Long> memberIds = baseRows.stream()
-                .map(BoardBaseRow::memberId)
-                .distinct()
-                .toList();
-
-        List<MemberAuthRow> authRows = jpaQueryFactory
-                .select(Projections.constructor(
-                        MemberAuthRow.class,
-                        authentication.member.id,
-                        authentication.type
-                ))
-                .distinct()
-                .from(authentication)
-                .where(
-                        authentication.member.id.in(memberIds),
-                        authentication.isAccepted.isTrue(),
-                        authentication.isDeleted.isFalse()
-                )
-                .fetch();
-
-        return authRows.stream()
-                .collect(Collectors.groupingBy(
-                        MemberAuthRow::memberId,
-                        Collectors.mapping(MemberAuthRow::type, Collectors.toList())
-                ));
-    }
-
-    private List<RoommateBoardListRow> toRows(
-            List<Long> boardIds,
-            Map<Long, BoardBaseRow> baseRowByBoardId,
-            Map<Long, String> thumbnailByBoardId,
-            Map<Long, List<AuthenticationType>> authByMemberId
-    ) {
-        return boardIds.stream()
-                .map(boardId -> {
-                    BoardBaseRow row = baseRowByBoardId.get(boardId);
-                    String regionFullName = parseToRegionFullName(row.grandParentRegionName, row.parentRegionName, row.regionName);
-
-                    return new RoommateBoardListRow(
-                            row.boardId(),
-                            thumbnailByBoardId.get(row.boardId()),
-                            row.title(),
-                            row.deposit(),
-                            row.monthlyRent(),
-                            row.managementCost(),
-                            List.of(row.roomTypeName()),
-                            row.comeableDate(),
-                            regionFullName,
-                            row.memberName(),
-                            authByMemberId.getOrDefault(row.memberId(), List.of()),
-                            row.hits(),
-                            List.of()
-                    );
-                })
-                .toList();
+        return new PageImpl<>(content, pageable, total == null ? 0 : total);
     }
 
     private OrderSpecifier<?>[] toBoardOrderSpecifiers(Sort sort) {
@@ -263,12 +123,13 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
         return orders.toArray(new OrderSpecifier[0]);
     }
 
-    private BooleanExpression latestBasicInformationIdEq(SearchAliases aliases) {
-        return basicInformation.id.eq(
+    private BooleanExpression latestBasicInformationIdEq(QBasicInformation latestBasicInformation) {
+        QBasicInformation maxBasicInformation = new QBasicInformation("searchMaxBasicInformation");
+        return latestBasicInformation.id.eq(
                 JPAExpressions
-                        .select(aliases.latestBasicInformation().id.max())
-                        .from(aliases.latestBasicInformation())
-                        .where(aliases.latestBasicInformation().member.id.eq(member.id))
+                        .select(maxBasicInformation.id.max())
+                        .from(maxBasicInformation)
+                        .where(maxBasicInformation.member.id.eq(member.id))
         );
     }
 
@@ -464,19 +325,21 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
         return roommateBoard.roomType.id.in(roomTypeIds);
     }
 
-    private BooleanExpression genderEq(Gender gender, SearchAliases aliases) {
+    private BooleanExpression genderEq(Gender gender) {
         if (gender == null) return null;
+        QBasicInformation latestBasicInformation = new QBasicInformation("genderLatestBasicInformation");
+        QBasicInformation maxBasicInformation = new QBasicInformation("genderMaxBasicInformation");
         return JPAExpressions
                 .selectOne()
-                .from(aliases.latestBasicInformation())
+                .from(latestBasicInformation)
                 .where(
-                        aliases.latestBasicInformation().member.id.eq(member.id),
-                        aliases.latestBasicInformation().gender.eq(gender),
-                        aliases.latestBasicInformation().id.eq(
+                        latestBasicInformation.member.id.eq(roommateBoard.member.id),
+                        latestBasicInformation.gender.eq(gender),
+                        latestBasicInformation.id.eq(
                                 JPAExpressions
-                                        .select(aliases.maxBasicInformation().id.max())
-                                        .from(aliases.maxBasicInformation())
-                                        .where(aliases.maxBasicInformation().member.id.eq(member.id))
+                                        .select(maxBasicInformation.id.max())
+                                        .from(maxBasicInformation)
+                                        .where(maxBasicInformation.member.id.eq(roommateBoard.member.id))
                         )
                 )
                 .exists();
@@ -486,7 +349,7 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
         return QueryDslUtils.numberBetween(roommateBoard.deposit, minDeposit, maxDeposit);
     }
 
-    private BooleanExpression mounthRentBetween(Integer minMounthRent, Integer maxMounthRent) {
+    private BooleanExpression monthlyRentBetween(Integer minMounthRent, Integer maxMounthRent) {
         return QueryDslUtils.numberBetween(roommateBoard.monthlyRent, minMounthRent, maxMounthRent);
     }
 
@@ -525,54 +388,4 @@ public class RoommateBoardRepositoryImpl implements RoommateBoardRepositoryCusto
         return isDeleted != null ? roommateBoard.isDeleted.eq(isDeleted) : null;
     }
 
-    public record BoardBaseRow(
-            Long boardId,
-            String title,
-            Integer deposit,
-            Integer monthlyRent,
-            Integer managementCost,
-            LocalDateTime comeableDate,
-            Long hits,
-            String roomTypeName,
-
-            String regionName,
-            String parentRegionName,
-            String grandParentRegionName,
-
-            Long memberId,
-            String memberName
-    ) {
-    }
-
-    private String parseToRegionFullName(
-            String grandParentRegionName,
-            String parentRegionName,
-            String regionName
-    ) {
-        return Stream.of(grandParentRegionName, parentRegionName, regionName)
-                .filter(Objects::nonNull)
-                .filter(name -> !name.isBlank())
-                .collect(Collectors.joining(" "));
-    }
-
-    public record BoardThumbnailRow(
-            Long boardId,
-            String imageUrl
-    ) {
-    }
-
-    public record MemberAuthRow(
-            Long memberId,
-            AuthenticationType type
-    ) {
-    }
-
-    private record SearchAliases(
-            QRegion boardRegion,
-            QRegion parentRegion,
-            QRegion grandParentRegion,
-            QBasicInformation latestBasicInformation,
-            QBasicInformation maxBasicInformation
-    ) {
-    }
 }

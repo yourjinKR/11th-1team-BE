@@ -13,6 +13,7 @@ import org.example.knockin.exception.EmailErrorCode;
 import org.example.knockin.exception.MemberErrorCode;
 import org.example.knockin.repository.auth.AuthenticationApproveRepository;
 import org.example.knockin.repository.auth.AuthenticationRepository;
+import org.example.knockin.repository.auth.row.MemberAuthenticationRow;
 import org.example.knockin.service.MailSendService;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -154,5 +155,9 @@ public class AuthenticationServiceImpl {
 
     public List<AuthenticationType> findTypesByMemberId(Long memberId) {
         return authenticationRepository.getAcceptedAuthenticationTypeByMemberId(memberId);
+    }
+
+    public List<MemberAuthenticationRow> findAcceptedByMemberIds(List<Long> memberIds) {
+        return authenticationRepository.findAcceptedByMemberIds(memberIds);
     }
 }

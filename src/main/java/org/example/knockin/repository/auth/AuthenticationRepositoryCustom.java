@@ -7,10 +7,13 @@ import org.example.knockin.dto.BoVerificationCancelListDto;
 import org.example.knockin.dto.BoVerificationWaitingDetailDto;
 import org.example.knockin.dto.BoVerificationWaitingListDto;
 import org.example.knockin.entity.auth.AuthenticationType;
+import org.example.knockin.repository.auth.row.MemberAuthenticationRow;
 import org.springframework.data.domain.Pageable;
 
 public interface AuthenticationRepositoryCustom {
     List<AuthenticationType> getAcceptedAuthenticationTypeByMemberId(Long memberId);
+
+    List<MemberAuthenticationRow> findAcceptedByMemberIds(List<Long> memberIds);
 
     List<BoVerificationApproveListDto.Response.EmployeeAuthItem> findVerificationApproves(Pageable pageable);
 

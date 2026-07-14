@@ -9,6 +9,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.example.knockin.dto.BoardDetailDto.Response.FileDetailDto;
 import org.example.knockin.repository.board.RoommateBoardFileRepositoryCustom;
+import org.example.knockin.repository.board.row.BoardThumbnailRow;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -32,6 +33,24 @@ public class RoommateBoardFileRepositoryImpl implements RoommateBoardFileReposit
                 )
                 .orderBy(roommateBoardFile.isThumbnail.desc(), roommateBoardFile.id.asc())
                 .limit(10)
+                .fetch();
+    }
+
+    @Override
+    public List<BoardThumbnailRow> findThumbnailsByBoardIds(List<Long> boardIds) {
+        return jpaQueryFactory
+                .select(Projections.constructor(
+                        BoardThumbnailRow.class,
+                        roommateBoardFile.roommateBoard.id,
+                        file.savedFileName
+                ))
+                .from(roommateBoardFile)
+                .join(roommateBoardFile.file, file)
+                .where(
+                        roommateBoardFile.roommateBoard.id.in(boardIds),
+                        roommateBoardFile.isThumbnail.isTrue(),
+                        file.isDeleted.isFalse()
+                )
                 .fetch();
     }
 }

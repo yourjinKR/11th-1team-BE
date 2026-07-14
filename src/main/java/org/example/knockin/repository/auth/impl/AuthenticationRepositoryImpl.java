@@ -16,6 +16,7 @@ import org.example.knockin.dto.BoVerificationWaitingListDto;
 import org.example.knockin.entity.auth.ApproveType;
 import org.example.knockin.entity.auth.AuthenticationType;
 import org.example.knockin.repository.auth.AuthenticationRepositoryCustom;
+import org.example.knockin.repository.auth.row.MemberAuthenticationRow;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
@@ -37,6 +38,24 @@ public class AuthenticationRepositoryImpl implements AuthenticationRepositoryCus
                         authentication.isDeleted.isFalse()
                 )
                 .join(authentication.member, member)
+                .fetch();
+    }
+
+    @Override
+    public List<MemberAuthenticationRow> findAcceptedByMemberIds(List<Long> memberIds) {
+        return jpaQueryFactory
+                .select(Projections.constructor(
+                        MemberAuthenticationRow.class,
+                        authentication.member.id,
+                        authentication.type
+                ))
+                .distinct()
+                .from(authentication)
+                .where(
+                        authentication.member.id.in(memberIds),
+                        authentication.isAccepted.isTrue(),
+                        authentication.isDeleted.isFalse()
+                )
                 .fetch();
     }
 
