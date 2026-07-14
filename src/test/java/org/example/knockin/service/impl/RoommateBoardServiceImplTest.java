@@ -628,6 +628,84 @@ class RoommateBoardServiceImplTest {
     }
 
     @Test
+    @DisplayName("게시글 저장 이미지가 10장을 초과하면 파일 개수 초과 예외를 던지고 게시글을 저장하지 않는다")
+    void saveThrowsWhenImageCountExceedsLimit() throws IOException {
+        // Given
+        List<FileDto> images = new ArrayList<>();
+        for (int index = 0; index <= RoommateBoard.IMAGE_MAXIMUM; index++) {
+            images.add(createFileDto(index, index == 0));
+        }
+        BoardDto.Request request = createRequest();
+        request.setImages(images);
+        Long memberId = 42L;
+        Member member = org.mockito.Mockito.mock(Member.class);
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+
+        when(memberService.findById(memberId)).thenReturn(Optional.of(member));
+        when(metaService.findByRoomTypeId(1L)).thenReturn(roomType);
+        when(metaService.findByRegionId(2L)).thenReturn(Optional.of(region));
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.save(request, memberId, null))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode())
+                                .isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_EXCEEDED));
+        verifyNoInteractions(fileService, roommateBoardRepository);
+        verify(roommateBoardFileService, never()).saveAll(any(RoommateBoard.class), any(), any());
+    }
+
+    @Test
+    @DisplayName("이미지가 있지만 썸네일이 없으면 썸네일 개수 예외를 던지고 게시글을 저장하지 않는다")
+    void saveThrowsWhenThumbnailIsMissing() throws IOException {
+        // Given
+        BoardDto.Request request = createRequest(
+                createFileDto(0, false),
+                createFileDto(1, false));
+        Long memberId = 42L;
+        Member member = org.mockito.Mockito.mock(Member.class);
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+
+        when(memberService.findById(memberId)).thenReturn(Optional.of(member));
+        when(metaService.findByRoomTypeId(1L)).thenReturn(roomType);
+        when(metaService.findByRegionId(2L)).thenReturn(Optional.of(region));
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.save(request, memberId, null))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode())
+                                .isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_THUMBNAIL_EXCEEDED));
+        verifyNoInteractions(fileService, roommateBoardRepository);
+        verify(roommateBoardFileService, never()).saveAll(any(RoommateBoard.class), any(), any());
+    }
+
+    @Test
+    @DisplayName("썸네일이 2장이면 썸네일 개수 예외를 던지고 게시글을 저장하지 않는다")
+    void saveThrowsWhenMultipleThumbnailsAreRequested() throws IOException {
+        // Given
+        BoardDto.Request request = createRequest(
+                createFileDto(0, true),
+                createFileDto(1, true));
+        Long memberId = 42L;
+        Member member = org.mockito.Mockito.mock(Member.class);
+        RoomType roomType = org.mockito.Mockito.mock(RoomType.class);
+        Region region = org.mockito.Mockito.mock(Region.class);
+
+        when(memberService.findById(memberId)).thenReturn(Optional.of(member));
+        when(metaService.findByRoomTypeId(1L)).thenReturn(roomType);
+        when(metaService.findByRegionId(2L)).thenReturn(Optional.of(region));
+
+        // When & Then
+        assertThatThrownBy(() -> roommateBoardService.save(request, memberId, null))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        e -> assertThat(e.getErrorCode())
+                                .isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_THUMBNAIL_EXCEEDED));
+        verifyNoInteractions(fileService, roommateBoardRepository);
+        verify(roommateBoardFileService, never()).saveAll(any(RoommateBoard.class), any(), any());
+    }
+
+    @Test
     @DisplayName("존재하지 않는 회원으로 저장을 요청하면 이미지 업로드와 트랜잭션 저장을 수행하지 않는다")
     void saveThrowsWhenMemberDoesNotExist() {
         BoardDto.Request request = createRequest(createFileDto(0, true));

@@ -93,6 +93,12 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
                 .orElseThrow(() -> new BusinessException(MetaErrorCode.REGION_NOT_FOUND));
 
         List<FileDto> fileDtos = request.getImages();
+
+        if (fileDtos != null && !fileDtos.isEmpty()) {
+            validateImageMaxCount(fileDtos.size());
+            validateThumbnailCount(fileDtos.stream().filter(FileDto::isThumbnail).count());
+        }
+
         List<MultipartFile> imageFiles = toImageFilesFromSaveRequest(fileDtos, files);
         List<Boolean> thumbnails = toThumbnailsFromSaveRequest(fileDtos);
         RoommateBoard savedRoommateBoard = saveRoommateBoard(request, member, roomType, region);
@@ -101,6 +107,18 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
         roommateBoardOptionService.saveByExtraOptionsIds(savedRoommateBoard, request.getExtraOptionIds());
 
         return new BoardDto.Response(savedRoommateBoard.getUpdatedAt());
+    }
+
+    private void validateImageMaxCount(long imageCount) {
+        if (imageCount > RoommateBoard.IMAGE_MAXIMUM) {
+            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_EXCEEDED, RoommateBoard.IMAGE_MAXIMUM);
+        }
+    }
+
+    private void validateThumbnailCount(long thumbnailCount) {
+        if (thumbnailCount != RoommateBoard.THUMBNAIL_MAXIMUM) {
+            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_THUMBNAIL_EXCEEDED, RoommateBoard.THUMBNAIL_MAXIMUM);
+        }
     }
 
     private RoommateBoard saveRoommateBoard(BoardDto.Request request, Member member, RoomType roomType, Region region) {
@@ -476,20 +494,9 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
 
     private void validateBoardFileResult(RoommateBoard roommateBoard) {
         List<RoommateBoardFile> roommateBoardFiles = roommateBoardFileService.findAllByRoommateBoard(roommateBoard);
-
-        if (roommateBoardFiles.isEmpty()) {
-            return;
-        }
-
-        if (roommateBoardFiles.size() > RoommateBoard.IMAGE_MAXIMUM) {
-            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_EXCEEDED, RoommateBoard.IMAGE_MAXIMUM);
-        }
-
-        long thumbnailCount = roommateBoardFiles.stream().filter(RoommateBoardFile::getIsThumbnail).count();
-
-        if (thumbnailCount != RoommateBoard.THUMBNAIL_MAXIMUM) {
-            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_THUMBNAIL_EXCEEDED, RoommateBoard.THUMBNAIL_MAXIMUM);
-        }
+        if (roommateBoardFiles.isEmpty()) return;
+        validateImageMaxCount(roommateBoardFiles.size());
+        validateThumbnailCount(roommateBoardFiles.stream().filter(RoommateBoardFile::getIsThumbnail).count());
     }
 
     @Override
