@@ -1,0 +1,50 @@
+name: "🚀 Deploy"
+description: "배포 작업 공유 또는 요청"
+labels: ["🛠️ Chores"]
+body:
+  - type: dropdown
+    attributes:
+      label: 📅 처리 시기
+      description: 이슈를 언제 처리해야 하는지 선택해 주세요.
+      options:
+        - P0
+        - P1
+        - P2
+        - P3
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: 🚨 중요도
+      description: 이슈의 중요도를 선택해 주세요.
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 🧾 배포 목적
+      description: 어떤 목적/기능의 배포인지 작성해주세요.
+      placeholder: 예 - 새로운 로그인 기능 적용, hotfix 배포 등
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: ✅ 배포 내용
+      description: 배포에 포함된 주요 변경사항을 체크박스로 적어주세요.
+      placeholder: |
+        - [ ] API 기능 추가
+        - [ ] 버그 수정
+        - [ ] 의존성 업데이트
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: ⏱ 배포 시간 및 환경
+      description: 예상 배포 시간, 대상 브랜치 및 서버 등 정보를 입력해주세요.
+      placeholder: 예 - 7월 4일 오후 3시 / main 브랜치 / prod 서버
