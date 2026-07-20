@@ -27,9 +27,10 @@ public class Agreement extends CreatedAtEntity {
     @Column(name = "contents", columnDefinition = "TEXT")
     private String contents;
 
+    @Builder.Default
     @ColumnDefault("false")
     @Column(name = "is_deleted")
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 
     @Column(name = "is_required")
     private Boolean isRequired;

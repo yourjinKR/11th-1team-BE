@@ -38,9 +38,10 @@ public class Notification extends BaseEntity {
     @Column(name = "contents", columnDefinition = "TEXT")
     private String contents;
 
+    @Builder.Default
     @ColumnDefault("false")
     @Column(name = "is_deleted")
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 
     public void modifyNotification(BoNoticeDto.Request request, Member member) {
         this.title = request.getTitle();

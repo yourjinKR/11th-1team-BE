@@ -25,7 +25,8 @@ public class InquiryCategory extends CreatedAtEntity {
     @Column(name = "title", length = 50)
     private String title;
 
+    @Builder.Default
     @ColumnDefault("false")
     @Column(name = "is_deleted")
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 }

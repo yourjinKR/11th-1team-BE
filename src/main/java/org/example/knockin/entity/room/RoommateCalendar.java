@@ -57,9 +57,10 @@ public class RoommateCalendar extends BaseEntity {
     @Column(name = "end_date", nullable = false)
     private LocalDateTime endDate;
 
+    @Builder.Default
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 
     public void modify(CalendarDto.CalendarInfoDto calendarInfo) {
         this.title = calendarInfo.getTitle();

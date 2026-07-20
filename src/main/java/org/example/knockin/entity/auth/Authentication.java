@@ -43,13 +43,15 @@ public class Authentication extends CreatedAtEntity {
     @Column(name = "code", nullable = false, length = 100)
     private String code;
 
+    @Builder.Default
     @ColumnDefault("false")
     @Column(name = "is_accepted", nullable = false)
-    private Boolean isAccepted;
+    private Boolean isAccepted = false;
 
+    @Builder.Default
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 
     public void deleteAuthentication() {
         this.isDeleted = true;
