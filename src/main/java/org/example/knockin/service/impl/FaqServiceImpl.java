@@ -24,7 +24,7 @@ public class FaqServiceImpl {
     public FaqSaveDto.Response saveFaq(FaqSaveDto.Request request, Long memberId) {
         Member member = memberService.findById(memberId).orElseThrow(() -> new BusinessException(AuthErrorCode.MEMBER_NOT_FOUND));
         if(!faqRepository.findBySort(request.getSort()).isEmpty()) throw new BusinessException(FaqErrorCode.ALREADY_EXIST_SORT);
-        faqRepository.save(Faq.builder().title(request.getTitle()).contents(request.getContents()).sort(request.getSort()).build());
+        faqRepository.save(Faq.builder().title(request.getTitle()).contents(request.getContents()).sort(request.getSort()).member(member).build());
         return FaqSaveDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 
