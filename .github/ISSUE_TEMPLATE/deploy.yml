@@ -1,6 +1,6 @@
 name: "🚀 Deploy"
 description: "배포 작업 공유 또는 요청"
-labels: ["🛠️ Chores"]
+labels: ["🚚 chore"]
 body:
   - type: dropdown
     attributes:

@@ -1,0 +1,27 @@
+name: Issue Auto Label
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  auto-label:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout labeling script
+        uses: actions/checkout@v5
+
+      - name: Apply labels from issue form
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const autoLabel = require('./.github/scripts/issue-auto-label.js');
+            await autoLabel({ github, context });
