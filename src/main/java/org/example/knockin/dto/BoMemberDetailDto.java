@@ -12,6 +12,7 @@ import org.example.knockin.entity.member.MemberRole;
 import org.example.knockin.entity.member.MemberState;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -32,7 +33,7 @@ public class BoMemberDetailDto {
         @Schema(description = "이메일")
         private String email;
         @Schema(description = "가입일")
-        private LocalDate createdAt;
+        private LocalDateTime createdAt;
         @Schema(description = "신원 인증")
         private List<AuthenticationInfo> authenticationInfoList;
         @Schema(description = "권한")
