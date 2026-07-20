@@ -62,11 +62,12 @@ public class AuthenticationRepositoryImpl implements AuthenticationRepositoryCus
     @Override
     public List<BoVerificationApproveListDto.Response.EmployeeAuthItem> findVerificationApproves(Pageable pageable) {
         return jpaQueryFactory.select(Projections.fields(BoVerificationApproveListDto.Response.EmployeeAuthItem.class,
+                    authentication.id,
                     basicInformation.name,
                     authentication.type,
                     authentication.isAccepted,
                     authentication.email,
-                    authenticationApprove.createdAt
+                    authenticationApprove.createdAt.as("createAt")
                 )).from(authenticationApprove).join(authenticationApprove.authentication, authentication)
                 .join(member).on(authentication.member.eq(member))
                 .leftJoin(basicInformation).on(basicInformation.member.eq(member))
@@ -78,11 +79,12 @@ public class AuthenticationRepositoryImpl implements AuthenticationRepositoryCus
     @Override
     public List<BoVerificationCancelListDto.Response.EmployeeAuthItem> findVerificationCancels(Pageable pageable) {
         return jpaQueryFactory.select(Projections.fields(BoVerificationCancelListDto.Response.EmployeeAuthItem.class,
+                        authentication.id,
                         basicInformation.name,
                         authentication.type,
                         authentication.isAccepted,
                         authentication.email,
-                        authenticationApprove.createdAt,
+                        authenticationApprove.createdAt.as("createAt"),
                         authenticationApprove.rejectReason.as("description")
                 )).from(authenticationApprove).join(authenticationApprove.authentication, authentication)
                 .join(member).on(authentication.member.eq(member))
@@ -100,11 +102,11 @@ public class AuthenticationRepositoryImpl implements AuthenticationRepositoryCus
                         authentication.type,
                         authentication.isAccepted,
                         authentication.email,
-                        authenticationApprove.createdAt
-                )).from(authentication)
+                        authenticationApprove.createdAt.as("createAt")
+                )).from(authenticationApprove).join(authenticationApprove.authentication, authentication)
                 .join(member).on(authentication.member.eq(member))
                 .leftJoin(basicInformation).on(basicInformation.member.eq(member))
-                .where(authenticationApprove.status.eq(ApproveType.REJECT))
+                .where(authenticationApprove.status.eq(ApproveType.PENDING))
                 .offset(pageable.getOffset()).limit(pageable.getPageSize())
                 .fetch();
     }
@@ -117,11 +119,11 @@ public class AuthenticationRepositoryImpl implements AuthenticationRepositoryCus
                         authentication.type,
                         authentication.isAccepted,
                         authentication.email,
-                        authenticationApprove.createdAt
-                )).from(authentication)
+                        authenticationApprove.createdAt.as("createAt")
+                )).from(authenticationApprove).join(authenticationApprove.authentication, authentication)
                 .join(member).on(authentication.member.eq(member))
                 .leftJoin(basicInformation).on(basicInformation.member.eq(member))
-                .where(authenticationApprove.status.eq(ApproveType.REJECT), authentication.id.eq(id))
+                .where(authenticationApprove.status.eq(ApproveType.PENDING), authentication.id.eq(id))
                 .fetchOne();
     }
 }

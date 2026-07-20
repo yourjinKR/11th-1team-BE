@@ -30,6 +30,8 @@ public class BoVerificationApproveListDto {
         @AllArgsConstructor
         @NoArgsConstructor
         public static class EmployeeAuthItem {
+            @Schema(description = "고유 번호")
+            private Long id;
             @Schema(description = "이름")
             private String name;
             @Schema(description = "유형")
