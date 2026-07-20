@@ -120,10 +120,11 @@ public class AuthenticationRepositoryImpl implements AuthenticationRepositoryCus
                         authentication.isAccepted,
                         authentication.email,
                         authenticationApprove.createdAt.as("createAt")
-                )).from(authenticationApprove).join(authenticationApprove.authentication, authentication)
+                )).from(authenticationApprove)
+                .join(authenticationApprove.authentication, authentication)
                 .join(member).on(authentication.member.eq(member))
                 .leftJoin(basicInformation).on(basicInformation.member.eq(member))
-                .where(authenticationApprove.status.eq(ApproveType.PENDING), authentication.id.eq(id))
+                .where(authentication.id.eq(id))
                 .fetchOne();
     }
 }
