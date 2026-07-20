@@ -97,7 +97,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource(KnockInProps knockInProps) {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(knockInProps.getCorsUrls());
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(List.of("Authorization", "Set-Cookie"));
