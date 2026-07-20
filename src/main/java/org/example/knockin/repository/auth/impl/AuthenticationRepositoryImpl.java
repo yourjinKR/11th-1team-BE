@@ -101,10 +101,10 @@ public class AuthenticationRepositoryImpl implements AuthenticationRepositoryCus
                         authentication.isAccepted,
                         authentication.email,
                         authenticationApprove.createdAt
-                )).from(authentication)
+                )).from(authenticationApprove).join(authenticationApprove.authentication, authentication)
                 .join(member).on(authentication.member.eq(member))
                 .leftJoin(basicInformation).on(basicInformation.member.eq(member))
-                .where(authenticationApprove.status.eq(ApproveType.REJECT))
+                .where(authenticationApprove.status.eq(ApproveType.PENDING))
                 .offset(pageable.getOffset()).limit(pageable.getPageSize())
                 .fetch();
     }
@@ -118,10 +118,11 @@ public class AuthenticationRepositoryImpl implements AuthenticationRepositoryCus
                         authentication.isAccepted,
                         authentication.email,
                         authenticationApprove.createdAt
-                )).from(authentication)
+                )).from(authenticationApprove)
+                .join(authenticationApprove.authentication, authentication)
                 .join(member).on(authentication.member.eq(member))
                 .leftJoin(basicInformation).on(basicInformation.member.eq(member))
-                .where(authenticationApprove.status.eq(ApproveType.REJECT), authentication.id.eq(id))
+                .where(authentication.id.eq(id))
                 .fetchOne();
     }
 }
