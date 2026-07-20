@@ -1,6 +1,6 @@
 name: "🛠️ Chores"
 description: "빌드, 설정, 패키지 관리 등 운영성 작업"
-labels: ["🛠️ Chores"]
+labels: ["🚚 chore"]
 body:
   - type: dropdown
     attributes:

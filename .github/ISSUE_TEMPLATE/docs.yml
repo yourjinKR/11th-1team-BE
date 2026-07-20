@@ -1,6 +1,6 @@
 name: "📚 Docs"
 description: "README, 위키, 문서 정리 및 개선"
-labels: ["📚 Docs"]
+labels: ["📝 docs"]
 body:
   - type: dropdown
     attributes:

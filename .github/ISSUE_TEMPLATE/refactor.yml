@@ -1,6 +1,6 @@
 name: "🧹 Refactor"
 description: "기능은 그대로, 코드 개선 요청"
-labels: ["♻️ Refactor"]
+labels: ["♻️ refactor"]
 body:
   - type: dropdown
     attributes:
