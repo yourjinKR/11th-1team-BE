@@ -23,8 +23,9 @@ public class AuthEmail extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Builder.Default
     @ColumnDefault(value = "false")
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 
     @Enumerated(EnumType.STRING)
     private AuthenticationType dtype;

@@ -33,9 +33,10 @@ public class MyRoommate extends CreatedAtEntity {
     @JoinColumn(name = "roommate_matching_required_id", nullable = false)
     private RoommateMatchingRequired roommateMatchingRequired;
 
+    @Builder.Default
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 
     public void softDelete() {
         this.isDeleted = true;

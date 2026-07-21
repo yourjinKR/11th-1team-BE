@@ -38,7 +38,8 @@ public class InquiryComment extends CreatedAtEntity {
     @Column(name = "contents", nullable = false, length = 500)
     private String contents;
 
+    @Builder.Default
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 }

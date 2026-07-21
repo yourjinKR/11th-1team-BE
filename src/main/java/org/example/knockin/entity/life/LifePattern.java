@@ -31,9 +31,10 @@ public class LifePattern extends CreatedAtEntity {
     @Column(name = "dtype", nullable = false, length = 30)
     private LifePatternType dtype;
 
+    @Builder.Default
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 
     @Column(name = "sort", nullable = false)
     private Integer sort;

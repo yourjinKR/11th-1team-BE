@@ -24,9 +24,10 @@ public class RoomType {
     @Column(name = "name", nullable = false, length = 50)
     private String name;
 
+    @Builder.Default
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 
     public void modifyRoomType(RoomType roomType) {
         this.name = roomType.getName();

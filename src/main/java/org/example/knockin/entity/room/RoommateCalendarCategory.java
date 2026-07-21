@@ -29,9 +29,10 @@ public class RoommateCalendarCategory extends CreatedAtEntity {
     @Column(name = "name", nullable = false, length = 50)
     private String name;
 
+    @Builder.Default
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 
     public void rename(String name) {
         this.name = name;

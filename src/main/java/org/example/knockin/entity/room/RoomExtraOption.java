@@ -24,7 +24,8 @@ public class RoomExtraOption {
     @Column(name = "name", nullable = false, length = 50)
     private String name;
 
+    @Builder.Default
     @ColumnDefault("false")
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 }
