@@ -30,9 +30,10 @@ public class MemberPrivacy {
     private Member member;
 
     @Enumerated(EnumType.STRING)
+    @Builder.Default
     @ColumnDefault("'PUBLIC'")
     @Column(name = "type", nullable = false, length = 20)
-    private MemberPrivacyType type;
+    private MemberPrivacyType type = MemberPrivacyType.PUBLIC;
 
     public void changeState(MemberPrivacyType type) {
         this.type = type;

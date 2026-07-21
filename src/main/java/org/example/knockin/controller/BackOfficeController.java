@@ -145,13 +145,13 @@ public class BackOfficeController {
     }
 
     @GetMapping("/verifications/approve")
-    @Operation(summary = "인증 승인완료 상세보기")
+    @Operation(summary = "인증 승인완료 목록 조회")
     public CommonResponse<BoVerificationApproveListDto.Response> findVerificationApproves(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findVerificationApproves(pageable));
     }
 
     @GetMapping("/verifications/cancel")
-    @Operation(summary = "인증 반려 상세보기")
+    @Operation(summary = "인증 반려 목록 조회")
     public CommonResponse<BoVerificationCancelListDto.Response> findVerificationCancels(@PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return CommonResponse.status(HttpStatus.OK).body(backOfficeService.findVerificationCancels(pageable));
     }
@@ -176,8 +176,8 @@ public class BackOfficeController {
 
     @PatchMapping("/verifications/wait/{id}/cancel")
     @Operation(summary = "인증 반려")
-    public CommonResponse<BoVerificationDto.Response> deleteVerifications(@PathVariable Long id) {
-        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.deleteVerifications(id));
+    public CommonResponse<BoVerificationDto.Response> deleteVerifications(@PathVariable Long id, @RequestBody BoVerificationDto.Request request) {
+        return CommonResponse.status(HttpStatus.OK).body(backOfficeService.deleteVerifications(id, request.getRejectReason()));
     }
 
     @PostMapping("/notices")

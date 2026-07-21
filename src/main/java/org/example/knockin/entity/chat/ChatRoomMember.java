@@ -44,9 +44,10 @@ public class ChatRoomMember {
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
 
+    @Builder.Default
     @ColumnDefault("false")
     @Column(name = "is_left", nullable = false)
-    private Boolean isLeft;
+    private Boolean isLeft = false;
 
     public static ChatRoomMember of(ChattingRoom chattingRoom, Member member) {
         return ChatRoomMember.builder()

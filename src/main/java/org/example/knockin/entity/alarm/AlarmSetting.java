@@ -22,9 +22,10 @@ public class AlarmSetting {
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
 
+    @Builder.Default
     @ColumnDefault("true")
     @Column(name = "is_enabled")
-    private Boolean isEnabled;
+    private Boolean isEnabled = true;
 
     @Enumerated(EnumType.STRING)
     private AlarmSettingType alarmSettingType;

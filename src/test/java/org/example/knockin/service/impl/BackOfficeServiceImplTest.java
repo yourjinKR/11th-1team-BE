@@ -477,14 +477,14 @@ class BackOfficeServiceImplTest {
     void deleteVerificationsSuccessTest() {
         // given
         Long id = 1L;
-
+        String rejectReason = "반려사유";
         // when
-        BoVerificationDto.Response response = backOfficeService.deleteVerifications(id);
+        BoVerificationDto.Response response = backOfficeService.deleteVerifications(id, rejectReason);
 
         // then
         assertThat(response).isNotNull();
         assertThat(response.getUpdatedAt()).isNotNull();
-        verify(authenticationService).deleteVerifications(id);
+        verify(authenticationService).deleteVerifications(id, rejectReason);
     }
 
     @Test

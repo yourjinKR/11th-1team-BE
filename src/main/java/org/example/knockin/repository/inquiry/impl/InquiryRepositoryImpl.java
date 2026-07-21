@@ -93,7 +93,7 @@ public class InquiryRepositoryImpl implements InquiryRepositoryCustom {
                 )).from(inquiry).leftJoin(inquiry.inquiryCategory)
                 .leftJoin(inquiryComment).on(inquiryComment.inquiry.eq(inquiry))
                 .leftJoin(basicInformation).on(basicInformation.member.eq(inquiry.member))
-                .where(inquiry.isDeleted.eq(false)).fetchOne();
+                .where(inquiry.id.eq(id), inquiry.isDeleted.eq(false)).fetchOne();
     }
 
     @Override

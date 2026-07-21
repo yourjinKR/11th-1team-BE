@@ -35,4 +35,14 @@ public class AuthenticationApprove extends CreatedAtEntity {
 
     @Column(length = 500)
     private String rejectReason;
+
+    public void approve() {
+        this.status = ApproveType.ACCEPTED;
+        this.rejectReason = null;
+    }
+
+    public void reject(String rejectReason) {
+        this.status = ApproveType.REJECT;
+        this.rejectReason = rejectReason;
+    }
 }

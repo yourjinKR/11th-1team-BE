@@ -27,8 +27,9 @@ public class Faq extends BaseEntity {
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
 
+    @Builder.Default
     @ColumnDefault(value = "false")
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 
     @Column(name = "sort", nullable = false)
     private Integer sort;

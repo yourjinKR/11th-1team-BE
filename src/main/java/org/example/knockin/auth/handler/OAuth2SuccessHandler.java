@@ -1,10 +1,13 @@
 package org.example.knockin.auth.handler;
 
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.auth.repository.HttpCookieOAuth2AuthorizationRequestRepository;
+import org.example.knockin.auth.util.CookieUtils;
 import org.example.knockin.entity.member.Member;
 import org.example.knockin.global.api.CommonResponse;
 import org.example.knockin.dto.AuthResponse;
@@ -34,6 +37,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final KnockInProps knockInProps;
     private final MemberServiceImpl memberService;
+    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
@@ -49,6 +53,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write(objectMapper.writeValueAsString(commonResponse));
         } else {
+            String targetUrl = CookieUtils.getCookie(request, HttpCookieOAuth2AuthorizationRequestRepository.REDIRECT_URI_PARAM_COOKIE_NAME).map(Cookie::getValue).orElse(knockInProps.getClientSuccessUrl());
             boolean secureCookie = knockInProps.getClientSuccessUrl().startsWith("https://");
 
             ResponseCookie accessTokenCookie = ResponseCookie.from(TokenConstants.ACCESS_TOKEN_COOKIE_NAME, accessToken)
@@ -60,7 +65,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                     .build();
 
             response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
-            response.sendRedirect(knockInProps.getClientSuccessUrl());
+            httpCookieOAuth2AuthorizationRequestRepository.clearCookies(request, response);
+            response.sendRedirect(targetUrl);
         }
     }
 }

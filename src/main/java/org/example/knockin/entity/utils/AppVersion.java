@@ -18,8 +18,9 @@ public class AppVersion extends BaseEntity {
     @Column(nullable = false, length = 30)
     private String version;
 
+    @Builder.Default
     @ColumnDefault(value = "false")
-    private Boolean isDeleted;
+    private Boolean isDeleted = false;
 
     public void deleteAppVersion() {
         this.isDeleted = true;
