@@ -2,6 +2,7 @@ package org.example.knockin.config;
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.auth.repository.HttpCookieOAuth2AuthorizationRequestRepository;
 import org.example.knockin.entity.member.MemberRole;
 import org.example.knockin.auth.filter.CustomOAuth2Filter;
 import org.example.knockin.auth.filter.TokenAuthenticationFilter;
@@ -44,6 +45,7 @@ public class SecurityConfig {
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
     private final SecurityErrorResponseWriter securityErrorResponseWriter;
+    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -54,7 +56,7 @@ public class SecurityConfig {
                 .headers(h -> h.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(customAuthenticationEntryPoint).accessDeniedHandler(customAccessDeniedHandler))
-                .oauth2Login(oauth -> oauth.userInfoEndpoint(c -> c.userService(customOAuth2UserService)).successHandler(oAuth2SuccessHandler).failureHandler(oAuth2FailureHandler))
+                .oauth2Login(oauth -> oauth.authorizationEndpoint(auth -> auth.authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository)).userInfoEndpoint(c -> c.userService(customOAuth2UserService)).successHandler(oAuth2SuccessHandler).failureHandler(oAuth2FailureHandler))
                 .addFilterBefore(new TokenAuthenticationFilter(tokenProvider), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new TokenExceptionFilter(securityErrorResponseWriter), TokenAuthenticationFilter.class)
                 .addFilterBefore(new CustomOAuth2Filter(clientRegistrationRepository, customOAuth2UserService, oAuth2SuccessHandler, oAuth2FailureHandler), OAuth2AuthorizationRequestRedirectFilter.class)
