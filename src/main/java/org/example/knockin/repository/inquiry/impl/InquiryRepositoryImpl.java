@@ -71,7 +71,7 @@ public class InquiryRepositoryImpl implements InquiryRepositoryCustom {
         return jpaQueryFactory.select(Projections.fields(BoInquiryListDto.Response.InquiryItem.class,
                 inquiry.id,
                 inquiry.title,
-                inquiry.createdAt,
+                inquiry.createdAt.as("createAt"),
                 inquiry.inquiryCategory.title.as("type"), basicInformation.name.as("writer"),
                 new CaseBuilder().when(inquiryComment.id.isNull()).then("답변 대기중").otherwise("답변 완료").as("status")
                 )).from(inquiry).leftJoin(inquiry.inquiryCategory)
@@ -87,7 +87,7 @@ public class InquiryRepositoryImpl implements InquiryRepositoryCustom {
                         inquiry.id,
                         inquiry.title,
                         inquiry.contents,
-                        inquiry.createdAt,
+                        inquiry.createdAt.as("createAt"),
                         inquiry.inquiryCategory.title.as("type"), basicInformation.name.as("writer"),
                         new CaseBuilder().when(inquiryComment.id.isNull()).then("답변 대기중").otherwise("답변 완료").as("status")
                 )).from(inquiry).leftJoin(inquiry.inquiryCategory)
