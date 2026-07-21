@@ -82,6 +82,7 @@ public class AuthenticationServiceImpl {
 
         if(authentication.getCode().equals(request.getAuthNo()) && authentication.getEmail().equals(request.getEmail())) {
             authentication.acceptAuthentication();
+            authenticationApproveRepository.save(AuthenticationApprove.builder().authentication(authentication).status(ApproveType.PENDING).build());
         } else {
             throw new BusinessException(EmailErrorCode.EMAIL_VALID_ERROR);
         }
@@ -100,6 +101,7 @@ public class AuthenticationServiceImpl {
 
         if(authentication.getCode().equals(request.getAuthNo()) && authentication.getEmail().equals(request.getEmail())) {
             authentication.acceptAuthentication();
+            authenticationApproveRepository.save(AuthenticationApprove.builder().authentication(authentication).status(ApproveType.PENDING).build());
         } else {
             throw new BusinessException(EmailErrorCode.EMAIL_VALID_ERROR);
         }
@@ -143,14 +145,14 @@ public class AuthenticationServiceImpl {
 
     @Transactional
     public void saveVerifications(Long id) {
-        Authentication authentication = authenticationRepository.findById(id).orElseThrow(() -> new BusinessException(AuthenticationErrorCode.AUTHENTICATION_NOT_FOUNT));
-        authenticationApproveRepository.save(AuthenticationApprove.builder().authentication(authentication).status(ApproveType.ACCEPTED).build());
+        AuthenticationApprove approve = authenticationApproveRepository.findById(id).orElseThrow(() -> new BusinessException(AuthenticationErrorCode.AUTHENTICATION_NOT_FOUNT));
+        approve.approve();
     }
 
     @Transactional
-    public void deleteVerifications(Long id) {
-        Authentication authentication = authenticationRepository.findById(id).orElseThrow(() -> new BusinessException(AuthenticationErrorCode.AUTHENTICATION_NOT_FOUNT));
-        authenticationApproveRepository.save(AuthenticationApprove.builder().authentication(authentication).status(ApproveType.REJECT).build());
+    public void deleteVerifications(Long id, String rejectReason) {
+        AuthenticationApprove approve = authenticationApproveRepository.findById(id).orElseThrow(() -> new BusinessException(AuthenticationErrorCode.AUTHENTICATION_NOT_FOUNT));
+        approve.reject(rejectReason);
     }
 
     public List<AuthenticationType> findTypesByMemberId(Long memberId) {

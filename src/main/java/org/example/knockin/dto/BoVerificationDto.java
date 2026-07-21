@@ -12,7 +12,11 @@ import java.time.LocalDateTime;
 @Data
 public class BoVerificationDto {
     @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class Request {
+        @Schema(description = "반려 사유", example = "서류가 식별되지 않습니다.")
+        private String rejectReason;
     }
 
     @Data

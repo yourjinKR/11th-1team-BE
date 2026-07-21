@@ -1,6 +1,7 @@
 package org.example.knockin.service.impl;
 
 import org.example.knockin.dto.*;
+import org.example.knockin.entity.auth.ApproveType;
 import org.example.knockin.entity.auth.Authentication;
 import org.example.knockin.entity.auth.AuthenticationApprove;
 import org.example.knockin.entity.auth.AuthenticationType;
@@ -350,14 +351,18 @@ class AuthenticationServiceImplTest {
     void saveVerificationsSuccessTest() {
         // given
         Long id = 1L;
-        Authentication authentication = Authentication.builder().id(id).build();
-        given(authenticationRepository.findById(id)).willReturn(Optional.of(authentication));
+        AuthenticationApprove approve = AuthenticationApprove.builder()
+                .id(id)
+                .status(ApproveType.PENDING)
+                .build();
+        given(authenticationApproveRepository.findById(id)).willReturn(Optional.of(approve));
 
         // when
         authenticationService.saveVerifications(id);
 
         // then
-        verify(authenticationApproveRepository).save(any(AuthenticationApprove.class));
+        assertThat(approve.getStatus()).isEqualTo(ApproveType.ACCEPTED);
+        assertThat(approve.getRejectReason()).isNull();
     }
 
     @Test
@@ -365,7 +370,7 @@ class AuthenticationServiceImplTest {
     void saveVerificationsNotFoundTest() {
         // given
         Long id = 1L;
-        given(authenticationRepository.findById(id)).willReturn(Optional.empty());
+        given(authenticationApproveRepository.findById(id)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> authenticationService.saveVerifications(id))
@@ -378,13 +383,18 @@ class AuthenticationServiceImplTest {
     void deleteVerificationsSuccessTest() {
         // given
         Long id = 1L;
-        Authentication authentication = Authentication.builder().id(id).build();
-        given(authenticationRepository.findById(id)).willReturn(Optional.of(authentication));
+        String rejectReason = "반려사유";
+        AuthenticationApprove approve = AuthenticationApprove.builder()
+                .id(id)
+                .status(ApproveType.PENDING)
+                .build();
+        given(authenticationApproveRepository.findById(id)).willReturn(Optional.of(approve));
 
         // when
-        authenticationService.deleteVerifications(id);
+        authenticationService.deleteVerifications(id, rejectReason);
 
         // then
-        verify(authenticationApproveRepository).save(any(AuthenticationApprove.class));
+        assertThat(approve.getStatus()).isEqualTo(ApproveType.REJECT);
+        assertThat(approve.getRejectReason()).isEqualTo(rejectReason);
     }
 }

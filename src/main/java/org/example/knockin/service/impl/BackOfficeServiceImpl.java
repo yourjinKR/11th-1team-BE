@@ -155,8 +155,8 @@ public class BackOfficeServiceImpl {
     }
 
     @Transactional
-    public BoVerificationDto.Response deleteVerifications(Long id) {
-        authenticationService.deleteVerifications(id);
+    public BoVerificationDto.Response deleteVerifications(Long id, String rejectReason) {
+        authenticationService.deleteVerifications(id, rejectReason);
         return BoVerificationDto.Response.builder().updatedAt(LocalDateTime.now()).build();
     }
 
