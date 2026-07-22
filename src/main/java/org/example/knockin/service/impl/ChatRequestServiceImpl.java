@@ -29,13 +29,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class ChatRequestServiceImpl {
-
-    private final static Map<ChattingRequiredStatus, String> templateMap = Map.of(
+    private static final Map<ChattingRequiredStatus, String> ALARM_TEMPLATE_BY_STATUS = Map.of(
             ChattingRequiredStatus.PENDING, "%s님이 매칭을 요청했어요",
             ChattingRequiredStatus.ACCEPTED, "%s님이 매칭 요청을 수락했어요",
             ChattingRequiredStatus.REJECTED, "%s님이 매칭 요청을 거절했어요",
             ChattingRequiredStatus.CANCELED, "%s님이 매칭 요청을 취소했어요"
     );
+
     private final MemberServiceImpl memberService;
     private final ChattingRequiredServiceImpl chattingRequiredService;
     private final RoommateBoardServiceImpl roommateBoardService;
@@ -226,6 +226,6 @@ public class ChatRequestServiceImpl {
     }
 
     private void sendAlarm(Member requestee, Member requester, ChattingRequired chattingRequired) {
-        chattingRequiredAlarmService.send(requestee, requester, chattingRequired, templateMap.get(chattingRequired.getStatus()));
+        chattingRequiredAlarmService.send(requestee, requester, chattingRequired, ALARM_TEMPLATE_BY_STATUS.get(chattingRequired.getStatus()));
     }
 }

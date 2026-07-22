@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.StreamSupport;
+import org.example.knockin.config.RoommateBoardPolicy;
 import org.example.knockin.dto.*;
 import org.example.knockin.dto.BoardDto.Request.FileDto;
 import org.example.knockin.dto.BoardEditDto.Response.BoardOptionInfo;
@@ -156,6 +157,9 @@ class RoommateBoardServiceImplTest {
     @Mock
     private RoommateBoardDeclarationServiceImpl roommateBoardDeclarationService;
 
+    @Mock
+    private RoommateBoardPolicy roommateBoardPolicy;
+
     @InjectMocks
     private RoommateBoardServiceImpl roommateBoardService;
 
@@ -188,6 +192,9 @@ class RoommateBoardServiceImplTest {
 
     @BeforeEach
     void setUpDependencies() throws IOException {
+        lenient().when(roommateBoardPolicy.getComeableDateVisibleGraceDays()).thenReturn(7);
+        lenient().when(roommateBoardPolicy.getImageMaxCount()).thenReturn(10);
+        lenient().when(roommateBoardPolicy.getThumbnailImageMaxCount()).thenReturn(1);
         lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
             TransactionCallback<?> callback = invocation.getArgument(0);
             return callback.doInTransaction(null);
@@ -632,7 +639,7 @@ class RoommateBoardServiceImplTest {
     void saveThrowsWhenImageCountExceedsLimit() throws IOException {
         // Given
         List<FileDto> images = new ArrayList<>();
-        for (int index = 0; index <= RoommateBoard.IMAGE_MAXIMUM; index++) {
+        for (int index = 0; index <= roommateBoardPolicy.getImageMaxCount(); index++) {
             images.add(createFileDto(index, index == 0));
         }
         BoardDto.Request request = createRequest();
@@ -910,14 +917,14 @@ class RoommateBoardServiceImplTest {
         BoardListDto.Request request = new BoardListDto.Request();
         Pageable pageable = PageRequest.of(0, 20);
         LocalDateTime beforeEndDate = LocalDateTime.now()
-                .minusDays(RoommateBoard.COMEABLE_DATE_VISIBLE_GRACE_DAYS);
+                .minusDays(roommateBoardPolicy.getComeableDateVisibleGraceDays());
         when(roommateBoardRepository.search(eq(request), eq(pageable), any(LocalDateTime.class)))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
         roommateBoardService.getBoardList(request, pageable);
 
         LocalDateTime afterEndDate = LocalDateTime.now()
-                .minusDays(RoommateBoard.COMEABLE_DATE_VISIBLE_GRACE_DAYS);
+                .minusDays(roommateBoardPolicy.getComeableDateVisibleGraceDays());
         verify(roommateBoardRepository).search(eq(request), eq(pageable), endDateCaptor.capture());
         assertThat(endDateCaptor.getValue()).isBetween(beforeEndDate, afterEndDate);
         verifyNoInteractions(roommateBoardFileService, authenticationService);

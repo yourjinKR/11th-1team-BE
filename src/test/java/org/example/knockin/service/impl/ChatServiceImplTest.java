@@ -150,6 +150,7 @@ class ChatServiceImplTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -169,6 +170,7 @@ class ChatServiceImplTest {
                 roommateScoreService,
                 new ChattingScoreServiceImpl(chattingScoreRepository)
         );
+        ReflectionTestUtils.setField(chatService, "chatRoomLimitPerMember", 15L);
     }
 
     @Test

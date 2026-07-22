@@ -53,7 +53,7 @@ public class RoommateRequestServiceImpl {
                 .orElseGet(() -> roommateMatchingRequiredService.savePending(requester, requestee, chattingRoom));
 
         Response response = toDto(roommateMatchingRequired);
-        sendAlarm(requestee, requester ,roommateMatchingRequired, REQUEST_PENDING_TEMPLATE);
+        sendAlarm(requestee, requester, roommateMatchingRequired, REQUEST_PENDING_TEMPLATE);
         sendRequestMessage(chatRoomId, response);
         return response;
     }

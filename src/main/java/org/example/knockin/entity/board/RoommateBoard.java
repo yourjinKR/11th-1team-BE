@@ -30,10 +30,6 @@ import org.hibernate.annotations.ColumnDefault;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "roommate_board")
 public class RoommateBoard extends BaseEntity {
-    public static final int COMEABLE_DATE_VISIBLE_GRACE_DAYS = 7;
-    public static final int IMAGE_MAXIMUM = 10;
-    public static final int THUMBNAIL_MAXIMUM = 1;
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")

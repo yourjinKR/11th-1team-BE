@@ -173,12 +173,16 @@ class RoommateScoreRepositoryTest {
     }
 
     private JavaRoommateScoreService roommateScoreService() {
+        RoommateScorePolicy roommateScorePolicy = new RoommateScorePolicy();
+        roommateScorePolicy.setPerfectScore(100);
+        roommateScorePolicy.setImportantPatternMultiplier(2);
+
         return new JavaRoommateScoreService(
                 null,
                 null,
                 null,
                 null,
-                new RoommateScorePolicy(),
+                roommateScorePolicy,
                 null,
                 null,
                 null

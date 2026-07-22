@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.example.knockin.config.RoommateBoardPolicy;
 import org.example.knockin.dto.*;
 import org.example.knockin.dto.BoardDetailDto.Response.Condition;
 import org.example.knockin.dto.BoardDetailDto.Response.ConditionWeight;
@@ -75,6 +76,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     private final RoommateBoardOptionServiceImpl roommateBoardOptionService;
     private final RoommateBoardInterestServiceImpl roommateBoardInterestService;
     private final RoommateBoardDeclarationServiceImpl roommateBoardDeclarationService;
+    private final RoommateBoardPolicy roommateBoardPolicy;
 
     public RoommateBoard findById(Long id) {
         return roommateBoardRepository.findById(id)
@@ -110,14 +112,16 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     }
 
     private void validateImageMaxCount(long imageCount) {
-        if (imageCount > RoommateBoard.IMAGE_MAXIMUM) {
-            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_EXCEEDED, RoommateBoard.IMAGE_MAXIMUM);
+        int imageMaxCount = roommateBoardPolicy.getImageMaxCount();
+        if (imageCount > imageMaxCount) {
+            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_EXCEEDED, imageMaxCount);
         }
     }
 
     private void validateThumbnailCount(long thumbnailCount) {
-        if (thumbnailCount != RoommateBoard.THUMBNAIL_MAXIMUM) {
-            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_THUMBNAIL_EXCEEDED, RoommateBoard.THUMBNAIL_MAXIMUM);
+        int thumbnailImageMaxCount = roommateBoardPolicy.getThumbnailImageMaxCount();
+        if (thumbnailCount != thumbnailImageMaxCount) {
+            throw new BusinessException(RoommateBoardErrorCode.ROOMMATE_BOARD_FILE_COUNT_THUMBNAIL_EXCEEDED, thumbnailImageMaxCount);
         }
     }
 
@@ -151,8 +155,7 @@ public class RoommateBoardServiceImpl implements RoommateBoardService {
     @Override
     @Transactional(readOnly = true)
     public Page<BoardListDto.Response> getBoardList(BoardListDto.Request request, Pageable pageable) {
-        LocalDateTime endDate = LocalDateTime.now()
-                .minusDays(RoommateBoard.COMEABLE_DATE_VISIBLE_GRACE_DAYS);
+        LocalDateTime endDate = LocalDateTime.now().minusDays(roommateBoardPolicy.getComeableDateVisibleGraceDays());
         Page<BoardBaseRow> baseRows = roommateBoardRepository.search(request, pageable, endDate);
 
         if (baseRows.isEmpty()) {

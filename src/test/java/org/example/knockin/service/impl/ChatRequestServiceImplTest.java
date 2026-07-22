@@ -116,14 +116,18 @@ class ChatRequestServiceImplTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
+        ChattingRequiredAlarmServiceImpl chattingRequiredAlarmService =
+                new ChattingRequiredAlarmServiceImpl(basicInformationService, alarmService);
+        ReflectionTestUtils.setField(chattingRequiredAlarmService, "requestAlarmExpireDays", 7);
 
         chatRequestService = new ChatRequestServiceImpl(
                 memberService,
                 new ChattingRequiredServiceImpl(chattingRequiredRepository),
                 roommateBoardService,
-                new ChattingRequiredAlarmServiceImpl(basicInformationService, alarmService),
+                chattingRequiredAlarmService,
                 basicInformationService,
                 memberLifePatternService,
                 roommateScoreService
