@@ -286,6 +286,7 @@ class SeparatedRepositoryServiceImplTest {
                 basicInformationService,
                 alarmService
         );
+        ReflectionTestUtils.setField(service, "requestAlarmExpireDays", 7);
         Member receiver = Member.builder().id(2L).build();
         Member actor = Member.builder().id(1L).build();
         ChattingRequired required = ChattingRequired.builder()
@@ -321,6 +322,7 @@ class SeparatedRepositoryServiceImplTest {
                 basicInformationService,
                 alarmService
         );
+        ReflectionTestUtils.setField(service, "requestAlarmExpireDays", 7);
         Member receiver = Member.builder().id(2L).build();
         Member actor = Member.builder().id(1L).build();
         RoommateMatchingRequired required = RoommateMatchingRequired.builder()
@@ -358,6 +360,7 @@ class SeparatedRepositoryServiceImplTest {
                 basicInformationService,
                 alarmService
         );
+        ReflectionTestUtils.setField(service, "requestAlarmExpireDays", 7);
         Member receiver = Member.builder().id(2L).build();
         Member actor = Member.builder().id(1L).build();
         ChattingRequired required = ChattingRequired.builder()

@@ -69,12 +69,16 @@ class RoommateScoreServiceTest {
 
     @BeforeEach
     void setUp() {
+        RoommateScorePolicy roommateScorePolicy = new RoommateScorePolicy();
+        roommateScorePolicy.setPerfectScore(100);
+        roommateScorePolicy.setImportantPatternMultiplier(2);
+
         roommateScoreService = new JavaRoommateScoreService(
                 memberLifePatternRepository,
                 preferenceConditionRepository,
                 preferenceConditionWeightRepository,
                 lifePatternInformationRepository,
-                new RoommateScorePolicy(),
+                roommateScorePolicy,
                 memberLifePatternLogRepository,
                 preferenceConditionLogRepository,
                 preferenceConditionWeightLogRepository

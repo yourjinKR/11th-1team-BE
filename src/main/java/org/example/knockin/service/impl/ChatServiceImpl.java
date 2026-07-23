@@ -33,6 +33,7 @@ import org.example.knockin.repository.member.row.ChattingRoomBasicInfoRow;
 import org.example.knockin.service.FileService;
 import org.example.knockin.service.RoommateScoreService;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,10 +45,8 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 public class ChatServiceImpl {
-
     private static final String ROOM_LEAVE_MESSAGE_CONTENTS = "상대방이 나갔습니다.";
     private static final String IMAGE_MESSAGE_CONTENTS = "사진을 보냈습니다.";
-    private static final long CHAT_ROOM_LIMIT_PER_MEMBER = 15L;
 
     private final ChattingRoomServiceImpl chattingRoomService;
     private final ChatRoomMemberServiceImpl chatRoomMemberService;
@@ -63,6 +62,8 @@ public class ChatServiceImpl {
     private final MemberServiceImpl memberService;
     private final RoommateScoreService roommateScoreService;
     private final ChattingScoreServiceImpl chattingScoreService;
+    @Value("${policy.chat.room-limit-per-member}")
+    private long chatRoomLimitPerMember;
 
     public List<ChatRoomListDto.Response> getChatRoomList(Long memberId) {
         return chattingRoomService.findByMemberId(memberId);
@@ -227,7 +228,7 @@ public class ChatServiceImpl {
         long requesterRoomCount = chattingRoomService.countActiveRoomsByMemberId(requesterId);
         long requesteeRoomCount = chattingRoomService.countActiveRoomsByMemberId(requesteeId);
 
-        if (requesterRoomCount >= CHAT_ROOM_LIMIT_PER_MEMBER || requesteeRoomCount >= CHAT_ROOM_LIMIT_PER_MEMBER) {
+        if (requesterRoomCount >= chatRoomLimitPerMember || requesteeRoomCount >= chatRoomLimitPerMember) {
             throw new BusinessException(ChattingErrorCode.ROOM_LIMIT_EXCEEDED);
         }
     }

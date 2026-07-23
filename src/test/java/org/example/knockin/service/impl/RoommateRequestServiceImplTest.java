@@ -97,11 +97,14 @@ class RoommateRequestServiceImplTest {
                 null,
                 null
         );
+        RoommateMatchingRequiredAlarmServiceImpl roommateMatchingRequiredAlarmService =
+                new RoommateMatchingRequiredAlarmServiceImpl(basicInformationService, alarmService);
+        ReflectionTestUtils.setField(roommateMatchingRequiredAlarmService, "requestAlarmExpireDays", 7);
         roommateRequestService = new RoommateRequestServiceImpl(
                 messagingTemplate,
                 new RoommateMatchingRequiredServiceImpl(roommateMatchingRequiredRepository),
                 new ChatRoomMemberServiceImpl(chatRoomMemberRepository),
-                new RoommateMatchingRequiredAlarmServiceImpl(basicInformationService, alarmService),
+                roommateMatchingRequiredAlarmService,
                 myRoomMateService,
                 memberPrivacyService
         );
