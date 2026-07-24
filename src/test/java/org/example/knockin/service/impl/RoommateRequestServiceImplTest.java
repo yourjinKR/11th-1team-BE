@@ -496,7 +496,7 @@ class RoommateRequestServiceImplTest {
         );
         Page<RoommateMatchingRequired> requestPage = new PageImpl<>(List.of(roommateRequest), pageable, 1);
 
-        when(roommateMatchingRequiredRepository.findByRequesterIdAndRequesteeId(memberId, memberId, pageable))
+        when(roommateMatchingRequiredRepository.findMyRequiredList(memberId, pageable))
                 .thenReturn(requestPage);
 
         // When
@@ -515,7 +515,7 @@ class RoommateRequestServiceImplTest {
         assertThat(content.getStatus()).isEqualTo(RoommateRequiredStatus.PENDING);
         assertThat(content.getCreateAt()).isEqualTo(LocalDateTime.of(2026, 6, 23, 10, 0));
 
-        verify(roommateMatchingRequiredRepository).findByRequesterIdAndRequesteeId(memberId, memberId, pageable);
+        verify(roommateMatchingRequiredRepository).findMyRequiredList(memberId, pageable);
         verifyNoInteractions(chatRoomMemberRepository, basicInformationRepository, myRoommateRepository,
                 roommateMatchingRequiredAlarmRepository, alarmService, messagingTemplate);
     }

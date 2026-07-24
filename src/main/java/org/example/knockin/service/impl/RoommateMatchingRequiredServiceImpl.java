@@ -48,4 +48,8 @@ public class RoommateMatchingRequiredServiceImpl {
     public Page<RoommateMatchingRequired> findByRequesterIdAndRequesteeId(Long requesterId, Long requesteeId, Pageable pageable) {
         return roommateMatchingRequiredRepository.findByRequesterIdAndRequesteeId(requesterId, requesteeId, pageable);
     }
+
+    public Page<RoommateMatchingRequired> findMyRequiredList(Long memberId,  Pageable pageable) {
+        return roommateMatchingRequiredRepository.findMyRequiredList(memberId, pageable);
+    }
 }

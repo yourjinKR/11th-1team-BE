@@ -142,7 +142,7 @@ public class RoommateRequestServiceImpl {
     }
 
     public Page<RoommateRequestListDto.Response> getRequiredList(Long memberId, Pageable pageable) {
-        return roommateMatchingRequiredService.findByRequesterIdAndRequesteeId(memberId, memberId, pageable).map(this::toListDto);
+        return roommateMatchingRequiredService.findMyRequiredList(memberId, pageable).map(this::toListDto);
     }
 
     private RoommateRequestListDto.Response toListDto(RoommateMatchingRequired roommateMatchingRequired) {

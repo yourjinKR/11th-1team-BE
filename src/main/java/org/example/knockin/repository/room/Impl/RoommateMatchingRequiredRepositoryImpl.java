@@ -11,6 +11,9 @@ import org.example.knockin.dto.RoommateRequestDto.RoommateMatchingRequiredInfo;
 import org.example.knockin.entity.chat.ChattingRoom;
 import org.example.knockin.entity.room.RoommateMatchingRequired;
 import org.example.knockin.repository.room.RoommateMatchingRequiredRepositoryCustom;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -47,5 +50,27 @@ public class RoommateMatchingRequiredRepositoryImpl implements RoommateMatchingR
                 .from(roommateMatchingRequired)
                 .where(roommateMatchingRequired.chattingRoom.eq(chattingRoomEntity))
                 .fetch();
+    }
+
+    @Override
+    public Page<RoommateMatchingRequired> findMyRequiredList(Long memberId, Pageable pageable) {
+        List<RoommateMatchingRequired> content = jpaQueryFactory
+                .select(roommateMatchingRequired)
+                .from(roommateMatchingRequired)
+                .where(roommateMatchingRequired.requester.id.eq(memberId)
+                        .or(roommateMatchingRequired.requestee.id.eq(memberId)))
+                .orderBy(roommateMatchingRequired.id.desc())
+                .limit(pageable.getPageSize())
+                .offset(pageable.getOffset())
+                .fetch();
+
+        Long count = jpaQueryFactory
+                .select(roommateMatchingRequired.count())
+                .from(roommateMatchingRequired)
+                .where(roommateMatchingRequired.requester.id.eq(memberId)
+                        .or(roommateMatchingRequired.requestee.id.eq(memberId)))
+                .fetchOne();
+
+        return new PageImpl<>(content, pageable, count);
     }
 }
