@@ -82,6 +82,32 @@ class OnBoardingServiceImplTest {
     }
  
     @Test
+    @DisplayName("기본 정보 저장 성공 테스트 (이미 존재할 시 업데이트)")
+    void saveBasicInfoLogic_Upsert_Success() {
+        SaveProfileBasicDto.Request request = SaveProfileBasicDto.Request.builder()
+                .name("이몽룡")
+                .terms(List.of(1L))
+                .build();
+
+        BasicInformation existingBasic = mock(BasicInformation.class);
+        given(basicInformationService.findByMember(any())).willReturn(List.of(existingBasic));
+        
+        MemberAgreement memberAgreement = mock(MemberAgreement.class);
+        AgreementLog agreementLog = mock(AgreementLog.class);
+        given(memberAgreement.getAgreementLog()).willReturn(agreementLog);
+        given(agreementLog.getId()).willReturn(1L);
+        
+        given(memberAgreementService.findByMember(any())).willReturn(List.of(memberAgreement));
+        given(metaService.findByAgreementLogIsCurrent(any())).willReturn(List.of(agreementLog));
+
+        SaveProfileBasicDto.Response response = onBoardingService.saveBasicInfoLogic(request, memberId);
+
+        assertThat(response).isNotNull();
+        verify(existingBasic).modifyBasicInformation(any());
+        verify(basicInformationService, never()).save(any());
+    }
+
+    @Test
     @DisplayName("라이프스타일 저장 성공 테스트")
     void saveLifeStyleLogic_Success() {
         SaveProfileLifeStyleDto.Request request = SaveProfileLifeStyleDto.Request.builder()
@@ -292,5 +318,21 @@ class OnBoardingServiceImplTest {
         MyBoardListDto.Response response = onBoardingService.findMyBoardList(pageable, memberId);
  
         assertThat(response.getBoards()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("선호 조건 저장 성공 테스트 (이미 존재할 시 삭제 후 재삽입)")
+    void savePreferenceConditionLogic_Upsert_Success() {
+        SavePreferencesConditionsDto.Request request = new SavePreferencesConditionsDto.Request(List.of(1L));
+
+        given(metaService.findLifePatternByLifeStyle(any())).willReturn(List.of(mock(LifePattern.class)));
+        given(preferenceConditionService.preferenceConditionWeightSaveAll(any())).willReturn(List.of(mock(PreferenceConditionWeight.class)));
+        given(preferenceConditionService.preferenceConditionWeightLogSaveAll(any())).willReturn(List.of(mock(PreferenceConditionWeightLog.class)));
+
+        SavePreferencesConditionsDto.Response response = onBoardingService.savePreferenceConditionLogic(request, memberId);
+
+        assertThat(response).isNotNull();
+        verify(preferenceConditionService).deletePreferenceConditionWeightByMember(any());
+        verify(preferenceConditionService).preferenceConditionWeightSaveAll(any());
     }
 }

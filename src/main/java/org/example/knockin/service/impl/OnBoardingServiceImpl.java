@@ -44,12 +44,32 @@ public class OnBoardingServiceImpl {
 
     @Transactional
     public BasicInformation saveBasicInfo(SaveProfileBasicDto.Request request, Member member) {
+        List<BasicInformation> existing = basicInformationService.findByMember(member);
+        if (!existing.isEmpty()) {
+            BasicInformation basicInformation = existing.getFirst();
+            ModifyProfileBasicDto.Request modifyRequest = ModifyProfileBasicDto.Request.builder()
+                    .name(request.getName())
+                    .birth(request.getBirth())
+                    .gender(request.getGender())
+                    .email(request.getEmail())
+                    .build();
+            basicInformation.modifyBasicInformation(modifyRequest);
+            return basicInformation;
+        }
         BasicInformation basicInformation = BasicInformation.builder().member(member).name(request.getName()).birth(request.getBirth()).gender(request.getGender()).email(request.getEmail()).build();
         return basicInformationService.save(basicInformation);
     }
 
     @Transactional
     public List<MemberAgreement> saveMemberAgreement(SaveProfileBasicDto.Request request, Member member) {
+        List<MemberAgreement> existing = memberAgreementService.findByMember(member);
+        if (!existing.isEmpty()) {
+            ModifyProfileBasicDto.Request modifyRequest = ModifyProfileBasicDto.Request.builder()
+                    .terms(request.getTerms())
+                    .build();
+            modifyAgreement(modifyRequest, member);
+            return memberAgreementService.findByMember(member);
+        }
         List<MemberAgreement> memberAgreementList = new ArrayList<>();
 
         metaService.findByAgreementLogIsCurrent(request.getTerms()).forEach(item -> {
@@ -70,6 +90,10 @@ public class OnBoardingServiceImpl {
 
     @Transactional
     public List<MemberLifePattern> saveMemberLifeStyle(SaveProfileLifeStyleDto.Request request, Member member) {
+        List<MemberLifePattern> existing = memberLifePatternService.findByMember(member);
+        if (!existing.isEmpty()) {
+            memberLifePatternService.deleteMemberLifePatternAll(existing);
+        }
         List<MemberLifePattern> memberLifePatternList = new ArrayList<>();
         List<MemberLifePatternLog> memberLifePatternLogList = new ArrayList<>();
 
@@ -93,6 +117,24 @@ public class OnBoardingServiceImpl {
 
     @Transactional
     public RoomProfile saveRoomInfo(SaveProfileRoomInfoDto.Request request, Member member) {
+        List<RoomProfile> existing = roomProfileService.findByMember(member);
+        if (!existing.isEmpty()) {
+            ModifyProfileRoomInfoDto.Request modifyRequest = ModifyProfileRoomInfoDto.Request.builder()
+                    .type(request.getType())
+                    .minDeposit(request.getMinDeposit())
+                    .maxDeposit(request.getMaxDeposit())
+                    .minMounthRent(request.getMinMounthRent())
+                    .maxMounthRent(request.getMaxMounthRent())
+                    .comeEnableAt(request.getComeEnableAt())
+                    .region(request.getRegion())
+                    .roomProfile(request.getRoomProfile())
+                    .deposit(request.getDeposit())
+                    .mounthRent(request.getMounthRent())
+                    .isComeableAtNegotiable(request.isComeableAtNegotiable())
+                    .build();
+            modifyRoomInfo(modifyRequest, member);
+            return roomProfileService.findByMember(member).getFirst();
+        }
         RoomProfile roomProfile = null;
 
         switch (request.getType()) {
@@ -418,6 +460,7 @@ public class OnBoardingServiceImpl {
 
     @Transactional
     public List<PreferenceCondition> savePreferenceLifeStyle(SavePreferencesLifeStyleDto.Request request, Member member) {
+        preferenceConditionService.deletePreferenceConditionByMember(member);
         List<PreferenceCondition> preferenceConditionList = new ArrayList<>();
         metaService.findByLifeStyle(request.getLifestyles()).forEach(item ->
                 preferenceConditionList.add(PreferenceCondition.builder().member(member).lifePatternInformation(item).build()));
@@ -444,6 +487,7 @@ public class OnBoardingServiceImpl {
 
     @Transactional
     public List<PreferenceConditionWeight>  savePreferenceCondition(SavePreferencesConditionsDto.Request request, Member member) {
+        preferenceConditionService.deletePreferenceConditionWeightByMember(member);
         List<PreferenceConditionWeight> preferenceConditionWeightList = new ArrayList<>();
         metaService.findLifePatternByLifeStyle(request.getConditions()).forEach(item ->
                 preferenceConditionWeightList.add(PreferenceConditionWeight.builder().member(member).lifePattern(item).build()));

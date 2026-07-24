@@ -148,7 +148,8 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
         return Optional.ofNullable(jpaQueryFactory
                 .selectFrom(roomProfile)
                 .where(roomProfile.member.eq(memberEntity))
-                .fetchOne());
+                .orderBy(roomProfile.createdAt.desc())
+                .fetchFirst());
     }
 
     @Override

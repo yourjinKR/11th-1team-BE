@@ -30,6 +30,11 @@ public class MemberLifePatternService {
         return memberLifePatternRepository.saveAll(memberLifePatternList);
     }
 
+    @Transactional
+    public void deleteMemberLifePatternAll(List<MemberLifePattern> memberLifePatternList) {
+        memberLifePatternRepository.deleteAll(memberLifePatternList);
+    }
+
     public List<MemberLifePattern> findByMember(Member member) {
         return memberLifePatternRepository.findByMember(member);
     }
