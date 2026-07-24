@@ -106,7 +106,28 @@ class AlarmServiceImplTest {
     }
 
     @Test
-    @DisplayName("알림 전송 실패 시 BusinessException 발생 및 Emitter 제거 테스트")
+    @DisplayName("SSE 구독이 없어도 알림을 저장한다")
+    void sendToClientWithoutSubscriptionTest() {
+        // given
+        Long memberId = 1L;
+        Alarm alarm = Alarm.builder()
+                .id(100L)
+                .title("Test Title")
+                .contents("Test Contents")
+                .isRead(false)
+                .expiredAt(LocalDateTime.now().plusDays(1))
+                .type(AlarmType.DEFAULT)
+                .build();
+
+        // when
+        alarmService.sendToClient(memberId, "testEvent", alarm);
+
+        // then
+        verify(alarmRepository).save(alarm);
+    }
+
+    @Test
+    @DisplayName("SSE 전송 실패 시 예외를 전파하지 않고 Emitter를 제거한다")
     void sendToClientFailureTest() throws IOException {
         // given
         Long memberId = 1L;
@@ -128,11 +149,11 @@ class AlarmServiceImplTest {
         Map<Long, SseEmitter> map = (Map<Long, SseEmitter>) ReflectionTestUtils.getField(alarmService, "sseEmitterMap");
         map.put(memberId, mockEmitter);
 
-        // when & then
-        assertThatThrownBy(() -> alarmService.sendToClient(memberId, eventName, alarm))
-                .isInstanceOf(BusinessException.class)
-                .hasFieldOrPropertyWithValue("errorCode", AlarmErrorCode.ALARM_SEND_ERROR);
+        // when
+        alarmService.sendToClient(memberId, eventName, alarm);
 
+        // then
+        verify(alarmRepository).save(alarm);
         assertThat(map).doesNotContainKey(memberId);
     }
 
