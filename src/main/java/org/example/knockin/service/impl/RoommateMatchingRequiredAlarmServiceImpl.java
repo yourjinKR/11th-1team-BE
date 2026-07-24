@@ -29,10 +29,10 @@ public class RoommateMatchingRequiredAlarmServiceImpl {
                 .contents(message)
                 .isRead(false)
                 .expiredAt(LocalDateTime.now().plusDays(requestAlarmExpireDays))
-                .type(AlarmType.OFFER)
+                .type(AlarmType.ROOM_MATCHING)
                 .roommateMatchingRequired(required)
                 .build();
 
-        alarmService.sendToClient(receiver.getId(), AlarmType.OFFER.name(), alarm);
+        alarmService.sendToClient(receiver.getId(), AlarmType.ROOM_MATCHING.name(), alarm);
     }
 }

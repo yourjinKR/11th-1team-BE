@@ -153,11 +153,11 @@ class RoommateRequestServiceImplTest {
         assertThat(requestCaptor.getValue().getStatus()).isEqualTo(RoommateRequiredStatus.PENDING);
 
         ArgumentCaptor<RoommateMatchingRequiredAlarm> alarmCaptor = ArgumentCaptor.forClass(RoommateMatchingRequiredAlarm.class);
-        verify(alarmService).sendToClient(eq(requesteeId), eq(AlarmType.OFFER.name()), alarmCaptor.capture());
+        verify(alarmService).sendToClient(eq(requesteeId), eq(AlarmType.ROOM_MATCHING.name()), alarmCaptor.capture());
         assertThat(alarmCaptor.getValue().getMember()).isSameAs(requestee);
         assertThat(alarmCaptor.getValue().getTitle()).isEqualTo("김중민님이 룸메이트 확정을 제안했어요");
         assertThat(alarmCaptor.getValue().getContents()).isEqualTo("김중민님이 룸메이트 확정을 제안했어요");
-        assertThat(alarmCaptor.getValue().getType()).isEqualTo(AlarmType.OFFER);
+        assertThat(alarmCaptor.getValue().getType()).isEqualTo(AlarmType.ROOM_MATCHING);
         assertThat(alarmCaptor.getValue().getRoommateMatchingRequired().getId()).isEqualTo(1000L);
 
         ArgumentCaptor<Object> socketCaptor = ArgumentCaptor.forClass(Object.class);
@@ -170,7 +170,7 @@ class RoommateRequestServiceImplTest {
         assertThat(socketResponse.getCreatedAt()).isNotNull();
 
         InOrder inOrder = inOrder(alarmService, messagingTemplate);
-        inOrder.verify(alarmService).sendToClient(eq(requesteeId), eq(AlarmType.OFFER.name()), any(RoommateMatchingRequiredAlarm.class));
+        inOrder.verify(alarmService).sendToClient(eq(requesteeId), eq(AlarmType.ROOM_MATCHING.name()), any(RoommateMatchingRequiredAlarm.class));
         inOrder.verify(messagingTemplate).convertAndSend(eq("/sub/chats/10"), any(ChatSocketResponse.class));
     }
 
@@ -303,7 +303,7 @@ class RoommateRequestServiceImplTest {
         verify(memberPrivacyService).findByMemberId(requesteeId);
 
         ArgumentCaptor<RoommateMatchingRequiredAlarm> alarmCaptor = ArgumentCaptor.forClass(RoommateMatchingRequiredAlarm.class);
-        verify(alarmService).sendToClient(eq(requesterId), eq(AlarmType.OFFER.name()), alarmCaptor.capture());
+        verify(alarmService).sendToClient(eq(requesterId), eq(AlarmType.ROOM_MATCHING.name()), alarmCaptor.capture());
         assertThat(alarmCaptor.getValue().getMember()).isSameAs(requester);
         assertThat(alarmCaptor.getValue().getTitle()).isEqualTo("이수현님과 룸메이트가 확정되었어요");
         assertThat(alarmCaptor.getValue().getContents()).isEqualTo("이수현님과 룸메이트가 확정되었어요");

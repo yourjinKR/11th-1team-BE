@@ -341,12 +341,12 @@ class SeparatedRepositoryServiceImplTest {
 
         // Then
         ArgumentCaptor<RoommateMatchingRequiredAlarm> captor = ArgumentCaptor.forClass(RoommateMatchingRequiredAlarm.class);
-        verify(alarmService).sendToClient(eq(receiver.getId()), eq(AlarmType.OFFER.name()), captor.capture());
+        verify(alarmService).sendToClient(eq(receiver.getId()), eq(AlarmType.ROOM_MATCHING.name()), captor.capture());
         RoommateMatchingRequiredAlarm alarm = captor.getValue();
         assertThat(alarm.getMember()).isSameAs(receiver);
         assertThat(alarm.getTitle()).isEqualTo("이수현님이 룸메이트 확정을 제안했어요");
         assertThat(alarm.getContents()).isEqualTo("이수현님이 룸메이트 확정을 제안했어요");
-        assertThat(alarm.getType()).isEqualTo(AlarmType.OFFER);
+        assertThat(alarm.getType()).isEqualTo(AlarmType.ROOM_MATCHING);
         assertThat(alarm.getRoommateMatchingRequired()).isSameAs(required);
         assertThat(alarm.getExpiredAt()).isAfter(LocalDateTime.now().plusDays(6));
     }

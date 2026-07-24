@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public enum AlarmType {
     DEFAULT(Values.DEFAULT),
-    OFFER(Values.ROOM_MATCHING),
+    ROOM_MATCHING(Values.ROOM_MATCHING),
     CHATTING_REQUIRED(Values.CHATTING_REQUIRED),
     ROOMMATE_CALENDAR(Values.ROOMMATE_CALENDAR)
     ;
