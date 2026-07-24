@@ -76,4 +76,12 @@ public class PreferenceConditionServiceImpl {
         preferenceConditionWeightRepository.deleteByMember(member);
         preferenceConditionWeightRepository.flush();
     }
+
+    @Transactional
+    public void deletePreferenceConditionByMember(Member member) {
+        List<PreferenceCondition> existing = preferenceConditionRepository.findByMember(member);
+        if (!existing.isEmpty()) {
+            preferenceConditionRepository.deleteAll(existing);
+        }
+    }
 }
