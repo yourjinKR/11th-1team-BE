@@ -1,6 +1,7 @@
 package org.example.knockin.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.knockin.dto.AlarmListDto;
 import org.example.knockin.dto.AlarmReadAllDto;
 import org.example.knockin.dto.AlarmReadDto;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AlarmServiceImpl {
     private final MemberServiceImpl memberService;
@@ -34,7 +36,7 @@ public class AlarmServiceImpl {
         long timeout = 1000L * 60 * 60;
         SseEmitter sseEmitter = new SseEmitter(timeout);
         sseEmitterMap.put(memberId, sseEmitter);
-        sseEmitter.onCompletion(() -> sseEmitterMap.remove(memberId));
+        sseEmitter.onCompletion(() -> sseEmitterMap.remove(memberId, sseEmitter));
         sseEmitter.onTimeout(sseEmitter::complete);
         sseEmitter.onError(throwable -> sseEmitter.complete());
         return sseEmitter;
@@ -44,6 +46,8 @@ public class AlarmServiceImpl {
     public void sendToClient(Long memberId, String eventName, Alarm alarm) {
         alarmRepository.save(alarm);
         SseEmitter sseEmitter = sseEmitterMap.get(memberId);
+        if (sseEmitter == null) return;
+
         try {
             String eventId = memberId + "_" + System.currentTimeMillis();
             AlarmSendDto.Response response = AlarmSendDto.Response.builder()
@@ -53,9 +57,9 @@ public class AlarmServiceImpl {
                     .createdAt(alarm.getCreatedAt()).expiredAt(alarm.getExpiredAt()).build();
 
             sseEmitter.send(SseEmitter.event().id(eventId).name(eventName).data(response));
-        } catch (IOException e) {
-            sseEmitterMap.remove(memberId);
-            throw new BusinessException(AlarmErrorCode.ALARM_SEND_ERROR);
+        } catch (IOException | IllegalStateException e) {
+            sseEmitterMap.remove(memberId, sseEmitter);
+            log.debug("SSE 알림 전송 실패했습니다. memberId={}", memberId, e);
         }
     }
 
