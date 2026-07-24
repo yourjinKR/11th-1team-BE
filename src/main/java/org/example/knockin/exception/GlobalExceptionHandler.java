@@ -13,6 +13,8 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import java.util.stream.Collectors;
+
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -30,7 +32,6 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({
-            MethodArgumentNotValidException.class,
             MissingServletRequestParameterException.class,
             HttpMessageNotReadableException.class,
             MethodArgumentTypeMismatchException.class,
@@ -39,6 +40,15 @@ public class GlobalExceptionHandler {
     public CommonResponse<?> handleBadRequestException(Exception e) {
         log.warn("Bad request: {}", e.getMessage());
         return handleExceptionInternal(CommonErrorCode.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public CommonResponse<?> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .distinct()
+                .collect(Collectors.joining(", "));
+        return handleExceptionInternal(CommonErrorCode.BAD_REQUEST, message);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
