@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -68,7 +70,6 @@ import org.example.knockin.global.exception.MemberErrorCode;
 import org.example.knockin.global.exception.MetaErrorCode;
 import org.example.knockin.global.exception.RoommateBoardErrorCode;
 import org.example.knockin.global.exception.RoomTypeErrorCode;
-import org.example.knockin.verification.repository.AuthenticationRepository;
 import org.example.knockin.verification.repository.row.MemberAuthenticationRow;
 import org.example.knockin.declaration.repository.RoommateBoardDeclarationRepository;
 import org.example.knockin.board.repository.RoommateBoardFileRepository;
@@ -80,25 +81,24 @@ import org.example.knockin.board.repository.row.BoardBaseRow;
 import org.example.knockin.board.repository.row.BoardThumbnailRow;
 import org.example.knockin.board.repository.row.EditFormRow;
 import org.example.knockin.meta.repository.FileRepository;
-import org.example.knockin.life.repository.MemberLifePatternRepository;
-import org.example.knockin.life.repository.PreferenceConditionRepository;
-import org.example.knockin.life.repository.PreferenceConditionWeightRepository;
 import org.example.knockin.life.repository.row.MatchingLifestyleRow;
 import org.example.knockin.life.repository.row.MatchingPreferenceConditionRow;
 import org.example.knockin.life.repository.row.MatchingPreferenceConditionWeightRow;
 import org.example.knockin.board.repository.row.BoardInterestCountRow;
 import org.example.knockin.meta.service.FileService;
 import org.example.knockin.util.service.RoommateScoreService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.example.knockin.declaration.service.impl.DeclarationServiceImpl;
+import org.example.knockin.declaration.repository.MemberDeclarationRepository;
+import org.example.knockin.room.service.impl.RoomExtraOptionServiceImpl;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -128,18 +128,6 @@ class RoommateBoardServiceImplTest {
     private FileRepository fileRepository;
 
     @Mock
-    private PreferenceConditionRepository preferenceConditionRepository;
-
-    @Mock
-    private PreferenceConditionWeightRepository preferenceConditionWeightRepository;
-
-    @Mock
-    private MemberLifePatternRepository memberLifePatternRepository;
-
-    @Mock
-    private AuthenticationRepository authenticationRepository;
-
-    @Mock
     private MemberServiceImpl memberService;
 
     @Mock
@@ -149,12 +137,8 @@ class RoommateBoardServiceImplTest {
     private MetaServiceImpl metaService;
 
     @Mock
-    private TransactionTemplate transactionTemplate;
-
-    @Mock
     private RoommateScoreService roommateScoreService;
 
-    @Mock
     private RoommateBoardFileServiceImpl roommateBoardFileService;
 
     @Mock
@@ -166,13 +150,10 @@ class RoommateBoardServiceImplTest {
     @Mock
     private AuthenticationServiceImpl authenticationService;
 
-    @Mock
     private RoommateBoardOptionServiceImpl roommateBoardOptionService;
 
-    @Mock
     private RoommateBoardInterestServiceImpl roommateBoardInterestService;
 
-    @Mock
     private RoommateBoardPolicy roommateBoardPolicy;
 
     @Mock
@@ -184,8 +165,30 @@ class RoommateBoardServiceImplTest {
     @Mock
     private PushNotificationServiceImpl pushNotificationService;
 
-    @InjectMocks
     private RoommateBoardServiceImpl roommateBoardService;
+
+    @Mock
+    private RoomExtraOptionServiceImpl roomExtraOptionService;
+
+    @BeforeEach
+    void setUp() {
+        // Keep the existing repository-level scenarios across the extracted board services.
+        roommateBoardFileService = spy(new RoommateBoardFileServiceImpl(roommateBoardFileRepository, fileService));
+        roommateBoardOptionService = spy(new RoommateBoardOptionServiceImpl(roomExtraOptionService, roommateBoardOptionRepository));
+        roommateBoardInterestService = spy(new RoommateBoardInterestServiceImpl(roommateBoardInterestRepository));
+        DeclarationServiceImpl declarationService = new DeclarationServiceImpl(
+                mock(MemberDeclarationRepository.class), roommateBoardDeclarationRepository, memberService);
+        roommateBoardPolicy = new RoommateBoardPolicy();
+        roommateBoardPolicy.setImageMaxCount(10);
+        roommateBoardPolicy.setThumbnailImageMaxCount(1);
+        roommateBoardPolicy.setComeableDateVisibleGraceDays(7);
+        roommateBoardPolicy.setHotBadgeMinInterestCount(10);
+        roommateBoardService = new RoommateBoardServiceImpl(
+                roommateBoardRepository, memberService, metaService, roommateScoreService,
+                roommateBoardFileService, preferenceConditionService, memberLifePatternService,
+                authenticationService, roommateBoardOptionService, roommateBoardInterestService,
+                roommateBoardPolicy, searchServiceImpl, alarmService, pushNotificationService, declarationService);
+    }
 
     @Captor
     private ArgumentCaptor<RoommateBoard> roommateBoardCaptor;
@@ -493,8 +496,8 @@ class RoommateBoardServiceImplTest {
         when(memberService.findById(memberId)).thenReturn(Optional.of(member));
         when(metaService.findByRoomTypeId(1L)).thenReturn(roomType);
         when(metaService.findByRegionId(2L)).thenReturn(Optional.of(region));
-        when(fileService.upload(thumbnailImage, FileType.ROOMMATE_BOARD_IMAGE)).thenReturn(thumbnailFile);
-        when(fileService.upload(roomImage, FileType.ROOMMATE_BOARD_IMAGE)).thenReturn(roomFile);
+        when(fileService.save(thumbnailImage, FileType.ROOMMATE_BOARD_IMAGE)).thenReturn(thumbnailFile);
+        when(fileService.save(roomImage, FileType.ROOMMATE_BOARD_IMAGE)).thenReturn(roomFile);
         when(roommateBoardRepository.save(any(RoommateBoard.class))).thenReturn(savedRoommateBoard);
         when(savedRoommateBoard.getUpdatedAt()).thenReturn(updatedAt);
 
@@ -663,7 +666,7 @@ class RoommateBoardServiceImplTest {
         when(memberService.findById(memberId)).thenReturn(Optional.of(member));
         when(metaService.findByRoomTypeId(1L)).thenReturn(roomType);
         when(metaService.findByRegionId(2L)).thenReturn(Optional.of(region));
-        when(fileService.upload(thumbnailImage, FileType.ROOMMATE_BOARD_IMAGE))
+        when(fileService.save(thumbnailImage, FileType.ROOMMATE_BOARD_IMAGE))
                 .thenThrow(new IOException("upload failed"));
 
         assertThatThrownBy(() -> roommateBoardService.save(request, memberId, List.of(thumbnailImage)))
@@ -691,8 +694,8 @@ class RoommateBoardServiceImplTest {
         when(memberService.findById(memberId)).thenReturn(Optional.of(member));
         when(metaService.findByRoomTypeId(1L)).thenReturn(roomType);
         when(metaService.findByRegionId(2L)).thenReturn(Optional.of(region));
-        when(fileService.upload(thumbnailImage, FileType.ROOMMATE_BOARD_IMAGE)).thenReturn(thumbnailFile);
-        when(fileService.upload(roomImage, FileType.ROOMMATE_BOARD_IMAGE))
+        when(fileService.save(thumbnailImage, FileType.ROOMMATE_BOARD_IMAGE)).thenReturn(thumbnailFile);
+        when(fileService.save(roomImage, FileType.ROOMMATE_BOARD_IMAGE))
                 .thenThrow(new IOException("upload failed"));
 
         assertThatThrownBy(() -> roommateBoardService.save(request, memberId, List.of(thumbnailImage, roomImage)))
@@ -721,7 +724,7 @@ class RoommateBoardServiceImplTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("db failed");
 
-        verify(fileService, never()).upload(any(MultipartFile.class), any(FileType.class));
+        verify(fileService, never()).save(any(MultipartFile.class), any(FileType.class));
         verify(fileService, never()).deleteAll(any());
         verify(roommateBoardFileService, never()).saveAll(any(RoommateBoard.class), any(), any());
     }
@@ -798,7 +801,7 @@ class RoommateBoardServiceImplTest {
         assertThatThrownBy(() -> roommateBoardService.save(request, memberId, List.of(emptyMultipartFile())))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.BAD_REQUEST));
-        verify(fileService, never()).upload(any(MultipartFile.class), any(FileType.class));
+        verify(fileService, never()).save(any(MultipartFile.class), any(FileType.class));
         verifyNoInteractions(roommateBoardRepository, fileRepository, roommateBoardFileRepository);
     }
 
@@ -1077,12 +1080,12 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardRepository.getBasicInfo(boardId)).thenReturn(Optional.of(basicInfoRow));
         when(roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId)).thenReturn(images);
         when(roommateBoardOptionRepository.getExtraOptionsByBoardId(boardId)).thenReturn(roomExtraOptions);
-        when(memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(ownerId))).thenReturn(List.of(visitor, sleep));
-        when(preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(List.of(ownerId))).thenReturn(List.of(condition));
-        when(preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(List.of(ownerId))).thenReturn(List.of(conditionWeight));
+        when(memberLifePatternService.findMatchingRowByMemberIdsIn(List.of(ownerId))).thenReturn(List.of(visitor, sleep));
+        when(preferenceConditionService.findRowByMemberIdsIn(List.of(ownerId))).thenReturn(List.of(condition));
+        when(preferenceConditionService.findWeightRowByMemberIdsIn(List.of(ownerId))).thenReturn(List.of(conditionWeight));
         when(roommateScoreService.calculateScore(any(), any()))
                 .thenReturn(new Compatibility(76, List.of()));
-        when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(ownerId)).thenReturn(authenticationTypes);
+        when(authenticationService.findTypesByMemberId(ownerId)).thenReturn(authenticationTypes);
         when(roommateBoardInterestRepository.existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, viewerId))
                 .thenReturn(true);
         when(roommateBoardInterestService.findActiveInterestCountsByBoardIds(List.of(boardId)))
@@ -1132,10 +1135,10 @@ class RoommateBoardServiceImplTest {
         inOrder.verify(roommateBoardRepository).getBasicInfo(boardId);
         verify(roommateBoardFileRepository).getFileDetailDtoByBoardId(boardId);
         verify(roommateBoardOptionRepository).getExtraOptionsByBoardId(boardId);
-        verify(memberLifePatternRepository).findAllLifestyleByMemberIdIn(List.of(ownerId));
-        verify(preferenceConditionRepository).findAllPreferenceConditionByMemberIdIn(List.of(ownerId));
-        verify(preferenceConditionWeightRepository).findAllPreferenceConditionWeightByMemberIdIn(List.of(ownerId));
-        verify(authenticationRepository).getAcceptedAuthenticationTypeByMemberId(ownerId);
+        verify(memberLifePatternService).findMatchingRowByMemberIdsIn(List.of(ownerId));
+        verify(preferenceConditionService).findRowByMemberIdsIn(List.of(ownerId));
+        verify(preferenceConditionService).findWeightRowByMemberIdsIn(List.of(ownerId));
+        verify(authenticationService).findTypesByMemberId(ownerId);
         verify(roommateBoardInterestRepository).existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, viewerId);
         verify(roommateBoardInterestService).findActiveInterestCountsByBoardIds(List.of(boardId));
     }
@@ -1152,10 +1155,10 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardRepository.getBasicInfo(boardId)).thenReturn(Optional.of(basicInfoRow));
         when(roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId)).thenReturn(List.of());
         when(roommateBoardOptionRepository.getExtraOptionsByBoardId(boardId)).thenReturn(List.of());
-        when(memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
-        when(preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
-        when(preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
-        when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(ownerId)).thenReturn(List.of());
+        when(memberLifePatternService.findMatchingRowByMemberIdsIn(List.of(ownerId))).thenReturn(List.of());
+        when(preferenceConditionService.findRowByMemberIdsIn(List.of(ownerId))).thenReturn(List.of());
+        when(preferenceConditionService.findWeightRowByMemberIdsIn(List.of(ownerId))).thenReturn(List.of());
+        when(authenticationService.findTypesByMemberId(ownerId)).thenReturn(List.of());
         when(roommateBoardInterestRepository.existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, viewerId))
                 .thenReturn(false);
         when(roommateBoardInterestService.findActiveInterestCountsByBoardIds(List.of(boardId)))
@@ -1185,10 +1188,10 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardRepository.getBasicInfo(boardId)).thenReturn(Optional.of(basicInfoRow));
         when(roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId)).thenReturn(List.of());
         when(roommateBoardOptionRepository.getExtraOptionsByBoardId(boardId)).thenReturn(List.of());
-        when(memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
-        when(preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
-        when(preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
-        when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(ownerId)).thenReturn(List.of());
+        when(memberLifePatternService.findMatchingRowByMemberIdsIn(List.of(ownerId))).thenReturn(List.of());
+        when(preferenceConditionService.findRowByMemberIdsIn(List.of(ownerId))).thenReturn(List.of());
+        when(preferenceConditionService.findWeightRowByMemberIdsIn(List.of(ownerId))).thenReturn(List.of());
+        when(authenticationService.findTypesByMemberId(ownerId)).thenReturn(List.of());
         when(roommateBoardInterestRepository.existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, viewerId))
                 .thenReturn(false);
 
@@ -1211,10 +1214,10 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardRepository.getBasicInfo(boardId)).thenReturn(Optional.of(basicInfoRow));
         when(roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId)).thenReturn(List.of());
         when(roommateBoardOptionRepository.getExtraOptionsByBoardId(boardId)).thenReturn(List.of());
-        when(memberLifePatternRepository.findAllLifestyleByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
-        when(preferenceConditionRepository.findAllPreferenceConditionByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
-        when(preferenceConditionWeightRepository.findAllPreferenceConditionWeightByMemberIdIn(List.of(ownerId))).thenReturn(List.of());
-        when(authenticationRepository.getAcceptedAuthenticationTypeByMemberId(ownerId)).thenReturn(List.of());
+        when(memberLifePatternService.findMatchingRowByMemberIdsIn(List.of(ownerId))).thenReturn(List.of());
+        when(preferenceConditionService.findRowByMemberIdsIn(List.of(ownerId))).thenReturn(List.of());
+        when(preferenceConditionService.findWeightRowByMemberIdsIn(List.of(ownerId))).thenReturn(List.of());
+        when(authenticationService.findTypesByMemberId(ownerId)).thenReturn(List.of());
         when(roommateBoardInterestRepository.existsByRoommateBoardIdAndMemberIdAndIsDeletedIsFalse(boardId, ownerId))
                 .thenReturn(false);
 
@@ -1242,8 +1245,8 @@ class RoommateBoardServiceImplTest {
         verify(roommateBoardRepository).increaseHitsById(boardId);
         verify(roommateBoardRepository, never()).getBasicInfo(any());
         verifyNoInteractions(roommateBoardFileRepository, roommateBoardOptionRepository,
-                memberLifePatternRepository, preferenceConditionRepository, preferenceConditionWeightRepository,
-                authenticationRepository);
+                memberLifePatternService, preferenceConditionService,
+                authenticationService);
     }
 
     @Test
@@ -1262,8 +1265,8 @@ class RoommateBoardServiceImplTest {
         verify(roommateBoardRepository).increaseHitsById(boardId);
         verify(roommateBoardRepository).getBasicInfo(boardId);
         verifyNoInteractions(roommateBoardFileRepository, roommateBoardOptionRepository,
-                memberLifePatternRepository, preferenceConditionRepository, preferenceConditionWeightRepository,
-                authenticationRepository);
+                memberLifePatternService, preferenceConditionService,
+                authenticationService);
     }
 
     @Test
@@ -1291,9 +1294,9 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardRepository.getEditRow(boardId)).thenReturn(Optional.of(editFormRow));
         when(roommateBoardFileRepository.getFileDetailDtoByBoardId(boardId)).thenReturn(images);
         when(roommateBoardOptionRepository.getExtraOptionsByBoardId(boardId)).thenReturn(roomExtraOptions);
-        when(memberLifePatternRepository.getLifeStyleDto(memberId)).thenReturn(List.of(lifestyle));
-        when(preferenceConditionRepository.getConditionDtoByMemberId(memberId)).thenReturn(List.of(condition));
-        when(preferenceConditionWeightRepository.getConditionWeightDtoByMemberId(memberId))
+        when(memberLifePatternService.findLifeStyleDtoByMemberId(memberId)).thenReturn(List.of(lifestyle));
+        when(preferenceConditionService.findAllConditionByMemberId(memberId)).thenReturn(List.of(condition));
+        when(preferenceConditionService.findAllConditionWeightByMemberId(memberId))
                 .thenReturn(List.of(conditionWeight));
 
         // When
@@ -1317,9 +1320,9 @@ class RoommateBoardServiceImplTest {
         assertThat(response.getLifeStyles()).containsExactly(lifestyle);
         assertThat(response.getConditions()).containsExactly(condition);
         assertThat(response.getConditionWeights()).containsExactly(conditionWeight);
-        verify(memberLifePatternRepository).getLifeStyleDto(memberId);
-        verify(preferenceConditionRepository).getConditionDtoByMemberId(memberId);
-        verify(preferenceConditionWeightRepository).getConditionWeightDtoByMemberId(memberId);
+        verify(memberLifePatternService).findLifeStyleDtoByMemberId(memberId);
+        verify(preferenceConditionService).findAllConditionByMemberId(memberId);
+        verify(preferenceConditionService).findAllConditionWeightByMemberId(memberId);
     }
 
     @Test
@@ -1336,7 +1339,7 @@ class RoommateBoardServiceImplTest {
                         e -> assertThat(e.getErrorCode()).isEqualTo(RoommateBoardErrorCode.ROOMMATE_BOARD_NOT_FOUND));
         verify(roommateBoardRepository).getEditRow(boardId);
         verifyNoInteractions(roommateBoardFileRepository, roommateBoardOptionRepository,
-                memberLifePatternRepository, preferenceConditionRepository, preferenceConditionWeightRepository);
+                memberLifePatternService, preferenceConditionService);
     }
 
     @Test
@@ -1398,7 +1401,7 @@ class RoommateBoardServiceImplTest {
         when(metaService.findByRegionId(22L)).thenReturn(Optional.of(newRegion));
         when(roommateBoardOptionRepository.findWithRoomExtraOptionByBoardId(boardId))
                 .thenReturn(List.of(deleteBoardOption, keepBoardOption));
-        when(metaService.findRoomExtraOptionsByIdIn(List.of(20L, 21L)))
+        when(roomExtraOptionService.findAllById(List.of(20L, 21L)))
                 .thenReturn(List.of(newExtraOption, anotherNewExtraOption));
         when(roommateBoardFileRepository.findByRoommateBoard(roommateBoard))
                 .thenAnswer(invocation -> new ArrayList<>(persistedBoardFiles));
@@ -1406,8 +1409,7 @@ class RoommateBoardServiceImplTest {
             persistedBoardFiles.remove(invocation.getArgument(0));
             return null;
         }).when(roommateBoardFileRepository).delete(any(RoommateBoardFile.class));
-        when(fileService.upload(newMultipartFile, FileType.ROOMMATE_BOARD_IMAGE)).thenReturn(newFile);
-        when(fileRepository.save(newFile)).thenReturn(newFile);
+        when(fileService.save(newMultipartFile, FileType.ROOMMATE_BOARD_IMAGE)).thenReturn(newFile);
         when(roommateBoardFileRepository.save(any(RoommateBoardFile.class))).thenAnswer(invocation -> {
             RoommateBoardFile boardFile = invocation.getArgument(0);
             persistedBoardFiles.add(boardFile);
@@ -1440,7 +1442,7 @@ class RoommateBoardServiceImplTest {
         assertThat(thumbnailImage.getIsThumbnail()).isTrue();
         assertThat(deletedFile.getIsDeleted()).isTrue();
         verify(roommateBoardFileRepository).delete(deletedImage);
-        verify(fileRepository).save(newFile);
+        verify(fileService).save(newMultipartFile, FileType.ROOMMATE_BOARD_IMAGE);
         verify(roommateBoardFileRepository).save(boardFileCaptor.capture());
         RoommateBoardFile newBoardFile = boardFileCaptor.getValue();
         assertThat(newBoardFile.getRoommateBoard()).isSameAs(roommateBoard);
@@ -1554,7 +1556,7 @@ class RoommateBoardServiceImplTest {
         assertThat(deletedFile.getIsDeleted()).isTrue();
         assertThat(persistedBoardFiles).isEmpty();
         verify(roommateBoardFileRepository).delete(deletedImage);
-        verify(metaService, never()).findRoomExtraOptionsByIdIn(any());
+        verify(roomExtraOptionService, never()).findAllById(any());
         verify(fileRepository, never()).save(any(File.class));
     }
 
@@ -1641,7 +1643,7 @@ class RoommateBoardServiceImplTest {
 
         // Then
         assertThat(response.getUpdatedAt()).isNotNull();
-        verify(metaService, never()).findRoomExtraOptionsByIdIn(any());
+        verify(roomExtraOptionService, never()).findAllById(any());
         verify(roommateBoardOptionRepository, never()).saveAll(any());
     }
 
@@ -1659,7 +1661,7 @@ class RoommateBoardServiceImplTest {
         when(roommateBoardRepository.findById(boardId)).thenReturn(Optional.of(roommateBoard));
         when(metaService.findByRoomTypeId(11L)).thenReturn(roomType);
         when(metaService.findByRegionId(22L)).thenReturn(Optional.of(region));
-        when(metaService.findRoomExtraOptionsByIdIn(List.of(20L, 21L)))
+        when(roomExtraOptionService.findAllById(List.of(20L, 21L)))
                 .thenReturn(List.of(org.mockito.Mockito.mock(RoomExtraOption.class)));
 
         // When & Then
@@ -1692,7 +1694,7 @@ class RoommateBoardServiceImplTest {
         when(metaService.findByRoomTypeId(11L)).thenReturn(roomType);
         when(metaService.findByRegionId(22L)).thenReturn(Optional.of(region));
         when(roommateBoardFileRepository.findByRoommateBoard(roommateBoard)).thenReturn(List.of(existingThumbnail));
-        when(fileService.upload(failedFile, FileType.ROOMMATE_BOARD_IMAGE))
+        when(fileService.save(failedFile, FileType.ROOMMATE_BOARD_IMAGE))
                 .thenThrow(new IOException("upload failed"));
 
         // When & Then
@@ -1746,7 +1748,7 @@ class RoommateBoardServiceImplTest {
         assertThatThrownBy(() -> roommateBoardService.modify(7L, boardId, request, List.of(emptyMultipartFile())))
                 .isInstanceOfSatisfying(BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.BAD_REQUEST));
-        verify(fileService, never()).upload(any(MultipartFile.class), any(FileType.class));
+        verify(fileService, never()).save(any(MultipartFile.class), any(FileType.class));
         verifyNoInteractions(fileRepository);
     }
 
