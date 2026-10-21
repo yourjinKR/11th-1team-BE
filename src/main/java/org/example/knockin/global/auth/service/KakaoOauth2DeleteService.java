@@ -6,17 +6,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.knockin.verification.entity.LoginProviderType;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
-import org.springframework.web.client.RestTemplate;
 
 @Service
 @Slf4j
@@ -37,7 +29,7 @@ public class KakaoOauth2DeleteService extends AbstractOauth2DeleteService{
         return StringUtils.hasText(response);
     }
 
-    public boolean unlinkFallback(String providerId, Exception e) { 
+    public boolean unlinkFallback(String providerId, Exception e) {
         if (e instanceof CallNotPermittedException) {
             log.warn("카카오 연결 끊기(Unlink) 생략. 서킷이 열려 있습니다.");
         } else if (e instanceof RestClientResponseException responseException) {
